@@ -68,7 +68,7 @@ function ReportCard() {
       
       <div style={cardStyle}>
         <h2 style={{ margin: '0 0 20px 0', color: '#333', textAlign: 'center' }}>
-          Sample MSME Ltd
+          Sharma Textiles Pvt Ltd
         </h2>
         
         {loading ? (
