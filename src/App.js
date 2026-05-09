@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './App.css';
 import Dashboard from './components/Dashboard';
 import TransactionList from './components/TransactionList';
 import ReportCard from './components/ReportCard';
@@ -13,65 +14,58 @@ function App() {
   const [activeTab, setActiveTab] = useState('Dashboard');
 
   const tabs = [
-    'Dashboard', 'Transactions', 'Ledger', 'Trial Balance', 
+    'Dashboard', 'Transactions', 'Ledger', 'Trial Balance',
     'GST Calculator', 'Balance Sheet', 'Cash Flow', 'Income Statement', 'AI Summary'
   ];
 
-  const navbarStyle = {
-    backgroundColor: '#0A1628',
-    color: 'white',
-    padding: '20px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    fontFamily: 'sans-serif'
-  };
-
-  const logoStyle = { fontSize: '24px', fontWeight: 'bold', margin: 0 };
-  const taglineStyle = { fontSize: '14px', margin: 0 };
-
-  const tabContainerStyle = {
-    display: 'flex',
-    backgroundColor: '#f0f0f0',
-    padding: '10px 20px',
-    gap: '10px',
-    overflowX: 'auto',
-    whiteSpace: 'nowrap',
-    borderBottom: '1px solid #ddd'
-  };
-
-  const getTabStyle = (tabName) => ({
-    padding: '10px 20px',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    fontWeight: 'bold',
-    backgroundColor: activeTab === tabName ? '#1D9E75' : 'transparent',
-    color: activeTab === tabName ? 'white' : '#333',
-    flexShrink: 0
-  });
-
-  const containerStyle = {
-    padding: '20px',
-    fontFamily: 'sans-serif'
-  };
-
   return (
-    <div style={{ margin: 0, padding: 0 }}>
-      <nav style={navbarStyle}>
-        <h1 style={logoStyle}>LedgerAI</h1>
-        <p style={taglineStyle}>Real-time financials for your business</p>
+    <div style={{ margin: 0, padding: 0, minHeight: '100vh', background: 'var(--bg)' }}>
+      {/* Navbar */}
+      <nav style={{
+        backgroundColor: 'var(--primary)',
+        color: 'white',
+        padding: '16px 24px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: 1 }}>LedgerAI</h1>
+        <p style={{ fontSize: 13, margin: 0, opacity: 0.8 }}>Real-time financials for your business</p>
       </nav>
 
-      <div style={tabContainerStyle}>
+      {/* Tab Bar */}
+      <div style={{
+        display: 'flex',
+        backgroundColor: 'var(--card)',
+        padding: '0 16px',
+        borderBottom: '1px solid var(--border)',
+        overflowX: 'auto',
+        whiteSpace: 'nowrap'
+      }}>
         {tabs.map(tab => (
-          <button key={tab} style={getTabStyle(tab)} onClick={() => setActiveTab(tab)}>
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              padding: '12px 18px',
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              fontWeight: activeTab === tab ? 700 : 500,
+              fontSize: 14,
+              color: activeTab === tab ? 'var(--accent)' : 'var(--text-muted)',
+              borderBottom: activeTab === tab ? '3px solid var(--accent)' : '3px solid transparent',
+              transition: 'all 0.2s',
+              flexShrink: 0
+            }}
+          >
             {tab}
           </button>
         ))}
       </div>
 
-      <div style={containerStyle}>
+      {/* Content */}
+      <div style={{ padding: '24px 16px' }}>
         {activeTab === 'Dashboard' && <Dashboard />}
         {activeTab === 'Transactions' && <TransactionList />}
         {activeTab === 'Ledger' && <Ledger />}

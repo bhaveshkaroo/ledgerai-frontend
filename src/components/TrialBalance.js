@@ -1,82 +1,99 @@
 import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 function TrialBalance() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_URL}/reports/trial-balance`)
-      .then(res => res.json())
+    fetch(`${API}/reports/trial-balance`)
+      .then(r => r.json())
       .then(setData)
       .finally(() => setLoading(false));
   }, []);
 
-  const tableStyle = {
-    width: '100%',
-    borderCollapse: 'collapse',
-    backgroundColor: 'white',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  const fmt = v => v > 0 ? `₹${v.toLocaleString('en-IN', {maximumFractionDigits:0})}` : '—';
+
+  const downloadPDF = () => {
+    if (!data) return;
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text('Sharma Textiles Pvt Ltd', 105, 15, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text('Trial Balance for FY 2026', 105, 23, { align: 'center' });
+
+    const rows = Object.entries(data.accounts).map(([name, vals]) => [
+      name, fmt(vals.debit), fmt(vals.credit)
+    ]);
+    rows.push([
+      {content: 'GRAND TOTAL', styles: {fontStyle:'bold', fillColor:[237,242,247]}},
+      {content: fmt(data.total_debits), styles: {fontStyle:'bold', fillColor:[237,242,247]}},
+      {content: fmt(data.total_credits), styles: {fontStyle:'bold', fillColor:[237,242,247]}}
+    ]);
+
+    doc.autoTable({
+      startY: 30,
+      head: [['Account Name', 'Debit (Dr)', 'Credit (Cr)']],
+      body: rows,
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [10, 22, 40] },
+      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
+      didDrawPage: d => {
+        doc.setFontSize(8);
+        doc.text(`Page ${d.pageNumber}`, doc.internal.pageSize.width - 25, doc.internal.pageSize.height - 10);
+      }
+    });
+    doc.save('Trial_Balance_2026.pdf');
   };
 
-  const thStyle = {
-    textAlign: 'left',
-    padding: '12px',
-    borderBottom: '2px solid #333',
-    backgroundColor: '#eee'
-  };
-
-  const tdStyle = {
-    padding: '12px',
-    borderBottom: '1px solid #ddd'
-  };
-
-  if (loading) return <p>Loading Trial Balance...</p>;
+  if (loading) return <div className="loading">Loading Trial Balance</div>;
+  if (!data) return null;
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="report-container">
+      <div className="report-header">
         <h2>Trial Balance</h2>
-        {data.is_balanced ? (
-          <span style={{ backgroundColor: '#52c41a', color: 'white', padding: '5px 12px', borderRadius: '20px', fontWeight: 'bold' }}>
-            Balanced ✓
-          </span>
-        ) : (
-          <span style={{ backgroundColor: '#f5222d', color: 'white', padding: '5px 12px', borderRadius: '20px', fontWeight: 'bold' }}>
-            Check Entries ⚠
-          </span>
-        )}
+        <div className="btn-group">
+          {data.is_balanced
+            ? <span className="badge badge-success">✓ Balanced</span>
+            : <span className="badge badge-danger">⚠ Check Entries</span>
+          }
+          <button className="btn btn-primary" onClick={downloadPDF}>⬇ Download PDF</button>
+        </div>
       </div>
 
-      <table style={tableStyle}>
+      <div className="report-company">
+        <h3>Sharma Textiles Pvt Ltd</h3>
+        <p>Trial Balance as at 31st December 2026</p>
+      </div>
+
+      <table className="acc-table">
         <thead>
           <tr>
-            <th style={thStyle}>Account Name</th>
-            <th style={{ ...thStyle, textAlign: 'right' }}>Debit (Dr)</th>
-            <th style={{ ...thStyle, textAlign: 'right' }}>Credit (Cr)</th>
+            <th>Account Name</th>
+            <th className="right" style={{width:150}}>Debit (Dr)</th>
+            <th className="right" style={{width:150}}>Credit (Cr)</th>
           </tr>
         </thead>
         <tbody>
           {Object.entries(data.accounts).map(([name, vals]) => (
             <tr key={name}>
-              <td style={tdStyle}>{name}</td>
-              <td style={{ ...tdStyle, textAlign: 'right' }}>
-                {vals.debit > 0 ? `₹${vals.debit.toLocaleString('en-IN')}` : '-'}
+              <td>{name}</td>
+              <td className="right" style={{color: vals.debit > 0 ? 'var(--red)' : 'inherit'}}>
+                {fmt(vals.debit)}
               </td>
-              <td style={{ ...tdStyle, textAlign: 'right' }}>
-                {vals.credit > 0 ? `₹${vals.credit.toLocaleString('en-IN')}` : '-'}
+              <td className="right" style={{color: vals.credit > 0 ? 'var(--green)' : 'inherit'}}>
+                {fmt(vals.credit)}
               </td>
             </tr>
           ))}
-          <tr style={{ fontWeight: 'bold', backgroundColor: '#fafafa' }}>
-            <td style={tdStyle}>GRAND TOTAL</td>
-            <td style={{ ...tdStyle, textAlign: 'right', borderTop: '2px solid #333' }}>
-              ₹{data.total_debits.toLocaleString('en-IN')}
-            </td>
-            <td style={{ ...tdStyle, textAlign: 'right', borderTop: '2px solid #333' }}>
-              ₹{data.total_credits.toLocaleString('en-IN')}
-            </td>
+          <tr className="total-row">
+            <td>GRAND TOTAL</td>
+            <td className="right">₹{data.total_debits.toLocaleString('en-IN')}</td>
+            <td className="right">₹{data.total_credits.toLocaleString('en-IN')}</td>
           </tr>
         </tbody>
       </table>
