@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -12,6 +14,33 @@ function IncomeStatement() {
       .then(setData)
       .finally(() => setLoading(false));
   }, []);
+
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Sharma Textiles Pvt Ltd", 14, 15);
+    doc.setFontSize(12);
+    doc.text("Income Statement", 14, 22);
+
+    const rows = [
+      ['Total Revenue', data.revenue.toLocaleString('en-IN')],
+      ['Cost of Goods Sold', `(${data.cogs.toLocaleString('en-IN')})`],
+      [{ content: 'GROSS PROFIT', styles: { fontStyle: 'bold' } }, { content: data.gross_profit.toLocaleString('en-IN'), styles: { fontStyle: 'bold' } }],
+      ['Operating Expenses', `(${data.operating_expenses.toLocaleString('en-IN')})`],
+      [{ content: 'OPERATING PROFIT (EBIT)', styles: { fontStyle: 'bold' } }, { content: data.ebit.toLocaleString('en-IN'), styles: { fontStyle: 'bold' } }],
+      ['Finance Costs', `(${data.finance_costs.toLocaleString('en-IN')})`],
+      [{ content: 'PROFIT BEFORE TAX', styles: { fontStyle: 'bold' } }, { content: data.pbt.toLocaleString('en-IN'), styles: { fontStyle: 'bold' } }],
+      ['Income Tax Expense', `(${data.tax.toLocaleString('en-IN')})`],
+      [{ content: 'NET PROFIT AFTER TAX', styles: { fontStyle: 'bold', fillColor: [230, 247, 255] } }, { content: data.net_profit.toLocaleString('en-IN'), styles: { fontStyle: 'bold', fillColor: [230, 247, 255] } }]
+    ];
+
+    doc.autoTable({
+      startY: 30,
+      head: [['Particulars', 'Amount (Rs.)']],
+      body: rows,
+    });
+
+    doc.save("Income_Statement.pdf");
+  };
 
   const containerStyle = {
     backgroundColor: 'white',
@@ -42,7 +71,15 @@ function IncomeStatement() {
 
   return (
     <div style={containerStyle}>
-      <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Income Statement</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+        <h2 style={{ margin: 0 }}>Income Statement</h2>
+        <button 
+          onClick={downloadPDF}
+          style={{ backgroundColor: '#0A1628', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '4px', cursor: 'pointer' }}
+        >
+          Download PDF
+        </button>
+      </div>
       
       <div style={rowStyle}>
         <span>Total Revenue</span>

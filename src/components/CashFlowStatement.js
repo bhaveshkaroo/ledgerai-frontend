@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -12,6 +14,30 @@ function CashFlowStatement() {
       .then(setData)
       .finally(() => setLoading(false));
   }, []);
+
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Sharma Textiles Pvt Ltd", 14, 15);
+    doc.setFontSize(12);
+    doc.text("Cash Flow Statement", 14, 22);
+
+    const rows = [
+      ['1. Operating Activities', ''],
+      ...Object.entries(data.operating).map(([n, v]) => [n, v.toLocaleString('en-IN')]),
+      ['2. Financing Activities', ''],
+      ...Object.entries(data.financing).map(([n, v]) => [n, v.toLocaleString('en-IN')]),
+      [{ content: 'Net Change in Cash', styles: { fontStyle: 'bold' } }, { content: data.net_change.toLocaleString('en-IN'), styles: { fontStyle: 'bold' } }],
+      [{ content: 'Closing Cash Balance', styles: { fontStyle: 'bold' } }, { content: data.closing_cash.toLocaleString('en-IN'), styles: { fontStyle: 'bold' } }]
+    ];
+
+    doc.autoTable({
+      startY: 30,
+      head: [['Description', 'Amount (Rs.)']],
+      body: rows,
+    });
+
+    doc.save("Cash_Flow_Statement.pdf");
+  };
 
   const sectionStyle = {
     backgroundColor: 'white',
@@ -32,7 +58,15 @@ function CashFlowStatement() {
 
   return (
     <div>
-      <h2>Cash Flow Statement</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2>Cash Flow Statement</h2>
+        <button 
+          onClick={downloadPDF}
+          style={{ backgroundColor: '#0A1628', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '4px', cursor: 'pointer' }}
+        >
+          Download PDF
+        </button>
+      </div>
 
       {/* Operating Section */}
       <div style={sectionStyle}>
