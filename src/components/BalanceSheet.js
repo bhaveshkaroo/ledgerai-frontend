@@ -120,14 +120,14 @@ function BalanceSheet() {
         <p>Balance Sheet as at 31st December 2026 (As per Indian Accounting Standards)</p>
       </div>
 
-      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:24}}>
+      <div style={{display:'flex', flexDirection:'column', gap:32}}>
         {/* Equity & Liabilities */}
         <div>
           <table className="acc-table">
             <thead>
               <tr>
-                <th>Equity & Liabilities</th>
-                <th className="right" style={{width:140}}>Amount (₹)</th>
+                <th>I. EQUITY AND LIABILITIES</th>
+                <th className="right" style={{width:180}}>Amount (₹)</th>
               </tr>
             </thead>
             <tbody>
@@ -135,7 +135,7 @@ function BalanceSheet() {
               {renderSection("(2) Long-Term Borrowings", 'borrowings', eq.long_term_borrowings, sectionSum(eq.long_term_borrowings))}
               {renderSection("(3) Current Liabilities", 'current_liab', eq.current_liabilities, sectionSum(eq.current_liabilities))}
               {renderSection("(4) Provisions", 'provisions', eq.provisions, sectionSum(eq.provisions))}
-              <tr className="total-row">
+              <tr className="total-row" style={{fontSize:15}}>
                 <td>TOTAL EQUITY & LIABILITIES</td>
                 <td className="right">{fmt(data.total_equity_liabilities)}</td>
               </tr>
@@ -148,15 +148,15 @@ function BalanceSheet() {
           <table className="acc-table">
             <thead>
               <tr>
-                <th>Assets</th>
-                <th className="right" style={{width:140}}>Amount (₹)</th>
+                <th>II. ASSETS</th>
+                <th className="right" style={{width:180}}>Amount (₹)</th>
               </tr>
             </thead>
             <tbody>
               {renderSection("(1) Fixed Assets", 'fixed', as.fixed_assets, as.fixed_assets['Net Fixed Assets'])}
               {renderSection("(2) Non-Current Assets", 'non_current', as.non_current_assets, sectionSum(as.non_current_assets))}
               {renderSection("(3) Current Assets", 'current_assets', as.current_assets, sectionSum(as.current_assets))}
-              <tr className="total-row">
+              <tr className="total-row" style={{fontSize:15}}>
                 <td>TOTAL ASSETS</td>
                 <td className="right">{fmt(data.total_assets)}</td>
               </tr>
@@ -164,6 +164,7 @@ function BalanceSheet() {
           </table>
         </div>
       </div>
+
     </div>
   );
 }
