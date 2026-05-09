@@ -5,6 +5,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 function TransactionList() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [classifyingId, setClassifyingId] = useState(null);
 
   useEffect(() => {
@@ -18,6 +19,7 @@ function TransactionList() {
       setTransactions(data);
     } catch (error) {
       console.error("Error fetching transactions:", error);
+      setError(`Failed to fetch transactions from ${API_URL}`);
     } finally {
       setLoading(false);
     }
@@ -51,7 +53,16 @@ function TransactionList() {
   };
 
   if (loading) {
-    return <div>Loading transactions...</div>;
+    return <div style={{ padding: '20px', textAlign: 'center' }}>Loading transactions...</div>;
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: '20px', backgroundColor: '#fff1f0', border: '1px solid #ffa39e', borderRadius: '8px', color: '#cf1322' }}>
+        <h3>Connection Error</h3>
+        <p>{error}</p>
+      </div>
+    );
   }
 
   const tableStyle = {

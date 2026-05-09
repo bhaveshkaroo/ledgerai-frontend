@@ -6,6 +6,7 @@ function Dashboard() {
   const [plData, setPlData] = useState(null);
   const [cashflowData, setCashflowData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -22,6 +23,7 @@ function Dashboard() {
         setCashflowData(cf);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        setError(`Failed to connect to backend at ${API_URL}. Make sure your backend is running.`);
       } finally {
         setLoading(false);
       }
@@ -31,7 +33,17 @@ function Dashboard() {
   }, []);
 
   if (loading) {
-    return <div>Loading dashboard data...</div>;
+    return <div style={{ padding: '20px', textAlign: 'center' }}>Loading dashboard data...</div>;
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: '20px', backgroundColor: '#fff1f0', border: '1px solid #ffa39e', borderRadius: '8px', color: '#cf1322' }}>
+        <h3>Connection Error</h3>
+        <p>{error}</p>
+        <p>If you are viewing this on GitHub Pages, you must set the <b>REACT_APP_API_URL</b> to your Railway URL before deploying.</p>
+      </div>
+    );
   }
 
   const formatRupees = (amount) => {
