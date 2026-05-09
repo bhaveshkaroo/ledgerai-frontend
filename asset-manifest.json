@@ -1,0 +1,10 @@
+{
+  "files": {
+    "main.js": "/ledgerai-frontend/static/js/main.5dca14f6.js",
+    "index.html": "/ledgerai-frontend/index.html",
+    "main.5dca14f6.js.map": "/ledgerai-frontend/static/js/main.5dca14f6.js.map"
+  },
+  "entrypoints": [
+    "static/js/main.5dca14f6.js"
+  ]
+}
