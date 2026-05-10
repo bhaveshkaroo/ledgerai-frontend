@@ -8,8 +8,8 @@ import TrialBalance from './components/TrialBalance';
 import GSTCalculator from './components/GSTCalculator';
 import BalanceSheet from './components/BalanceSheet';
 import CashFlowStatement from './components/CashFlowStatement';
-import IncomeStatement from './components/IncomeStatement';
-import { LayoutDashboard, ReceiptText, FileText, Settings, Sparkles } from 'lucide-react';
+import Statements from './components/Statements';
+import { LayoutDashboard, ReceiptText, FileText, Settings, Sparkles, BookOpen } from 'lucide-react';
 
 function App() {
   const [activeTab, setActiveTab] = useState('Dashboard');
@@ -23,6 +23,7 @@ function App() {
     { name: 'Dashboard', icon: <LayoutDashboard size={18} /> },
     { name: 'Transactions', icon: <ReceiptText size={18} /> },
     { name: 'Statements', icon: <FileText size={18} /> },
+    { name: 'Ledger Book', icon: <BookOpen size={18} /> },
     { name: 'AI Summary', icon: <Sparkles size={18} /> },
     { name: 'Settings', icon: <Settings size={18} /> }
   ];
@@ -50,14 +51,9 @@ function App() {
       <div className="main-content">
         {activeTab === 'Dashboard' && <Dashboard />}
         {activeTab === 'Transactions' && <TransactionList />}
-        {activeTab === 'Statements' && (
-          <div style={{display:'flex', gap:20, flexDirection:'column'}}>
-            <IncomeStatement />
-            <BalanceSheet />
-            <CashFlowStatement />
-          </div>
-        )}
+        {activeTab === 'Statements' && <Statements />}
         {activeTab === 'AI Summary' && <ReportCard />}
+        {activeTab === 'Ledger Book' && <Ledger />}
         {/* Placeholder for settings or other old components */}
         {(activeTab === 'Ledger' || activeTab === 'Trial Balance' || activeTab === 'GST Calculator') && (
            <div style={{color: 'var(--text-muted)'}}>Please use Statements tab or specific routes.</div>

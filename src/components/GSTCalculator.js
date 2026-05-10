@@ -80,14 +80,14 @@ function GSTCalculator() {
 
         {calc && (
           <div style={{ backgroundColor: 'var(--alt-bg)', padding: '15px', borderRadius: '4px' }}>
-            <div style={resultItemStyle}><span>CGST (Central)</span> <strong>₹{calc.cgst.toLocaleString('en-IN')}</strong></div>
-            <div style={resultItemStyle}><span>SGST (State)</span> <strong>₹{calc.sgst.toLocaleString('en-IN')}</strong></div>
-            <div style={resultItemStyle}><span>IGST (Integrated)</span> <strong>₹{calc.igst.toLocaleString('en-IN')}</strong></div>
+            <div style={resultItemStyle}><span>CGST (Central)</span> <strong>${calc.cgst.toLocaleString('en-IN')}</strong></div>
+            <div style={resultItemStyle}><span>SGST (State)</span> <strong>${calc.sgst.toLocaleString('en-IN')}</strong></div>
+            <div style={resultItemStyle}><span>IGST (Integrated)</span> <strong>${calc.igst.toLocaleString('en-IN')}</strong></div>
             <div style={{ ...resultItemStyle, borderBottom: '2px solid #ddd' }}>
-              <span>Total GST</span> <strong>₹{calc.total_gst.toLocaleString('en-IN')}</strong>
+              <span>Total GST</span> <strong>${calc.total_gst.toLocaleString('en-IN')}</strong>
             </div>
             <div style={{ ...resultItemStyle, borderBottom: 'none', fontSize: '18px', fontWeight: 'bold', color: '#1D9E75' }}>
-              <span>Invoice Total</span> <span>₹{calc.total_amount.toLocaleString('en-IN')}</span>
+              <span>Invoice Total</span> <span>${calc.total_amount.toLocaleString('en-IN')}</span>
             </div>
           </div>
         )}
@@ -99,16 +99,16 @@ function GSTCalculator() {
           <>
             <div style={{ marginBottom: '20px' }}>
               <p style={{ margin: '0 0 5px 0', opacity: 0.8 }}>Total GST Collected</p>
-              <h2 style={{ margin: 0 }}>₹{summary.gst_collected.toLocaleString('en-IN')}</h2>
+              <h2 style={{ margin: 0 }}>${summary.gst_collected.toLocaleString('en-IN')}</h2>
             </div>
             <div style={{ marginBottom: '20px' }}>
               <p style={{ margin: '0 0 5px 0', opacity: 0.8 }}>Total GST Paid (ITC)</p>
-              <h2 style={{ margin: 0 }}>₹{summary.gst_paid.toLocaleString('en-IN')}</h2>
+              <h2 style={{ margin: 0 }}>${summary.gst_paid.toLocaleString('en-IN')}</h2>
             </div>
             <div style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '4px' }}>
               <p style={{ margin: '0 0 5px 0' }}>Net GST {summary.status}</p>
               <h2 style={{ margin: 0, color: summary.net_liability > 0 ? 'var(--red)' : 'var(--green)' }}>
-                ₹{Math.abs(summary.net_liability).toLocaleString('en-IN')}
+                ${Math.abs(summary.net_liability).toLocaleString('en-IN')}
               </h2>
             </div>
           </>

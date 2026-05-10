@@ -1,269 +1,307 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import React, { useState, useMemo } from 'react';
+import { Search, Printer, Download, ChevronDown } from 'lucide-react';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-const PAGE_SIZE = 50;
+const ACCOUNTS = [
+  "Sales Revenue", "Capital Account", "Bank Loan Payable", "Raw Material Purchases", 
+  "Salary Expense", "Rent Expense", "GST Output Payable", "GST Input ITC", 
+  "Utility Expense", "Fixed Assets Machinery", "Loan Repayments", "Finance Cost", 
+  "Advance Tax", "Bank Charges", "Depreciation Expense", "Freight Expense", 
+  "Repair and Maintenance", "Professional Fees", "Insurance Expense", 
+  "Office Expense", "Cash and Bank", "Accounts Receivable", 
+  "Accounts Payable", "Inventory", "Advance to Suppliers"
+];
+
+const mockTransactions = [
+  { id: 'JV001', date: '2025-04-01', particulars: 'Opening Balance', debit: 0, credit: 0, balance: 500000, type: 'Cr' },
+  { id: 'JV002', date: '2025-04-05', particulars: 'Cash Sales', debit: 0, credit: 150000, balance: 650000, type: 'Cr' },
+  { id: 'JV003', date: '2025-04-10', particulars: 'Purchase of Machinery', debit: 200000, credit: 0, balance: 450000, type: 'Cr' },
+  { id: 'JV004', date: '2025-04-15', particulars: 'Payment of Rent', debit: 50000, credit: 0, balance: 400000, type: 'Cr' },
+  { id: 'JV005', date: '2025-04-20', particulars: 'Salary Distribution', debit: 120000, credit: 0, balance: 280000, type: 'Cr' },
+];
 
 function Ledger() {
-  const [categories, setCategories] = useState(null);
-  const [selectedAccount, setSelectedAccount] = useState('');
-  const [ledgerData, setLedgerData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [activeBook, setActiveBook] = useState('main');
+  const [selectedAccount, setSelectedAccount] = useState(ACCOUNTS[0]);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    fetch(`${API}/ledger/categories`).then(r => r.json()).then(data => {
-      setCategories(data);
-      if (data.main_ledger.length > 0) setSelectedAccount(data.main_ledger[0]);
-    });
-  }, []);
+  const fmt = (v, showSymbol = true) => {
+    if (v === 0) return '—';
+    const str = v.toLocaleString('en-IN');
+    return showSymbol ? `₹${str}` : str;
+  };
 
-  useEffect(() => {
-    if (!selectedAccount) return;
-    setLoading(true);
-    setPage(1);
-    fetch(`${API}/ledger/account?name=${encodeURIComponent(selectedAccount)}`)
-      .then(r => r.json())
-      .then(setLedgerData)
-      .finally(() => setLoading(false));
-  }, [selectedAccount]);
-
-  const filteredMain = useMemo(() => {
-    if (!categories) return [];
-    return categories.main_ledger.filter(c =>
-      c.toLowerCase().includes(search.toLowerCase())
+  const filteredTransactions = useMemo(() => {
+    return mockTransactions.filter(t => 
+      t.particulars.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.date.includes(searchTerm) ||
+      t.id.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [categories, search]);
+  }, [searchTerm]);
 
-  const subsidiaryBooks = categories ? Object.entries(categories.subsidiary) : [];
-
-  const totalPages = ledgerData ? Math.ceil(ledgerData.entries.length / PAGE_SIZE) : 1;
-  const pagedEntries = ledgerData
-    ? ledgerData.entries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-    : [];
-
-  const fmt = v => `₹${v.toLocaleString('en-IN', {maximumFractionDigits:0})}`;
-
-  const downloadPDF = () => {
-    if (!ledgerData) return;
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text('Sharma Textiles Pvt Ltd', 14, 15);
-    doc.setFontSize(11);
-    doc.text(`General Ledger: ${selectedAccount}`, 14, 23);
-    doc.text(`Period: January 2026 — December 2026`, 14, 29);
-    doc.text(`Opening Balance: ${fmt(0)}  |  Closing Balance: ${fmt(ledgerData.closing_balance)}`, 14, 35);
-
-    doc.autoTable({
-      startY: 42,
-      head: [['Date', 'Particulars', 'Voucher', 'Debit (Dr)', 'Credit (Cr)', 'Balance']],
-      body: ledgerData.entries.map(e => [
-        e.date,
-        e.narration.substring(0, 50),
-        e.debit > 0 ? 'Payment' : 'Receipt',
-        e.debit > 0 ? fmt(e.debit) : '-',
-        e.credit > 0 ? fmt(e.credit) : '-',
-        fmt(e.balance)
-      ]),
-      foot: [['', 'TOTAL', '', fmt(ledgerData.total_debits), fmt(ledgerData.total_credits), fmt(ledgerData.closing_balance)]],
-      styles: { fontSize: 8, cellPadding: 3 },
-      headStyles: { fillColor: [10, 22, 40] },
-      footStyles: { fillColor: [237, 242, 247], textColor: [10, 22, 40], fontStyle: 'bold' },
-      didDrawPage: (data) => {
-        doc.setFontSize(8);
-        doc.text(`Page ${data.pageNumber}`, doc.internal.pageSize.width - 25, doc.internal.pageSize.height - 10);
-      }
-    });
-    doc.save(`Ledger_${selectedAccount.replace(/\s/g, '_')}.pdf`);
-  };
-
-  const downloadCSV = () => {
-    if (!ledgerData) return;
-    const header = 'Date,Particulars,Debit,Credit,Balance\n';
-    const rows = ledgerData.entries.map(e =>
-      `${e.date},"${e.narration}",${e.debit},${e.credit},${e.balance}`
-    ).join('\n');
-    const blob = new Blob([header + rows], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Ledger_${selectedAccount.replace(/\s/g, '_')}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleSubBookClick = (bookName) => {
-    if (!categories) return;
-    const cats = categories.subsidiary[bookName];
-    if (cats && cats.length > 0) {
-      setSelectedAccount(cats[0]);
-    }
-  };
+  const totalDebit = filteredTransactions.reduce((sum, t) => sum + t.debit, 0);
+  const totalCredit = filteredTransactions.reduce((sum, t) => sum + t.credit, 0);
+  const closingBalance = filteredTransactions.length > 0 ? filteredTransactions[filteredTransactions.length - 1].balance : 0;
+  const balanceType = filteredTransactions.length > 0 ? filteredTransactions[filteredTransactions.length - 1].type : 'Cr';
 
   return (
-    <div className="report-container">
-      <div className="report-header">
-        <h2>General Ledger</h2>
-        <div className="btn-group">
-          <button className="btn btn-primary" onClick={downloadPDF}>⬇ PDF</button>
-          <button className="btn btn-outline" onClick={downloadCSV}>⬇ Excel/CSV</button>
-        </div>
-      </div>
-
-      <div className="ledger-sidebar">
-        {/* Left Menu */}
-        <div className="ledger-menu">
-          {/* Book Toggle */}
-          <div style={{display:'flex', marginBottom:12, borderRadius:6, overflow:'hidden', border:'1px solid var(--border)'}}>
-            <button
-              className={`btn ${activeBook === 'main' ? 'btn-primary' : 'btn-outline'}`}
-              style={{flex:1, borderRadius:0}}
-              onClick={() => setActiveBook('main')}
-            >Main Ledger</button>
-            <button
-              className={`btn ${activeBook === 'subsidiary' ? 'btn-primary' : 'btn-outline'}`}
-              style={{flex:1, borderRadius:0}}
-              onClick={() => setActiveBook('subsidiary')}
-            >Subsidiary</button>
-          </div>
-
-          <input
-            className="ledger-search"
-            placeholder="Search accounts..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-
-          <div className="ledger-list">
-            {activeBook === 'main' ? (
-              filteredMain.map(cat => (
-                <div
-                  key={cat}
-                  className={`ledger-item ${selectedAccount === cat ? 'active' : ''}`}
-                  onClick={() => setSelectedAccount(cat)}
-                >
-                  {cat}
-                </div>
-              ))
-            ) : (
-              subsidiaryBooks.map(([bookName, cats]) => (
-                <React.Fragment key={bookName}>
-                  <div className="ledger-group-title">{bookName}</div>
-                  {cats.map(cat => (
-                    <div
-                      key={cat}
-                      className={`ledger-item ${selectedAccount === cat ? 'active' : ''}`}
-                      onClick={() => setSelectedAccount(cat)}
-                    >
-                      {cat}
-                    </div>
-                  ))}
-                </React.Fragment>
-              ))
-            )}
+    <div className="ledger-book-container">
+      <div className="ledger-header">
+        <div className="account-selector-wrapper">
+          <label>Select Ledger Account</label>
+          <div className="custom-select">
+            <select value={selectedAccount} onChange={(e) => setSelectedAccount(e.target.value)}>
+              {ACCOUNTS.map(acc => <option key={acc} value={acc}>{acc}</option>)}
+            </select>
+            <ChevronDown size={16} className="select-icon" />
           </div>
         </div>
 
-        {/* Right Content */}
-        <div className="ledger-content">
-          {loading ? (
-            <div className="loading">Loading ledger</div>
-          ) : ledgerData ? (
-            <>
-              <div className="report-company">
-                <h3>Sharma Textiles Pvt Ltd</h3>
-                <p>Ledger Account: {selectedAccount} — FY 2026</p>
-              </div>
-
-              {/* Summary Cards */}
-              <div className="card-grid card-grid-4" style={{marginTop:16}}>
-                <div className="card stat-card">
-                  <div className="label">Opening Bal</div>
-                  <div className="value" style={{fontSize:18}}>{fmt(0)}</div>
-                </div>
-                <div className="card stat-card">
-                  <div className="label">Total Debits</div>
-                  <div className="value negative" style={{fontSize:18}}>{fmt(ledgerData.total_debits)}</div>
-                </div>
-                <div className="card stat-card">
-                  <div className="label">Total Credits</div>
-                  <div className="value positive" style={{fontSize:18}}>{fmt(ledgerData.total_credits)}</div>
-                </div>
-                <div className="card stat-card">
-                  <div className="label">Closing Bal</div>
-                  <div className={`value ${ledgerData.closing_balance >= 0 ? 'positive' : 'negative'}`} style={{fontSize:18}}>
-                    {fmt(ledgerData.closing_balance)}
-                  </div>
-                </div>
-              </div>
-
-              {/* Ledger Table */}
-              <table className="acc-table" style={{marginTop:16}}>
-                <thead>
-                  <tr>
-                    <th style={{width:100}}>Date</th>
-                    <th>Particulars</th>
-                    <th style={{width:80}}>Voucher</th>
-                    <th className="right" style={{width:120}}>Debit (Dr)</th>
-                    <th className="right" style={{width:120}}>Credit (Cr)</th>
-                    <th className="right" style={{width:130}}>Balance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* Opening Balance Row */}
-                  <tr style={{background:'var(--hover-bg)'}}>
-                    <td></td>
-                    <td style={{fontStyle:'italic', color:'var(--text-muted)'}}>Opening Balance</td>
-                    <td></td>
-                    <td className="right">-</td>
-                    <td className="right">-</td>
-                    <td className="right" style={{fontWeight:600}}>{fmt(0)}</td>
-                  </tr>
-                  {pagedEntries.map((e, i) => (
-                    <tr key={i}>
-                      <td>{e.date}</td>
-                      <td>{e.narration}</td>
-                      <td style={{color:'var(--text-muted)', fontSize:12}}>
-                        {e.debit > 0 ? 'Payment' : 'Receipt'}
-                      </td>
-                      <td className="right" style={{color: e.debit > 0 ? 'var(--red)' : 'inherit'}}>
-                        {e.debit > 0 ? fmt(e.debit) : '-'}
-                      </td>
-                      <td className="right" style={{color: e.credit > 0 ? 'var(--green)' : 'inherit'}}>
-                        {e.credit > 0 ? fmt(e.credit) : '-'}
-                      </td>
-                      <td className="right" style={{fontWeight:600}}>{fmt(e.balance)}</td>
-                    </tr>
-                  ))}
-                  {/* Closing Balance Row */}
-                  <tr className="total-row">
-                    <td></td>
-                    <td>CLOSING BALANCE</td>
-                    <td></td>
-                    <td className="right">{fmt(ledgerData.total_debits)}</td>
-                    <td className="right">{fmt(ledgerData.total_credits)}</td>
-                    <td className="right">{fmt(ledgerData.closing_balance)}</td>
-                  </tr>
-                </tbody>
-              </table>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="pagination">
-                  <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page === 1}>← Prev</button>
-                  <span>Page {page} of {totalPages} ({ledgerData.entries.length} entries)</span>
-                  <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page === totalPages}>Next →</button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="loading">Select an account from the left panel</div>
-          )}
+        <div className="ledger-actions">
+          <div className="search-wrapper">
+            <Search size={16} className="search-icon" />
+            <input 
+              type="text" 
+              placeholder="Search by date, particulars or JV..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <button className="btn-icon" title="Print Ledger"><Printer size={18} /></button>
+          <button className="btn-icon" title="Export CSV"><Download size={18} /></button>
         </div>
       </div>
+
+      <div className="card glass-card ledger-card">
+        <div className="ledger-top-info">
+          <div>
+            <h2 className="account-name">{selectedAccount}</h2>
+            <p className="company-info">Sharma Textiles Pvt Ltd | FY 2025-26</p>
+          </div>
+          <div className="balance-summary">
+            <div className="bal-item">
+              <span>Opening Balance</span>
+              <strong>{fmt(500000)} Cr</strong>
+            </div>
+            <div className="bal-item">
+              <span>Closing Balance</span>
+              <strong className={balanceType === 'Cr' ? 'text-green' : 'text-red'}>
+                {fmt(closingBalance)} {balanceType}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="table-wrapper">
+          <table className="ledger-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Particulars</th>
+                <th>Journal Ref</th>
+                <th className="right">Debit (Dr)</th>
+                <th className="right">Credit (Cr)</th>
+                <th className="right">Running Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTransactions.map((t, idx) => (
+                <tr key={idx}>
+                  <td className="date-cell">{t.date}</td>
+                  <td className="particulars-cell">{t.particulars}</td>
+                  <td className="ref-cell">{t.id}</td>
+                  <td className="right text-red">{t.debit > 0 ? fmt(t.debit) : '—'}</td>
+                  <td className="right text-green">{t.credit > 0 ? fmt(t.credit) : '—'}</td>
+                  <td className="right balance-cell">
+                    {fmt(t.balance)} <small>{t.type}</small>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={3}>Total Movements</td>
+                <td className="right text-red">{fmt(totalDebit)}</td>
+                <td className="right text-green">{fmt(totalCredit)}</td>
+                <td className="right grand-total">{fmt(closingBalance)} {balanceType}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <style jsx>{`
+        .ledger-book-container {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+        .ledger-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          background: var(--card-bg);
+          padding: 20px;
+          border-radius: 16px;
+          border: 1px solid var(--border);
+        }
+        .account-selector-wrapper {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .account-selector-wrapper label {
+          font-size: 12px;
+          color: var(--text-secondary);
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .custom-select {
+          position: relative;
+          min-width: 300px;
+        }
+        .custom-select select {
+          width: 100%;
+          padding: 10px 16px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          color: white;
+          appearance: none;
+          font-size: 14px;
+          cursor: pointer;
+        }
+        .select-icon {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          pointer-events: none;
+          color: var(--text-secondary);
+        }
+        .ledger-actions {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+        }
+        .search-wrapper {
+          position: relative;
+        }
+        .search-icon {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: var(--text-secondary);
+        }
+        .search-wrapper input {
+          padding: 10px 16px 10px 40px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          color: white;
+          width: 300px;
+          font-size: 14px;
+        }
+        .btn-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+          border: 1px solid var(--border);
+          background: rgba(255, 255, 255, 0.05);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .btn-icon:hover {
+          background: var(--accent-blue);
+          border-color: var(--accent-blue);
+        }
+        .ledger-card {
+          padding: 0;
+          overflow: hidden;
+        }
+        .ledger-top-info {
+          padding: 30px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid var(--border);
+          background: rgba(255, 255, 255, 0.02);
+        }
+        .account-name {
+          font-size: 24px;
+          font-weight: 700;
+          color: var(--accent-cyan);
+          margin-bottom: 4px;
+        }
+        .company-info {
+          font-size: 13px;
+          color: var(--text-secondary);
+        }
+        .balance-summary {
+          display: flex;
+          gap: 40px;
+        }
+        .bal-item {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 4px;
+        }
+        .bal-item span {
+          font-size: 11px;
+          text-transform: uppercase;
+          color: var(--text-secondary);
+          letter-spacing: 1px;
+        }
+        .bal-item strong {
+          font-size: 18px;
+        }
+        .text-red { color: #ff4d4f; }
+        .text-green { color: #52c41a; }
+        .table-wrapper {
+          padding: 20px;
+        }
+        .ledger-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .ledger-table th {
+          text-align: left;
+          padding: 12px 16px;
+          color: var(--text-secondary);
+          font-size: 12px;
+          text-transform: uppercase;
+          border-bottom: 1px solid var(--border);
+        }
+        .ledger-table td {
+          padding: 16px;
+          font-size: 14px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+        .right { text-align: right; }
+        .balance-cell {
+          font-weight: 600;
+          color: white;
+        }
+        .balance-cell small {
+          color: var(--text-secondary);
+          font-weight: 400;
+          margin-left: 4px;
+        }
+        tfoot td {
+          padding: 20px 16px;
+          font-weight: 700;
+          border-top: 2px solid var(--border);
+        }
+        .grand-total {
+          font-size: 16px;
+          color: var(--accent-cyan);
+        }
+      `}</style>
     </div>
   );
 }

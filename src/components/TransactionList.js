@@ -126,7 +126,7 @@ function TransactionList() {
                 color: txn.type === 'credit' ? 'green' : 'red',
                 fontWeight: 'bold'
               }}>
-                ₹{txn.amount.toLocaleString('en-IN')}
+                ${txn.amount.toLocaleString('en-IN')}
               </td>
               <td style={tdStyle}>{txn.type.charAt(0).toUpperCase() + txn.type.slice(1)}</td>
               <td style={tdStyle}>{txn.category || '-'}</td>

@@ -92,8 +92,8 @@ function TrialBalance() {
           ))}
           <tr className="total-row">
             <td>GRAND TOTAL</td>
-            <td className="right">₹{data.total_debits.toLocaleString('en-IN')}</td>
-            <td className="right">₹{data.total_credits.toLocaleString('en-IN')}</td>
+            <td className="right">${data.total_debits.toLocaleString('en-IN')}</td>
+            <td className="right">${data.total_credits.toLocaleString('en-IN')}</td>
           </tr>
         </tbody>
       </table>
