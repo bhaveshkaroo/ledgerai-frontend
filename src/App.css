@@ -3,24 +3,53 @@
    Based on Tally/Zoho Books aesthetic
    ────────────────────────────────────────────────── */
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 :root {
-  --primary: #0A1628;
-  --primary-light: #1a2d4a;
-  --accent: #1D9E75;
-  --accent-hover: #17845f;
-  --bg: #f4f6f9;
+  --hover-bg: #f7fafc;
+  --alt-bg: #f8f9fa;
+  --badge-danger-bg: #fed7d7;
+  --badge-danger-text: #742a2a;
+  --badge-success-bg: #c6f6d5;
+  --badge-success-text: #22543d;
+  --primary: #020a1c;
+  --primary-light: #101c38;
+  --accent: #d4af37;
+  --accent-hover: #b8972e;
+  --bg: #f8f9fa;
   --card: #ffffff;
   --border: #e2e8f0;
-  --text: #1a202c;
-  --text-muted: #718096;
-  --red: #e53e3e;
-  --green: #38a169;
-  --blue: #3182ce;
-  --orange: #dd6b20;
-  --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --red: #ef4444;
+  --green: #10b981;
+  --blue: #3b82f6;
+  --orange: #f59e0b;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --topbar-bg: #ffffff;
 }
 
-* { box-sizing: border-box; }
+body.dark-mode {
+  --hover-bg: #1C2333;
+  --alt-bg: #222b40;
+  --badge-danger-bg: rgba(239, 68, 68, 0.2);
+  --badge-danger-text: #fca5a5;
+  --badge-success-bg: rgba(16, 185, 129, 0.2);
+  --badge-success-text: #6ee7b7;
+  --bg: #0D1117;
+  --primary: #080E1A;
+  --primary-light: #1C2333;
+  --card: #161B27;
+  --border: #2D3748;
+  --text: #E2E8F0;
+  --text-muted: #8899AA;
+  --topbar-bg: #161B27;
+}
+
+* { 
+  box-sizing: border-box; 
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
 
 body {
   margin: 0;
@@ -50,13 +79,15 @@ body {
   margin: 0;
   font-size: 22px;
   color: var(--primary);
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
 .report-company {
   text-align: center;
   margin-bottom: 8px;
   padding-bottom: 12px;
-  border-bottom: 2px solid var(--primary);
+  border-bottom: 2px solid var(--accent);
 }
 
 .report-company h3 {
@@ -85,14 +116,15 @@ body {
 
 .acc-table thead th {
   background: var(--primary);
-  color: white;
-  padding: 10px 14px;
+  color: var(--accent);
+  padding: 12px 14px;
   text-align: left;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
   white-space: nowrap;
+  border-bottom: 2px solid var(--accent);
 }
 
 .acc-table thead th.right,
@@ -106,19 +138,20 @@ body {
 }
 
 .acc-table tbody tr:hover {
-  background: #f7fafc;
+  background: var(--hover-bg);
 }
 
 .acc-table .total-row td {
   font-weight: 700;
-  background: #edf2f7;
-  border-top: 2px solid var(--primary);
-  border-bottom: 2px solid var(--primary);
+  background: var(--alt-bg);
+  border-top: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  color: var(--primary);
 }
 
 .acc-table .section-header td {
   font-weight: 700;
-  background: #f7fafc;
+  background: var(--hover-bg);
   color: var(--primary);
   padding: 12px 14px;
   font-size: 14px;
@@ -129,7 +162,7 @@ body {
   font-weight: 600;
   color: var(--primary-light);
   padding-left: 24px;
-  background: #fdfdfd;
+  background: var(--alt-bg);
 }
 
 .acc-table .indent td:first-child {
@@ -143,16 +176,16 @@ body {
 .acc-table .subtotal-row td {
   font-weight: 600;
   border-top: 1px solid #cbd5e0;
-  background: #f7fafc;
+  background: var(--hover-bg);
 }
 
 /* ─── Cards ────────────────────────────────────── */
 .card {
   background: var(--card);
-  border-radius: 8px;
+  border-radius: 4px;
   border: 1px solid var(--border);
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 .card-grid {
@@ -185,8 +218,10 @@ body {
 }
 
 .stat-card .value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--primary);
 }
 
 .stat-card .value.positive { color: var(--green); }
@@ -208,11 +243,12 @@ body {
 
 .btn-primary {
   background: var(--primary);
-  color: white;
+  color: var(--accent);
 }
 
 .btn-primary:hover {
   background: var(--primary-light);
+  color: var(--accent-hover);
 }
 
 .btn-accent {
@@ -231,13 +267,39 @@ body {
 }
 
 .btn-outline:hover {
-  background: #f7fafc;
+  background: var(--hover-bg);
 }
 
 .btn-group {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.topbar-btn {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.topbar-btn:hover {
+  background: var(--bg);
+}
+
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 16px;
 }
 
 /* ─── Dashboard Chart ──────────────────────────── */
@@ -397,12 +459,12 @@ body {
 }
 
 .ledger-item:hover {
-  background: #edf2f7;
+  background: var(--hover-bg);
 }
 
 .ledger-item.active {
   background: var(--primary);
-  color: white;
+  color: var(--accent);
 }
 
 .ledger-group-title {
@@ -412,7 +474,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-muted);
-  background: #f7fafc;
+  background: var(--hover-bg);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
@@ -429,13 +491,13 @@ body {
 }
 
 .badge-success {
-  background: #c6f6d5;
-  color: #22543d;
+  background: var(--badge-success-bg);
+  color: var(--badge-success-text);
 }
 
 .badge-danger {
-  background: #fed7d7;
-  color: #742a2a;
+  background: var(--badge-danger-bg);
+  color: var(--badge-danger-text);
 }
 
 /* ─── Loading ──────────────────────────────────── */
@@ -505,7 +567,7 @@ body {
 }
 
 .pagination button:hover:not(:disabled) {
-  background: #edf2f7;
+  background: var(--hover-bg);
 }
 
 @media (max-width: 900px) {

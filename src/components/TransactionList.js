@@ -58,7 +58,7 @@ function TransactionList() {
 
   if (error) {
     return (
-      <div style={{ padding: '20px', backgroundColor: '#fff1f0', border: '1px solid #ffa39e', borderRadius: '8px', color: '#cf1322' }}>
+      <div style={{ padding: '20px', backgroundColor: 'var(--badge-danger-bg)', border: '1px solid #ffa39e', borderRadius: '8px', color: 'var(--badge-danger-text)' }}>
         <h3>Connection Error</h3>
         <p>{error}</p>
       </div>
@@ -69,7 +69,7 @@ function TransactionList() {
     width: '100%',
     borderCollapse: 'collapse',
     marginTop: '20px',
-    backgroundColor: 'white',
+    backgroundColor: 'var(--card)',
     boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
   };
 
@@ -77,7 +77,7 @@ function TransactionList() {
     textAlign: 'left',
     padding: '12px 15px',
     borderBottom: '2px solid #ddd',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'var(--hover-bg)',
     color: '#333'
   };
 
@@ -88,7 +88,7 @@ function TransactionList() {
 
   const buttonStyle = {
     backgroundColor: '#1D9E75',
-    color: 'white',
+    color: 'var(--text)',
     border: 'none',
     padding: '8px 12px',
     borderRadius: '4px',
@@ -98,7 +98,7 @@ function TransactionList() {
 
   const disabledButtonStyle = {
     ...buttonStyle,
-    backgroundColor: '#ccc',
+    backgroundColor: 'var(--border)',
     cursor: 'not-allowed'
   };
 

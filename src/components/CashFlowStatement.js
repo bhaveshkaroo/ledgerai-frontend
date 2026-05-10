@@ -223,7 +223,7 @@ function CashFlowStatement() {
             <td>Opening Cash & Cash Equivalents</td>
             <td className="right">{fmt(data.opening_cash)}</td>
           </tr>
-          <tr className="total-row" style={{background:'#c6f6d5'}}>
+          <tr className="total-row" style={{background:'var(--badge-success-bg)'}}>
             <td style={{fontSize:16}}>Closing Cash & Cash Equivalents</td>
             <td className="right" style={{fontSize:16}}>{fmt(data.closing_cash)}</td>
           </tr>

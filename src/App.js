@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import Dashboard from './components/Dashboard';
 import TransactionList from './components/TransactionList';
@@ -12,6 +12,19 @@ import IncomeStatement from './components/IncomeStatement';
 
 function App() {
   const [activeTab, setActiveTab] = useState('Dashboard');
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem('theme') === 'dark';
+  });
+
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add('dark-mode');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.body.classList.remove('dark-mode');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [darkMode]);
 
   const tabs = [
     'Dashboard', 'Transactions', 'Ledger', 'Trial Balance',
@@ -22,15 +35,26 @@ function App() {
     <div style={{ margin: 0, padding: 0, minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Navbar */}
       <nav style={{
-        backgroundColor: 'var(--primary)',
-        color: 'white',
+        backgroundColor: 'var(--topbar-bg)',
+        color: 'var(--text)',
         padding: '16px 24px',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        borderBottom: '1px solid var(--border)'
       }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: 1 }}>LedgerAI</h1>
-        <p style={{ fontSize: 13, margin: 0, opacity: 0.8 }}>Real-time financials for your business</p>
+        <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: 1, color: 'var(--accent)' }}>LedgerAI</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button className="topbar-btn">Export</button>
+          <button 
+            className="topbar-btn icon-btn" 
+            onClick={() => setDarkMode(!darkMode)}
+            title="Toggle Dark Mode"
+          >
+            {darkMode ? '☀️' : '🌙'}
+          </button>
+          <button className="topbar-btn">Settings</button>
+        </div>
       </nav>
 
       {/* Tab Bar */}

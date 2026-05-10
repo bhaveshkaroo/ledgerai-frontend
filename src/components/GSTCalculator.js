@@ -46,7 +46,7 @@ function GSTCalculator() {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-      <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+      <div style={{ backgroundColor: 'var(--card)', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
         <h3 style={{ marginTop: 0 }}>GST Calculator</h3>
         
         <div style={{ marginBottom: '15px' }}>
@@ -79,7 +79,7 @@ function GSTCalculator() {
         </div>
 
         {calc && (
-          <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '4px' }}>
+          <div style={{ backgroundColor: 'var(--alt-bg)', padding: '15px', borderRadius: '4px' }}>
             <div style={resultItemStyle}><span>CGST (Central)</span> <strong>₹{calc.cgst.toLocaleString('en-IN')}</strong></div>
             <div style={resultItemStyle}><span>SGST (State)</span> <strong>₹{calc.sgst.toLocaleString('en-IN')}</strong></div>
             <div style={resultItemStyle}><span>IGST (Integrated)</span> <strong>₹{calc.igst.toLocaleString('en-IN')}</strong></div>
@@ -93,7 +93,7 @@ function GSTCalculator() {
         )}
       </div>
 
-      <div style={{ backgroundColor: '#0A1628', color: 'white', padding: '20px', borderRadius: '8px' }}>
+      <div style={{ backgroundColor: 'var(--primary)', color: 'var(--text)', padding: '20px', borderRadius: '8px' }}>
         <h3 style={{ marginTop: 0 }}>Monthly GST Summary</h3>
         {summary && (
           <>
@@ -107,7 +107,7 @@ function GSTCalculator() {
             </div>
             <div style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '4px' }}>
               <p style={{ margin: '0 0 5px 0' }}>Net GST {summary.status}</p>
-              <h2 style={{ margin: 0, color: summary.net_liability > 0 ? '#ff4d4f' : '#52c41a' }}>
+              <h2 style={{ margin: 0, color: summary.net_liability > 0 ? 'var(--red)' : 'var(--green)' }}>
                 ₹{Math.abs(summary.net_liability).toLocaleString('en-IN')}
               </h2>
             </div>

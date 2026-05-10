@@ -137,7 +137,7 @@ Net Margin %,${data.margins.net}`;
             <td>Less: Income Tax Expense</td>
             <td className="right" style={{color:'var(--red)'}}>{fmt(-data.tax)}</td>
           </tr>
-          <tr className="total-row" style={{background: data.net_profit >= 0 ? '#c6f6d5' : '#fed7d7'}}>
+          <tr className="total-row" style={{background: data.net_profit >= 0 ? 'var(--badge-success-bg)' : 'var(--badge-danger-bg)'}}>
             <td style={{fontSize:16}}>
               NET PROFIT AFTER TAX
               <span style={{color:'var(--text-muted)', fontWeight:400, fontSize:13, marginLeft:8}}>

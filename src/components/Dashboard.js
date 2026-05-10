@@ -25,8 +25,8 @@ function Dashboard() {
 
   if (loading) return <div className="loading">Loading dashboard</div>;
   if (error) return (
-    <div className="card" style={{margin: 20, background:'#fff5f5', borderColor:'#fc8181'}}>
-      <h3 style={{color:'#c53030', margin:'0 0 8px'}}>Connection Error</h3>
+    <div className="card" style={{margin: 20, background:'var(--badge-danger-bg)', borderColor:'var(--red)'}}>
+      <h3 style={{color:'var(--badge-danger-text)', margin:'0 0 8px'}}>Connection Error</h3>
       <p>{error}</p>
     </div>
   );

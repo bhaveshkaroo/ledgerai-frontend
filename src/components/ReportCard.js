@@ -25,7 +25,7 @@ function ReportCard() {
   }, []);
 
   const cardStyle = {
-    backgroundColor: 'white',
+    backgroundColor: 'var(--card)',
     borderRadius: '8px',
     padding: '30px',
     border: '1px solid #eaeaea',
@@ -37,14 +37,14 @@ function ReportCard() {
 
   const skeletonStyle = {
     height: '100px',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'var(--hover-bg)',
     borderRadius: '4px',
     animation: 'pulse 1.5s infinite ease-in-out'
   };
 
   const buttonStyle = {
-    backgroundColor: '#0A1628',
-    color: 'white',
+    backgroundColor: 'var(--primary)',
+    color: 'var(--text)',
     border: 'none',
     padding: '10px 20px',
     borderRadius: '4px',

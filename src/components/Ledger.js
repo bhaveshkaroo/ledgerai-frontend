@@ -214,7 +214,7 @@ function Ledger() {
                 </thead>
                 <tbody>
                   {/* Opening Balance Row */}
-                  <tr style={{background:'#f7fafc'}}>
+                  <tr style={{background:'var(--hover-bg)'}}>
                     <td></td>
                     <td style={{fontStyle:'italic', color:'var(--text-muted)'}}>Opening Balance</td>
                     <td></td>
