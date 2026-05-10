@@ -1,18 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
-import { Layout, Columns, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Layout, Columns, CheckCircle2, AlertTriangle, AlertCircle } from 'lucide-react';
 
 function BalanceSheet({ period }) {
   const [layout, setLayout] = useState(() => localStorage.getItem('ledgerai_bs_layout') || 'vertical');
+  const [findings, setFindings] = useState([]);
   const data = LedgerEngine.calcBalanceSheet(period);
 
   useEffect(() => {
     localStorage.setItem('ledgerai_bs_layout', layout);
+    const saved = localStorage.getItem('ledgerai-compliance-log');
+    if (saved) setFindings(JSON.parse(saved));
   }, [layout]);
 
-  const Row = ({ label, value, isSubtotal, isTotal, indent, bold, negative }) => (
+  const getIndicator = (ruleId) => {
+    const finding = findings.find(f => f.id === ruleId && f.status === 'Unresolved');
+    if (!finding) return null;
+    return (
+      <div className={`compliance-indicator ${finding.severity.toLowerCase()}`} title={`${finding.id}: ${finding.message}`} style={{ display: 'inline-flex', marginLeft: 8, color: finding.severity === 'ERROR' ? '#ef4444' : '#f59e0b' }}>
+        <AlertCircle size={12} />
+      </div>
+    );
+  };
+
+  const Row = ({ label, value, isSubtotal, isTotal, indent, bold, negative, ruleId }) => (
     <tr className={`${isSubtotal ? 'subtotal' : ''} ${isTotal ? 'grand-total' : ''} ${bold ? 'bold-row' : ''}`}>
-      <td style={{ paddingLeft: indent ? (indent === 2 ? 48 : 24) : 12 }}>{label}</td>
+      <td style={{ paddingLeft: indent ? (indent === 2 ? 48 : 24) : 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          {label}
+          {getIndicator(ruleId)}
+        </div>
+      </td>
       <td className="right" style={{ color: negative ? '#ef4444' : 'inherit' }}>
         {value !== undefined ? (negative ? `(${formatINR(Math.abs(value))})` : formatINR(value)) : ""}
       </td>
@@ -29,17 +47,17 @@ function BalanceSheet({ period }) {
         <Row label="Sub-total: Shareholders' Funds" value={data.equity.shareCapital + data.equity.retainedEarnings} isSubtotal indent />
         
         <Row label="2. Non-Current Liabilities" bold />
-        <Row label="(a) Long-Term Borrowings" value={data.liabilities.nonCurrent} indent />
+        <Row label="(a) Long-Term Borrowings" value={data.liabilities.nonCurrent} indent ruleId="AS16-R001" />
         <Row label="Sub-total: Non-Current Liabilities" value={data.liabilities.nonCurrent} isSubtotal indent />
 
         <Row label="3. Current Liabilities" bold />
         <Row label="(a) Trade Payables" value={600000} indent />
         <Row label="(b) GST Payable" value={400000} indent />
         <Row label="(c) TDS Payable" value={50000} indent />
-        <Row label="(d) Provision for Tax" value={150000} indent />
+        <Row label="(d) Provision for Tax" value={150000} indent ruleId="AS22-R001" />
         <Row label="Sub-total: Current Liabilities" value={1200000} isSubtotal indent />
 
-        <Row label="TOTAL EQUITY AND LIABILITIES" value={data.totalEquityLiabilities} isTotal />
+        <Row label="TOTAL EQUITY AND LIABILITIES" value={data.totalEquityLiabilities} isTotal ruleId="GEN-R001" />
       </tbody>
     </table>
   );
@@ -50,20 +68,20 @@ function BalanceSheet({ period }) {
       <tbody>
         <Row label="1. Non-Current Assets" bold />
         <Row label="(a) Fixed Assets" indent />
-        <Row label="(i) Tangible Assets" value={7500000} indent={2} />
+        <Row label="(i) Tangible Assets" value={7500000} indent={2} ruleId="AS10-R002" />
         <Row label="(ii) Accumulated Depreciation" value={1000000} indent={2} negative />
         <Row label="(iii) Net Block" value={6500000} indent={2} bold />
         <Row label="Sub-total: Non-Current Assets" value={6500000} isSubtotal indent />
 
         <Row label="2. Current Assets" bold />
-        <Row label="(a) Inventories" value={1500000} indent />
+        <Row label="(a) Inventories" value={1500000} indent ruleId="AS2-R002" />
         <Row label="(b) Trade Receivables" value={1200000} indent />
         <Row label="(c) Cash and Cash Equivalents" value={data.assets.current - 3500000} indent />
         <Row label="(d) Short-Term Loans and Advances" value={500000} indent />
         <Row label="(e) Other Current Assets" value={300000} indent />
         <Row label="Sub-total: Current Assets" value={data.assets.current} isSubtotal indent />
 
-        <Row label="TOTAL ASSETS" value={data.totalAssets} isTotal />
+        <Row label="TOTAL ASSETS" value={data.totalAssets} isTotal ruleId="GEN-R001" />
       </tbody>
     </table>
   );
@@ -72,7 +90,10 @@ function BalanceSheet({ period }) {
     <div className="card glass-card statement-card" style={{ maxWidth: layout === 'horizontal' ? 1200 : 800, margin: '0 auto', transition: 'all 0.3s ease' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 30 }}>
         <div style={{ flex: 1 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 700 }}>Balance Sheet as at 31 March 2026</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 700 }}>Balance Sheet as at 31 March 2026</h2>
+            {findings.some(f => f.id === 'GEN-R001' && f.status === 'Unresolved') && <AlertCircle size={20} color="#ef4444" />}
+          </div>
           <h3 style={{ fontSize: 16, color: '#3b82f6', margin: '4px 0' }}>Sharma Textiles Pvt Ltd | MSME-MH-2024-001</h3>
           <p style={{ fontSize: 11, color: '#94a3b8' }}>Schedule III Vertical Format | Values in ₹</p>
         </div>
@@ -96,7 +117,6 @@ function BalanceSheet({ period }) {
 
       <style jsx>{`
         .layout-toggle { display: flex; align-items: center; gap: 8px; background: #1e293b; border: 1px solid #334155; color: #fff; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-        .layout-toggle:hover { background: #334155; }
         .bs-layout.vertical { display: flex; flex-direction: column; gap: 40px; }
         .bs-layout.horizontal { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
         .ca-table { width: 100%; border-collapse: collapse; }

@@ -5,17 +5,45 @@ import TransactionList from './components/TransactionList';
 import ReportCard from './components/ReportCard';
 import Ledger from './components/Ledger';
 import Statements from './components/Statements';
-import { LayoutDashboard, ReceiptText, FileText, Settings, Sparkles, BookOpen, LogOut, Trash2, ShieldCheck } from 'lucide-react';
+import CompliancePanel from './components/CompliancePanel';
+import { LayoutDashboard, ReceiptText, FileText, Settings, Sparkles, BookOpen, LogOut, Trash2, Shield, Bell } from 'lucide-react';
+import { ASValidationEngine } from './utils/ASComplianceEngine';
+import { LedgerEngine } from './utils/LedgerEngine';
 
 function App() {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [period, setPeriod] = useState('Full Year');
   const [connectedBanks, setConnectedBanks] = useState([]);
+  const [isComplianceOpen, setIsComplianceOpen] = useState(false);
+  const [complianceStats, setComplianceStats] = useState({ errors: 0, warnings: 0 });
 
   useEffect(() => {
     document.body.classList.add('dark-mode');
     loadBanks();
+    runInitialValidation();
   }, []);
+
+  const runInitialValidation = () => {
+    const saved = localStorage.getItem('ledgerai-compliance-log');
+    let findings = [];
+    if (saved) {
+      findings = JSON.parse(saved);
+    } else {
+      // Run once on fresh load if no log exists
+      const txs = LedgerEngine.transactions;
+      const is = LedgerEngine.calcIncomeStatement('Full Year');
+      const cf = LedgerEngine.calcCashFlow('Full Year');
+      const bs = LedgerEngine.calcBalanceSheet('Full Year');
+      findings = ASValidationEngine.runFullValidation(txs, is, cf, bs);
+    }
+    updateStats(findings);
+  };
+
+  const updateStats = (findings) => {
+    const errors = findings.filter(f => f.severity === 'ERROR' && f.status === 'Unresolved').length;
+    const warnings = findings.filter(f => f.severity === 'WARNING' && f.status === 'Unresolved').length;
+    setComplianceStats({ errors, warnings });
+  };
 
   const loadBanks = () => {
     const saved = localStorage.getItem('ledgerai_connected_banks');
@@ -53,7 +81,6 @@ function App() {
           ))}
         </div>
         
-        {/* Connected Banks Sidebar Section */}
         <div className="sidebar-banks" style={{ marginTop: 'auto', padding: '20px' }}>
           <label style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12, display: 'block' }}>Connected Banks</label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -88,6 +115,19 @@ function App() {
 
       {/* Main Content */}
       <div className="main-content" style={{ marginLeft: '220px', width: 'calc(100% - 220px)' }}>
+        {/* Topbar */}
+        <div className="topbar" style={{ display: 'flex', justifyContent: 'flex-end', padding: '16px 40px', background: 'transparent', position: 'sticky', top: 0, zIndex: 100 }}>
+          <div className="compliance-trigger" onClick={() => setIsComplianceOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#1e293b', padding: '8px 16px', borderRadius: 30, cursor: 'pointer', border: '1px solid #334155' }}>
+            <Shield size={18} style={{ color: complianceStats.errors > 0 ? '#ef4444' : (complianceStats.warnings > 0 ? '#f59e0b' : '#10b981') }} />
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>AS Compliance</span>
+            {(complianceStats.errors > 0 || complianceStats.warnings > 0) && (
+              <span className={`compliance-badge ${complianceStats.errors > 0 ? 'error' : 'warning'}`}>
+                {complianceStats.errors > 0 ? complianceStats.errors : complianceStats.warnings}
+              </span>
+            )}
+          </div>
+        </div>
+
         <div id="Dashboard" className={activeTab === 'Dashboard' ? '' : 'hidden'}>
           <Dashboard period={period} setPeriod={setPeriod} />
         </div>
@@ -111,9 +151,20 @@ function App() {
         </div>
       </div>
 
+      <CompliancePanel 
+        isOpen={isComplianceOpen} 
+        onClose={() => setIsComplianceOpen(false)} 
+        onRefresh={() => {
+          const saved = localStorage.getItem('ledgerai-compliance-log');
+          if (saved) updateStats(JSON.parse(saved));
+        }}
+      />
+
       <style jsx>{`
         .hidden { display: none; }
-        .bank-sidebar-card:hover { border-color: #3b82f6 !important; }
+        .compliance-badge { font-size: 10px; font-weight: 800; color: #fff; padding: 2px 6px; border-radius: 10px; min-width: 18px; text-align: center; }
+        .compliance-badge.error { background: #ef4444; }
+        .compliance-badge.warning { background: #f59e0b; }
       `}</style>
     </div>
   );

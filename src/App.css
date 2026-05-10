@@ -100,9 +100,16 @@ body {
 /* Main Content */
 .main-content {
   flex: 1;
-  padding: 48px 60px;
   overflow-y: auto;
   position: relative;
+  padding-top: 20px; /* Space for sticky topbar */
+}
+
+/* Topbar Sticky Style */
+.topbar {
+  background: rgba(15, 23, 42, 0.8) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
 /* Texture overlay for that "map" feel */
@@ -507,4 +514,33 @@ option {
 .pill-btn.active {
   background: #3b82f6;
   color: #ffffff;
+}
+
+/* Compliance Indicators */
+.compliance-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  cursor: help;
+  position: relative;
+}
+
+.compliance-indicator:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  border: 1px solid #334155;
 }
