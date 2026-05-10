@@ -35,21 +35,25 @@ body {
 
 /* Sidebar */
 .sidebar {
-  width: 240px;
-  background-color: var(--sidebar-bg);
-  border-right: 1px solid var(--border);
+  width: 220px;
+  background-color: #0f172a;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
   display: flex;
   flex-direction: column;
-  padding: 40px 0;
-  z-index: 10;
+  z-index: 1000;
+  border-right: 1px solid #1e293b;
 }
 
 .sidebar-logo {
+  padding: 24px 20px 16px;
   font-size: 22px;
   font-weight: 700;
-  padding: 0 32px;
-  margin-bottom: 60px;
-  color: var(--accent-blue);
+  color: #3b82f6;
+  border-bottom: 1px solid #1e293b;
+  margin-bottom: 20px;
   letter-spacing: -0.5px;
 }
 
@@ -62,29 +66,35 @@ body {
 .sidebar-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 28px;
-  color: var(--text-secondary);
-  font-size: 15px;
+  gap: 10px;
+  padding: 12px 20px;
+  color: #94a3b8;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   border: none;
-  border-left: 4px solid transparent;
+  border-left: 3px solid transparent;
   background: transparent;
   width: 100%;
   text-align: left;
 }
 
 .sidebar-item:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.03);
+  background-color: #1e293b;
+  color: #cbd5e1;
 }
 
 .sidebar-item.active {
-  color: #fff;
-  background: rgba(59, 130, 246, 0.1);
-  border-left: 4px solid #001f3f; /* Solid Navy border */
+  background-color: #1e293b;
+  color: #ffffff;
+  border-left: 3px solid #3b82f6;
+}
+
+.sidebar-item svg {
+  width: 18px;
+  height: 18px;
+  color: inherit;
 }
 
 /* Main Content */
@@ -336,25 +346,36 @@ body {
 }
 
 /* Ledger Selector Fix */
+/* Ledger Selector Fix */
 select {
-  background-color: #1e293b !important;
+  background-color: #0f172a !important;
   color: #f1f5f9 !important;
-  border: 1px solid var(--border) !important;
-  padding: 10px 16px;
+  border: 1px solid #334155 !important;
   border-radius: 8px;
+  padding: 10px 14px;
   font-size: 14px;
   outline: none;
   cursor: pointer;
 }
 
 select:focus {
-  border-color: var(--accent-blue) !important;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  outline: 2px solid #3b82f6 !important;
+  border-color: transparent !important;
 }
 
 option {
   background-color: #1e293b !important;
   color: #f1f5f9 !important;
+}
+
+/* Custom Dropdown Search Fixes */
+.ledger-select input {
+  background: #0f172a !important;
+  color: #f1f5f9 !important;
+}
+
+.ledger-select input::placeholder {
+  color: #64748b !important;
 }
 
 /* Modal Overlay Fixes */
@@ -398,20 +419,92 @@ option {
   font-size: 24px;
 }
 
-/* Chart Drilldown Modal */
-.chart-drilldown-modal {
-  width: 90%;
-  max-width: 1200px;
-  height: 90vh;
-  display: flex;
-  flex-direction: column;
-  padding: 40px;
+/* Panoramic Overlay */
+.panoramic-overlay {
+  position: fixed;
+  top: 0;
+  left: 220px;
+  right: 0;
+  bottom: 0;
+  background: #0f172a;
+  z-index: 1500;
   overflow-y: auto;
+  animation: slideUp 0.35s ease-out forwards;
 }
 
-.drilldown-header {
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.panoramic-header {
+  padding: 24px 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  border-bottom: 1px solid #1e293b;
+  position: sticky;
+  top: 0;
+  background: #0f172a;
+  z-index: 10;
+}
+
+.panoramic-content {
+  padding: 40px;
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.summary-card {
+  background: #1e293b;
+  padding: 24px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary-card label {
+  font-size: 12px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.summary-card .amount {
+  font-size: 24px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-card.positive .amount { color: #22c55e; }
+.summary-card.negative .amount { color: #ef4444; }
+
+.pill-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.pill-btn {
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+.pill-btn.active {
+  background: #3b82f6;
+  color: #ffffff;
 }

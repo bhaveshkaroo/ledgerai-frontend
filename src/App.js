@@ -55,7 +55,7 @@ function App() {
       </div>
 
       {/* Main Content */}
-      <div className="main-content">
+      <div className="main-content" style={{ marginLeft: '220px', width: 'calc(100% - 220px)' }}>
         <div id="Dashboard" className={activeTab === 'Dashboard' ? '' : 'hidden'}>
           <Dashboard period={period} setPeriod={setPeriod} />
         </div>
