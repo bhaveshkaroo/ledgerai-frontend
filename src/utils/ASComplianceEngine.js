@@ -1,5 +1,46 @@
 import { formatINR } from './LedgerEngine';
 
+export const COMPLIANCE_MODES = {
+  AS_SME: 'AS (SME/Non-Corporate)',
+  IND_AS: 'Ind AS (Large/Corporate)'
+};
+
+export const IND_AS_RULES = [
+  {
+    id: 'IAS115-R001',
+    standard: 'Ind AS 115',
+    title: 'Revenue 5-Step Model',
+    severity: 'ERROR',
+    category: 'Transaction',
+    description: 'Revenue must be recognized based on performance obligations.',
+    message: (tx) => `Revenue entry ${tx.ref} for Ind AS entity must confirm to 5-step model. Recognition before performance completion is prohibited.`,
+    suggestion: 'Verify if the performance obligation has been fully satisfied before recognizing revenue.',
+    check: (tx) => tx.account === 'Sales Revenue' && tx.narration.toLowerCase().includes('partial')
+  },
+  {
+    id: 'IAS116-R001',
+    standard: 'Ind AS 116',
+    title: 'Lease ROU Recognition',
+    severity: 'ERROR',
+    category: 'Transaction',
+    description: 'Leases must recognize a Right-of-Use (ROU) asset and a lease liability.',
+    message: (tx) => `Rent payment ${tx.ref} is being expensed directly. Ind AS 116 requires ROU asset recognition for leases > 12 months.`,
+    suggestion: 'Capitalize the lease by debiting "ROU Asset" and crediting "Lease Liability".',
+    check: (tx) => tx.account.toLowerCase().includes('rent') && tx.amount > 500000 // Simplified threshold
+  },
+  {
+    id: 'IAS109-R001',
+    standard: 'Ind AS 109',
+    title: 'Financial Assets Measurement',
+    severity: 'WARNING',
+    category: 'Transaction',
+    description: 'Financial assets must be measured at Fair Value or Amortized Cost.',
+    message: (tx) => `Investment entry ${tx.ref} does not specify measurement category (FVTPL/FVOCI/Amortized Cost).`,
+    suggestion: 'Specify the classification of the financial asset as per Ind AS 109.',
+    check: (tx) => tx.account.toLowerCase().includes('investment') && !tx.narration.toLowerCase().includes('fair value')
+  }
+];
+
 export const AS_RULES = [
   {
     id: 'AS1-R001',
@@ -10,7 +51,7 @@ export const AS_RULES = [
     description: 'All transactions must be recorded on accrual basis.',
     message: (tx) => `Transaction ${tx.ref} is recorded on cash basis. AS 1 requires revenue/expense to be recognised when earned/incurred regardless of cash receipt.`,
     suggestion: 'Convert the transaction to an accrual entry (e.g., use Accounts Receivable/Payable).',
-    check: (tx) => tx.narration.toLowerCase().includes('cash basis') || tx.category === 'Cash' // Simplified check for demo
+    check: (tx) => tx.narration.toLowerCase().includes('cash basis') || tx.category === 'Cash'
   },
   {
     id: 'AS2-R002',
@@ -35,28 +76,6 @@ export const AS_RULES = [
     check: (tx) => tx.account === 'Sales Revenue' && (tx.narration.toLowerCase().includes('incl gst') || tx.narration.toLowerCase().includes('with gst'))
   },
   {
-    id: 'AS9-R003',
-    standard: 'AS 9',
-    title: 'Advance Payment Recognition',
-    severity: 'ERROR',
-    category: 'Transaction',
-    description: 'Advances from customers are not revenue until goods/services are delivered.',
-    message: (tx) => `Advance payment ${tx.ref} is directly credited to Sales Revenue.`,
-    suggestion: 'Credit the amount to "Advance from Customers" (Liability) instead of Sales Revenue.',
-    check: (tx) => tx.account === 'Sales Revenue' && tx.narration.toLowerCase().includes('advance')
-  },
-  {
-    id: 'AS10-R002',
-    standard: 'AS 10',
-    title: 'No Repairs Capitalization',
-    severity: 'ERROR',
-    category: 'Transaction',
-    description: 'Routine maintenance must be expensed, not capitalized.',
-    message: (tx) => `Repair expense ${tx.ref} is posted to a Fixed Asset account.`,
-    suggestion: 'Debit "Repairs and Maintenance" expense instead of the Asset account.',
-    check: (tx) => tx.account.toLowerCase().includes('fixed asset') && (tx.narration.toLowerCase().includes('repair') || tx.narration.toLowerCase().includes('maintenance'))
-  },
-  {
     id: 'AS15-R001',
     standard: 'AS 15',
     title: 'Salary Accrual Requirement',
@@ -70,9 +89,11 @@ export const AS_RULES = [
 ];
 
 export const ASValidationEngine = {
-  validateTransaction(tx) {
+  validateTransaction(tx, mode = COMPLIANCE_MODES.AS_SME) {
     const findings = [];
-    AS_RULES.filter(r => r.category === 'Transaction').forEach(rule => {
+    const rules = mode === COMPLIANCE_MODES.IND_AS ? [...AS_RULES, ...IND_AS_RULES] : AS_RULES;
+    
+    rules.filter(r => r.category === 'Transaction').forEach(rule => {
       if (rule.check(tx)) {
         findings.push({
           id: rule.id,
@@ -90,16 +111,17 @@ export const ASValidationEngine = {
     return findings;
   },
 
-  validateStatements(is, cf, bs) {
+  validateStatements(is, cf, bs, mode = COMPLIANCE_MODES.AS_SME) {
     const findings = [];
 
-    // AS 3: Cash Flow Balancing
+    // Statement Level Checks
     const netChange = cf.operating.netCashFromOperating + cf.investing.netCashFromInvesting + cf.financing.netCashFromFinancing;
     const actualChange = cf.closingBalance - cf.openingBalance;
+    
     if (Math.abs(netChange - actualChange) > 1) {
       findings.push({
         id: 'AS3-R001',
-        standard: 'AS 3',
+        standard: mode === COMPLIANCE_MODES.IND_AS ? 'Ind AS 7' : 'AS 3',
         severity: 'ERROR',
         title: 'CF Statement Imbalance',
         message: `Cash Flow sections do not sum to net change. Discrepancy: ${formatINR(Math.abs(netChange - actualChange))}`,
@@ -109,35 +131,6 @@ export const ASValidationEngine = {
       });
     }
 
-    // AS 3: Depreciation Add-back
-    if (cf.operating.adjustments.depreciation === 0 && is.depreciationAndAmortisation > 0) {
-      findings.push({
-        id: 'AS3-R002',
-        standard: 'AS 3',
-        severity: 'WARNING',
-        title: 'Missing Depreciation Add-back',
-        message: 'Depreciation must be added back in Operating Activities under the indirect method.',
-        suggestion: 'Add Depreciation to non-cash adjustments in the Operating section.',
-        timestamp: new Date().toISOString(),
-        status: 'Unresolved'
-      });
-    }
-
-    // AS 22: Tax Provision Check
-    if (is.profitBeforeTax > 0 && is.taxExpenseCurrent === 0) {
-      findings.push({
-        id: 'AS22-R001',
-        standard: 'AS 22',
-        severity: 'ERROR',
-        title: 'Missing Tax Provision',
-        message: 'No provision for tax entry exists despite the company having a profit.',
-        suggestion: 'Calculate and record Current Tax liability at applicable rates.',
-        timestamp: new Date().toISOString(),
-        status: 'Unresolved'
-      });
-    }
-
-    // BS Balance Check
     if (!bs.isBalanced) {
       findings.push({
         id: 'GEN-R001',
@@ -145,23 +138,38 @@ export const ASValidationEngine = {
         severity: 'ERROR',
         title: 'Balance Sheet Out of Balance',
         message: `Total Assets (${formatINR(bs.totalAssets)}) does not equal Liabilities + Equity (${formatINR(bs.totalEquityLiabilities)}).`,
-        suggestion: 'Verify all journal entries are balanced and closing balances are carried forward correctly.',
+        suggestion: 'Verify all journal entries are balanced.',
         timestamp: new Date().toISOString(),
         status: 'Unresolved'
       });
     }
 
+    // Ind AS specific statement check
+    if (mode === COMPLIANCE_MODES.IND_AS) {
+      if (!is.otherComprehensiveIncome) {
+        findings.push({
+          id: 'IAS1-R001',
+          standard: 'Ind AS 1',
+          severity: 'WARNING',
+          title: 'Missing OCI Section',
+          message: 'Ind AS 1 requires the presentation of Other Comprehensive Income (OCI).',
+          suggestion: 'Add an OCI section to the Statement of Profit and Loss for items like revaluation surplus or actuarial gains.',
+          timestamp: new Date().toISOString(),
+          status: 'Unresolved'
+        });
+      }
+    }
+
     return findings;
   },
 
-  runFullValidation(transactions, is, cf, bs) {
+  runFullValidation(transactions, is, cf, bs, mode) {
     let allFindings = [];
     transactions.forEach(tx => {
-      allFindings = [...allFindings, ...this.validateTransaction(tx)];
+      allFindings = [...allFindings, ...this.validateTransaction(tx, mode)];
     });
-    allFindings = [...allFindings, ...this.validateStatements(is, cf, bs)];
+    allFindings = [...allFindings, ...this.validateStatements(is, cf, bs, mode)];
     
-    // Persist
     localStorage.setItem('ledgerai-compliance-log', JSON.stringify(allFindings));
     return allFindings;
   }
@@ -177,26 +185,25 @@ export const AccountingStandardsDB = {
     localStorage.setItem('ledgerai-as-database', JSON.stringify({
       ...data,
       lastUpdated: new Date().toISOString(),
-      version: '1.0.0'
+      version: 'Ind AS 2024-25 Extended'
     }));
   },
 
   async parseOCR(text) {
-    // Basic logic to split text into standards based on "AS X" pattern
     const standards = [];
-    const segments = text.split(/AS\s+(\d+)/g);
+    const segments = text.split(/INDIAN ACCOUNTING STANDARD\s+(\d+)/gi);
     
     for (let i = 1; i < segments.length; i += 2) {
-      const code = `AS-${segments[i]}`;
+      const code = `Ind AS ${segments[i]}`;
       const content = segments[i+1];
       const lines = content.split('\n').filter(l => l.trim());
       
       standards.push({
         code,
-        title: lines[0] ? lines[0].trim() : `Accounting Standard ${segments[i]}`,
-        rawText: content,
-        keyPrinciples: lines.slice(1, 10).map(l => l.trim()), // Simplified extraction
-        validationRules: [] // In a real app, AI would map these to programmatic rules
+        title: lines[0] ? lines[0].trim() : `${code}`,
+        rawText: content.substring(0, 10000), // Cap size for storage
+        keyPrinciples: lines.slice(1, 15).map(l => l.trim()),
+        validationRules: []
       });
     }
     

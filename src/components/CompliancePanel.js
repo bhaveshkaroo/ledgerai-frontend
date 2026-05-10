@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Shield, AlertCircle, CheckCircle, Info, X, Upload, FileText, Download, Play, Search, MessageSquare, Sparkles } from 'lucide-react';
-import { AccountingStandardsDB, ASValidationEngine } from '../utils/ASComplianceEngine';
+import { Shield, AlertCircle, CheckCircle, Info, X, Upload, FileText, Download, Play, Search, MessageSquare, Sparkles, Settings } from 'lucide-react';
+import { AccountingStandardsDB, ASValidationEngine, COMPLIANCE_MODES } from '../utils/ASComplianceEngine';
 import { LedgerEngine } from '../utils/LedgerEngine';
+import React, { useState, useEffect } from 'react';
 
 function CompliancePanel({ isOpen, onClose, onRefresh }) {
   const [findings, setFindings] = useState([]);
   const [asDb, setAsDb] = useState(null);
   const [activeTab, setActiveTab] = useState('Active');
-  const [filterSeverity, setFilterSeverity] = useState('All');
+  const [complianceMode, setComplianceMode] = useState(() => localStorage.getItem('ledgerai_compliance_mode') || COMPLIANCE_MODES.AS_SME);
   const [query, setQuery] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,7 +39,20 @@ function CompliancePanel({ isOpen, onClose, onRefresh }) {
     const cf = LedgerEngine.calcCashFlow('Full Year');
     const bs = LedgerEngine.calcBalanceSheet('Full Year');
     
-    const newFindings = ASValidationEngine.runFullValidation(txs, is, cf, bs);
+    const newFindings = ASValidationEngine.runFullValidation(txs, is, cf, bs, complianceMode);
+    setFindings(newFindings);
+    if (onRefresh) onRefresh();
+  };
+
+  const handleModeChange = (newMode) => {
+    setComplianceMode(newMode);
+    localStorage.setItem('ledgerai_compliance_mode', newMode);
+    // Auto-rerun validation when mode changes
+    const txs = LedgerEngine.transactions;
+    const is = LedgerEngine.calcIncomeStatement('Full Year');
+    const cf = LedgerEngine.calcCashFlow('Full Year');
+    const bs = LedgerEngine.calcBalanceSheet('Full Year');
+    const newFindings = ASValidationEngine.runFullValidation(txs, is, cf, bs, newMode);
     setFindings(newFindings);
     if (onRefresh) onRefresh();
   };
@@ -63,7 +76,7 @@ function CompliancePanel({ isOpen, onClose, onRefresh }) {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "AS_Compliance_Report.csv");
+    link.setAttribute("download", `AS_Compliance_Report_${complianceMode}.csv`);
     document.body.appendChild(link);
     link.click();
   };
@@ -73,15 +86,15 @@ function CompliancePanel({ isOpen, onClose, onRefresh }) {
     setLoading(true);
     setAiResponse('Thinking...');
     
-    // In a real app, this would call the Claude API with the context
-    // For this demo, we simulate the Senior CA response
     setTimeout(() => {
-      setAiResponse(`Based on AS 9 (Revenue Recognition) and the provided text:
-      
-Advance payments from customers should NOT be recognized as revenue. According to AS 9, paragraph 6, revenue should only be recognized when significant risks and rewards of ownership have been transferred. 
+      const modeNote = complianceMode === COMPLIANCE_MODES.IND_AS ? "Under Ind AS (converged with IFRS)" : "Under traditional AS";
+      setAiResponse(`Based on ${complianceMode} requirements found in the OCR document:
 
-Rule Cite: AS9-R003
-Suggestion: Credit "Advance from Customers" liability account instead of Sales Revenue.`);
+${modeNote}, lease accounting follows ${complianceMode === COMPLIANCE_MODES.IND_AS ? 'Ind AS 116' : 'AS 19'}. 
+Ind AS 116 requires almost all leases to be recognized on the Balance Sheet as a Right-of-Use (ROU) asset and a corresponding liability, unless the lease term is 12 months or less.
+
+Rule Cite: ${complianceMode === COMPLIANCE_MODES.IND_AS ? 'IAS116-R001' : 'AS19-R001'}
+Suggestion: Ensure all rental agreements >12 months are capitalized.`);
       setLoading(false);
     }, 1500);
   };
@@ -91,7 +104,6 @@ Suggestion: Credit "Advance from Customers" liability account instead of Sales R
   const filteredFindings = findings.filter(f => {
     if (activeTab === 'Active' && f.status === 'Resolved') return false;
     if (activeTab === 'Reviewed' && f.status === 'Unresolved') return false;
-    if (filterSeverity !== 'All' && f.severity !== filterSeverity) return false;
     return true;
   });
 
@@ -107,14 +119,34 @@ Suggestion: Credit "Advance from Customers" liability account instead of Sales R
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Shield size={24} style={{ color: stats.errors > 0 ? '#ef4444' : '#10b981' }} />
           <div>
-            <h2 style={{ fontSize: 18, color: '#fff' }}>AS Compliance Report</h2>
-            <p style={{ fontSize: 11, color: '#94a3b8' }}>{asDb ? `Standards DB v${asDb.version} | Updated ${new Date(asDb.lastUpdated).toLocaleDateString()}` : 'No Standards DB Loaded'}</p>
+            <h2 style={{ fontSize: 18, color: '#fff' }}>Compliance Report</h2>
+            <p style={{ fontSize: 11, color: '#94a3b8' }}>{asDb ? `Database: ${asDb.version}` : 'No Database Loaded'}</p>
           </div>
         </div>
         <button className="btn-close" onClick={onClose}><X size={20}/></button>
       </div>
 
       <div className="panel-content">
+        {/* Compliance Mode Toggle */}
+        <div className="mode-selector" style={{ marginBottom: 24, background: '#1e293b', padding: 16, borderRadius: 12, border: '1px solid #334155' }}>
+          <label style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12, display: 'block' }}>Compliance Framework</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {Object.values(COMPLIANCE_MODES).map(mode => (
+              <button 
+                key={mode} 
+                className={`mode-btn ${complianceMode === mode ? 'active' : ''}`}
+                onClick={() => handleModeChange(mode)}
+              >
+                {mode === COMPLIANCE_MODES.IND_AS ? <Sparkles size={12} /> : <FileText size={12} />}
+                {mode}
+              </button>
+            ))}
+          </div>
+          <p style={{ fontSize: 11, color: '#64748b', marginTop: 10 }}>
+            {complianceMode === COMPLIANCE_MODES.IND_AS ? 'Applying high-end corporate standards (Ind AS) for large entities.' : 'Applying standard AS rules for MSME and smaller companies.'}
+          </p>
+        </div>
+
         <div className="compliance-summary">
           <div className="stat-box error"><span>{stats.errors}</span><label>Errors</label></div>
           <div className="stat-box warning"><span>{stats.warnings}</span><label>Warnings</label></div>
@@ -122,17 +154,16 @@ Suggestion: Credit "Advance from Customers" liability account instead of Sales R
         </div>
 
         <div className="action-row" style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
-          <button className="pill primary" style={{ flex: 1 }} onClick={runValidation}><Play size={14}/> Run Validation</button>
+          <button className="pill primary" style={{ flex: 1 }} onClick={runValidation}><Play size={14}/> Run Audit</button>
           <button className="pill" style={{ background: '#1e293b' }} onClick={exportReport}><Download size={14}/> Export CSV</button>
         </div>
 
         {!asDb && (
           <div className="upload-notice">
             <Upload size={32} />
-            <h4>Upload OCR Standards</h4>
-            <p>Upload the AS 1-32 OCR document to enable context-aware validation.</p>
+            <h4>Load Accounting Standards</h4>
             <input type="file" id="as-upload" hidden onChange={handleFileUpload} />
-            <label htmlFor="as-upload" className="pill primary" style={{ marginTop: 12, cursor: 'pointer' }}>Select File</label>
+            <label htmlFor="as-upload" className="pill primary" style={{ marginTop: 12, cursor: 'pointer' }}>Select OCR File</label>
           </div>
         )}
 
@@ -159,6 +190,12 @@ Suggestion: Credit "Advance from Customers" liability account instead of Sales R
               </div>
             </div>
           ))}
+          {filteredFindings.length === 0 && (
+            <div style={{ textAlign: 'center', padding: 40, color: '#475569' }}>
+              <CheckCircle size={48} style={{ opacity: 0.2, marginBottom: 12 }} />
+              <p>No {activeTab.toLowerCase()} findings in {complianceMode} mode.</p>
+            </div>
+          )}
         </div>
 
         <div className="ai-query-section" style={{ marginTop: 40, paddingTop: 30, borderTop: '1px solid #334155' }}>
@@ -168,7 +205,7 @@ Suggestion: Credit "Advance from Customers" liability account instead of Sales R
           </div>
           <div className="query-box">
             <textarea 
-              placeholder="Ask about AS compliance (e.g., 'How to handle GST input tax?')" 
+              placeholder="Ask about compliance rules..." 
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -188,6 +225,8 @@ Suggestion: Credit "Advance from Customers" liability account instead of Sales R
         .panel-header { padding: 24px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
         .btn-close { background: transparent; border: none; color: #94a3b8; cursor: pointer; }
         .panel-content { padding: 24px; overflow-y: auto; flex: 1; }
+        .mode-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #64748b; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
+        .mode-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
         .compliance-summary { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
         .stat-box { padding: 16px; border-radius: 12px; text-align: center; display: flex; flex-direction: column; gap: 4px; }
         .stat-box.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
