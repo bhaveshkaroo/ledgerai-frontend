@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/ledgerai-frontend/static/css/main.8f89f06b.css",
-    "main.js": "/ledgerai-frontend/static/js/main.667214af.js",
+    "main.css": "/ledgerai-frontend/static/css/main.7d212817.css",
+    "main.js": "/ledgerai-frontend/static/js/main.154b5c7a.js",
     "index.html": "/ledgerai-frontend/index.html",
-    "main.8f89f06b.css.map": "/ledgerai-frontend/static/css/main.8f89f06b.css.map",
-    "main.667214af.js.map": "/ledgerai-frontend/static/js/main.667214af.js.map"
+    "main.7d212817.css.map": "/ledgerai-frontend/static/css/main.7d212817.css.map",
+    "main.154b5c7a.js.map": "/ledgerai-frontend/static/js/main.154b5c7a.js.map"
   },
   "entrypoints": [
-    "static/css/main.8f89f06b.css",
-    "static/js/main.667214af.js"
+    "static/css/main.7d212817.css",
+    "static/js/main.154b5c7a.js"
   ]
 }
