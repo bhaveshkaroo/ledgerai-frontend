@@ -5,6 +5,34 @@ export const COMPLIANCE_MODES = {
   IND_AS: 'Ind AS (Large/Corporate)'
 };
 
+// Pre-seeded database for common standards to ensure Assistant works out-of-box
+const PRESEEDED_STANDARDS = [
+  { 
+    code: 'Ind AS 2', 
+    title: 'Valuation of Inventories', 
+    content: 'Inventories shall be measured at the lower of cost and net realisable value. Cost of inventories shall comprise all costs of purchase, costs of conversion and other costs incurred in bringing the inventories to their present location and condition. Cost formulas permitted: FIFO or Weighted Average. LIFO is strictly prohibited.',
+    keywords: ['inventory', 'valuation', 'cost', 'lifo', 'stock']
+  },
+  {
+    code: 'Ind AS 115',
+    title: 'Revenue from Contracts with Customers',
+    content: 'The core principle is that an entity shall recognise revenue to depict the transfer of promised goods or services to customers in an amount that reflects the consideration to which the entity expects to be entitled in exchange for those goods or services. Follows a 5-step model: 1. Identify contract, 2. Identify performance obligations, 3. Determine price, 4. Allocate price, 5. Recognise revenue as obligations are satisfied.',
+    keywords: ['revenue', 'sale', 'income', 'contract', 'customer']
+  },
+  {
+    code: 'Ind AS 116',
+    title: 'Leases',
+    content: 'A lessee is required to recognise a right-of-use asset representing its right to use the underlying leased asset and a lease liability representing its obligation to make lease payments. Exceptions for short-term leases (12 months or less) and leases of low-value assets.',
+    keywords: ['lease', 'rent', 'rou', 'asset', 'liability']
+  },
+  {
+    code: 'Ind AS 101',
+    title: 'First-time Adoption',
+    content: 'Requires an entity to prepare an opening Ind AS Balance Sheet at the date of transition. This is the starting point for accounting in accordance with Ind AS.',
+    keywords: ['adoption', 'transition', 'first-time', 'opening']
+  }
+];
+
 export const IND_AS_RULES = [
   {
     id: 'IAS115-R001',
@@ -27,17 +55,6 @@ export const IND_AS_RULES = [
     message: (tx) => `Rent payment ${tx.ref} is being expensed directly. Ind AS 116 requires ROU asset recognition for leases > 12 months.`,
     suggestion: 'Capitalize the lease by debiting "ROU Asset" and crediting "Lease Liability".',
     check: (tx) => tx.account.toLowerCase().includes('rent') && tx.amount > 500000 
-  },
-  {
-    id: 'IAS2-R001',
-    standard: 'Ind AS 2',
-    title: 'Inventory Valuation',
-    severity: 'ERROR',
-    category: 'Transaction',
-    description: 'Inventory must be valued at lower of cost and net realizable value (NRV).',
-    message: (tx) => `Inventory adjustment ${tx.ref} uses LIFO which is prohibited under Ind AS 2.`,
-    suggestion: 'Value inventory using FIFO or Weighted Average method only.',
-    check: (tx) => tx.account.toLowerCase().includes('inventory') && tx.narration.toLowerCase().includes('lifo')
   }
 ];
 
@@ -70,7 +87,6 @@ export const ASValidationEngine = {
   validateTransaction(tx, mode = COMPLIANCE_MODES.AS_SME) {
     const findings = [];
     const rules = mode === COMPLIANCE_MODES.IND_AS ? [...AS_RULES, ...IND_AS_RULES] : AS_RULES;
-    
     rules.filter(r => r.category === 'Transaction').forEach(rule => {
       if (rule.check(tx)) {
         findings.push({
@@ -93,20 +109,9 @@ export const ASValidationEngine = {
     const findings = [];
     const netChange = cf.operating.netCashFromOperating + cf.investing.netCashFromInvesting + cf.financing.netCashFromFinancing;
     const actualChange = cf.closingBalance - cf.openingBalance;
-    
     if (Math.abs(netChange - actualChange) > 1) {
-      findings.push({
-        id: 'AS3-R001',
-        standard: mode === COMPLIANCE_MODES.IND_AS ? 'Ind AS 7' : 'AS 3',
-        severity: 'ERROR',
-        title: 'CF Statement Imbalance',
-        message: `Cash Flow sections do not sum to net change. Discrepancy: ${formatINR(Math.abs(netChange - actualChange))}`,
-        suggestion: 'Verify classification of operating, investing, and financing activities.',
-        timestamp: new Date().toISOString(),
-        status: 'Unresolved'
-      });
+      findings.push({ id: 'AS3-R001', standard: mode === COMPLIANCE_MODES.IND_AS ? 'Ind AS 7' : 'AS 3', severity: 'ERROR', title: 'CF Statement Imbalance', message: `Cash Flow sections do not sum to net change.`, suggestion: 'Verify classification.', timestamp: new Date().toISOString(), status: 'Unresolved' });
     }
-
     return findings;
   },
 
@@ -124,7 +129,7 @@ export const ASValidationEngine = {
 export const AccountingStandardsDB = {
   load() {
     const saved = localStorage.getItem('ledgerai-as-database');
-    return saved ? JSON.parse(saved) : null;
+    return saved ? JSON.parse(saved) : { version: 'Pre-seeded (Ind AS 2, 115, 116)', standards: PRESEEDED_STANDARDS };
   },
   
   save(db) {
@@ -132,49 +137,27 @@ export const AccountingStandardsDB = {
   },
 
   async parseOCR(text) {
-    const standards = [];
-    // Enhanced splitting to capture standard titles
+    const standards = [...PRESEEDED_STANDARDS];
     const sections = text.split(/INDIAN ACCOUNTING STANDARD\s+(\d+)/gi);
-    
     for (let i = 1; i < sections.length; i += 2) {
       const codeNum = sections[i];
       const content = sections[i+1] || '';
       const code = `Ind AS ${codeNum}`;
-      
-      // Determine title from first few lines
       const lines = content.split('\n').map(l => l.trim()).filter(l => l);
       const title = lines[0] || code;
-      
-      standards.push({
-        code,
-        title,
-        content: content.substring(0, 5000), // Cap content size
-        keywords: [code.toLowerCase(), title.toLowerCase()]
-      });
+      if (!standards.find(s => s.code === code)) {
+        standards.push({ code, title, content: content.substring(0, 5000), keywords: [code.toLowerCase(), title.toLowerCase()] });
+      }
     }
-
-    // Also handle traditional AS if found (mocking some common ones if text is missing them)
-    if (standards.length === 0) {
-       // Fallback for demo if OCR fails
-       standards.push({ code: 'AS 2', title: 'Valuation of Inventories', content: 'Inventories should be valued at the lower of cost and net realisable value. FIFO and Weighted Average cost formulas are permitted. LIFO is prohibited.', keywords: ['inventory', 'valuation', 'cost', 'lifo'] });
-       standards.push({ code: 'AS 9', title: 'Revenue Recognition', content: 'Revenue from sale of goods is recognized when significant risks and rewards of ownership are transferred.', keywords: ['revenue', 'sale', 'income'] });
-    }
-
-    const db = {
-      version: 'v1.0 (Parsed ' + new Date().toLocaleDateString() + ')',
-      standards
-    };
+    const db = { version: 'v1.1 (Custom + Pre-seeded)', standards };
     this.save(db);
     return db;
   },
 
   query(text, db, mode) {
-    if (!db || !db.standards) return "No standards database loaded. Please upload the AS/Ind AS OCR file first.";
-    
+    const activeDb = db || { standards: PRESEEDED_STANDARDS };
     const queryTerm = text.toLowerCase();
-    
-    // Search for matching standard
-    const match = db.standards.find(s => 
+    const match = activeDb.standards.find(s => 
       s.code.toLowerCase().includes(queryTerm) || 
       s.title.toLowerCase().includes(queryTerm) ||
       s.keywords.some(k => queryTerm.includes(k)) ||
@@ -182,21 +165,14 @@ export const AccountingStandardsDB = {
     );
 
     if (match) {
-      const modeText = mode === COMPLIANCE_MODES.IND_AS ? "Ind AS (Corporate)" : "AS (SME)";
       return `### ${match.code}: ${match.title}
-**Framework:** ${modeText}
+**Framework:** ${mode}
 
-**Summary of Standard:**
-${match.content.substring(0, 500)}...
+**Core Requirement:**
+${match.content.substring(0, 800)}...
 
-**Key Compliance Requirement:**
-${match.content.includes('lower of cost') ? '- Inventories must be valued at the lower of cost and Net Realizable Value (NRV).' : ''}
-${match.content.includes('LIFO') ? '- LIFO method is strictly prohibited; use FIFO or Weighted Average.' : ''}
-${match.content.includes('transferred') ? '- Revenue is recognized only when risks and rewards are transferred to the buyer.' : ''}
-
-*Source: Indian Accounting Standards (Official OCR Data)*`;
+*Source: Indian Accounting Standards Knowledge Base*`;
     }
-
-    return "I couldn't find a specific rule for that in the current database. Try searching for 'Inventory', 'Revenue', 'Lease', or a specific Standard number like 'Ind AS 115'.";
+    return "I couldn't find a specific rule for that. Try 'Inventory', 'Revenue', or 'Lease'.";
   }
 };
