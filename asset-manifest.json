@@ -1,19 +1,19 @@
 {
   "files": {
-    "main.css": "/ledgerai-frontend/static/css/main.12101fe1.css",
-    "main.js": "/ledgerai-frontend/static/js/main.70dc27e7.js",
+    "main.css": "/ledgerai-frontend/static/css/main.7aadfacb.css",
+    "main.js": "/ledgerai-frontend/static/js/main.d5658cb1.js",
     "static/js/239.e39fb35b.chunk.js": "/ledgerai-frontend/static/js/239.e39fb35b.chunk.js",
     "static/js/977.4561c64c.chunk.js": "/ledgerai-frontend/static/js/977.4561c64c.chunk.js",
     "static/js/455.5d6dba8c.chunk.js": "/ledgerai-frontend/static/js/455.5d6dba8c.chunk.js",
     "index.html": "/ledgerai-frontend/index.html",
-    "main.12101fe1.css.map": "/ledgerai-frontend/static/css/main.12101fe1.css.map",
-    "main.70dc27e7.js.map": "/ledgerai-frontend/static/js/main.70dc27e7.js.map",
+    "main.7aadfacb.css.map": "/ledgerai-frontend/static/css/main.7aadfacb.css.map",
+    "main.d5658cb1.js.map": "/ledgerai-frontend/static/js/main.d5658cb1.js.map",
     "239.e39fb35b.chunk.js.map": "/ledgerai-frontend/static/js/239.e39fb35b.chunk.js.map",
     "977.4561c64c.chunk.js.map": "/ledgerai-frontend/static/js/977.4561c64c.chunk.js.map",
     "455.5d6dba8c.chunk.js.map": "/ledgerai-frontend/static/js/455.5d6dba8c.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.12101fe1.css",
-    "static/js/main.70dc27e7.js"
+    "static/css/main.7aadfacb.css",
+    "static/js/main.d5658cb1.js"
   ]
 }
