@@ -47,7 +47,6 @@ function CompliancePanel({ isOpen, onClose, onRefresh }) {
   const handleModeChange = (newMode) => {
     setComplianceMode(newMode);
     localStorage.setItem('ledgerai_compliance_mode', newMode);
-    // Auto-rerun validation when mode changes
     const txs = LedgerEngine.transactions;
     const is = LedgerEngine.calcIncomeStatement('Full Year');
     const cf = LedgerEngine.calcCashFlow('Full Year');
@@ -82,21 +81,16 @@ function CompliancePanel({ isOpen, onClose, onRefresh }) {
   };
 
   const handleAIQuery = async () => {
-    if (!query || !asDb) return;
+    if (!query) return;
     setLoading(true);
-    setAiResponse('Thinking...');
+    setAiResponse('Consulting Accounting Standards DB...');
     
+    // Simulate lookup delay
     setTimeout(() => {
-      const modeNote = complianceMode === COMPLIANCE_MODES.IND_AS ? "Under Ind AS (converged with IFRS)" : "Under traditional AS";
-      setAiResponse(`Based on ${complianceMode} requirements found in the OCR document:
-
-${modeNote}, lease accounting follows ${complianceMode === COMPLIANCE_MODES.IND_AS ? 'Ind AS 116' : 'AS 19'}. 
-Ind AS 116 requires almost all leases to be recognized on the Balance Sheet as a Right-of-Use (ROU) asset and a corresponding liability, unless the lease term is 12 months or less.
-
-Rule Cite: ${complianceMode === COMPLIANCE_MODES.IND_AS ? 'IAS116-R001' : 'AS19-R001'}
-Suggestion: Ensure all rental agreements >12 months are capitalized.`);
+      const response = AccountingStandardsDB.query(query, asDb, complianceMode);
+      setAiResponse(response);
       setLoading(false);
-    }, 1500);
+    }, 800);
   };
 
   if (!isOpen) return null;
@@ -127,7 +121,6 @@ Suggestion: Ensure all rental agreements >12 months are capitalized.`);
       </div>
 
       <div className="panel-content">
-        {/* Compliance Mode Toggle */}
         <div className="mode-selector" style={{ marginBottom: 24, background: '#1e293b', padding: 16, borderRadius: 12, border: '1px solid #334155' }}>
           <label style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12, display: 'block' }}>Compliance Framework</label>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -142,9 +135,6 @@ Suggestion: Ensure all rental agreements >12 months are capitalized.`);
               </button>
             ))}
           </div>
-          <p style={{ fontSize: 11, color: '#64748b', marginTop: 10 }}>
-            {complianceMode === COMPLIANCE_MODES.IND_AS ? 'Applying high-end corporate standards (Ind AS) for large entities.' : 'Applying standard AS rules for MSME and smaller companies.'}
-          </p>
         </div>
 
         <div className="compliance-summary">
@@ -164,6 +154,7 @@ Suggestion: Ensure all rental agreements >12 months are capitalized.`);
             <h4>Load Accounting Standards</h4>
             <input type="file" id="as-upload" hidden onChange={handleFileUpload} />
             <label htmlFor="as-upload" className="pill primary" style={{ marginTop: 12, cursor: 'pointer' }}>Select OCR File</label>
+            <p style={{ fontSize: 11, marginTop: 8 }}>Upload the txt file to enable the AI Assistant.</p>
           </div>
         )}
 
@@ -190,12 +181,6 @@ Suggestion: Ensure all rental agreements >12 months are capitalized.`);
               </div>
             </div>
           ))}
-          {filteredFindings.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 40, color: '#475569' }}>
-              <CheckCircle size={48} style={{ opacity: 0.2, marginBottom: 12 }} />
-              <p>No {activeTab.toLowerCase()} findings in {complianceMode} mode.</p>
-            </div>
-          )}
         </div>
 
         <div className="ai-query-section" style={{ marginTop: 40, paddingTop: 30, borderTop: '1px solid #334155' }}>
@@ -205,15 +190,16 @@ Suggestion: Ensure all rental agreements >12 months are capitalized.`);
           </div>
           <div className="query-box">
             <textarea 
-              placeholder="Ask about compliance rules..." 
+              placeholder="Ask about inventory, revenue, leases..." 
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleAIQuery()}
             />
             <button onClick={handleAIQuery} disabled={loading}><MessageSquare size={16}/></button>
           </div>
           {aiResponse && (
             <div className="ai-response">
-              <p>{aiResponse}</p>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{aiResponse}</div>
             </div>
           )}
         </div>
