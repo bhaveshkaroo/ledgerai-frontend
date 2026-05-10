@@ -2,15 +2,20 @@ import React, { useState } from 'react';
 import IncomeStatement from './IncomeStatement';
 import CashFlowStatement from './CashFlowStatement';
 import BalanceSheet from './BalanceSheet';
+import { AlertCircle } from 'lucide-react';
 
-function Statements() {
+function Statements({ period }) {
   const [activeSubTab, setActiveSubTab] = useState('Income Statement');
 
   const tabs = ['Income Statement', 'Cash Flow Statement', 'Balance Sheet'];
 
   return (
     <div className="statements-wrapper">
-      {/* Sub-navigation bar */}
+      <div className="period-notice">
+        <AlertCircle size={16} />
+        <span>Currently viewing data for <strong>{period}</strong> | FY 2025-26</span>
+      </div>
+
       <div className="sub-nav">
         {tabs.map(tab => (
           <button
@@ -24,16 +29,27 @@ function Statements() {
       </div>
 
       <div className="statement-content">
-        {activeSubTab === 'Income Statement' && <IncomeStatement />}
-        {activeSubTab === 'Cash Flow Statement' && <CashFlowStatement />}
-        {activeSubTab === 'Balance Sheet' && <BalanceSheet />}
+        {activeSubTab === 'Income Statement' && <IncomeStatement period={period} />}
+        {activeSubTab === 'Cash Flow Statement' && <CashFlowStatement period={period} />}
+        {activeSubTab === 'Balance Sheet' && <BalanceSheet period={period} />}
       </div>
 
       <style jsx>{`
         .statements-wrapper {
           display: flex;
           flex-direction: column;
-          gap: 24px;
+          gap: 20px;
+        }
+        .period-notice {
+          background: rgba(59, 130, 246, 0.1);
+          border: 1px solid rgba(59, 130, 246, 0.2);
+          color: var(--accent-blue);
+          padding: 12px 20px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-size: 13px;
         }
         .sub-nav {
           display: flex;
@@ -58,8 +74,8 @@ function Statements() {
           background: rgba(255, 255, 255, 0.05);
         }
         .sub-nav-btn.active {
-          background: rgba(59, 130, 246, 0.15);
-          color: var(--accent-blue);
+          background: rgba(0, 229, 255, 0.1);
+          color: var(--accent-cyan);
         }
       `}</style>
     </div>

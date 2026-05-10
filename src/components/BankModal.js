@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, Search, CreditCard } from 'lucide-react';
+import { X, CheckCircle, Search, CreditCard, Shield, Loader2 } from 'lucide-react';
 
 const BANKS = [
   "State Bank of India", "Punjab National Bank", "Bank of Baroda", "Canara Bank", "Union Bank of India", 
@@ -16,12 +16,12 @@ const BANKS = [
   "Saraswat Bank", "Abhyudaya Bank", "TJSB Bank", "Cosmos Bank", "Shamrao Vithal Bank", 
   "Kalupur Commercial Bank", "Citibank", "HSBC", "Standard Chartered", "Deutsche Bank", 
   "DBS Bank", "Barclays", "BNP Paribas", "Bank of America", "JPMorgan Chase", "Wells Fargo",
-  "Goldman Sachs Bank", "Morgan Stanley Bank", "Credit Suisse", "UBS", "Societe Generale", 
+  "Goldman Sachs", "Morgan Stanley", "Credit Suisse", "UBS", "Societe Generale", 
   "Rabobank", "ABN AMRO", "ING Bank", "Commerzbank", "UniCredit"
 ];
 
 function BankModal({ isOpen, onClose, onAdd }) {
-  const [step, setStep] = useState(1); // 1: form, 2: success
+  const [step, setStep] = useState('form'); // 'form', 'loading', 'success'
   const [bankSearch, setBankSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [formData, setFormData] = useState({
@@ -41,17 +41,17 @@ function BankModal({ isOpen, onClose, onAdd }) {
   const validate = () => {
     let newErrors = {};
     if (!formData.bankName) newErrors.bankName = "Required";
-    if (!/^\d{9,18}$/.test(formData.accountNumber)) newErrors.accountNumber = "Invalid (9-18 digits)";
-    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifsc)) newErrors.ifsc = "Invalid IFSC format";
+    if (!/^\d{9,18}$/.test(formData.accountNumber)) newErrors.accountNumber = "9-18 digits required";
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifsc)) newErrors.ifsc = "Invalid IFSC format (e.g. HDFC0001234)";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleConnect = () => {
     if (!validate()) return;
-    setStep(2); // loading
+    setStep('loading');
     setTimeout(() => {
-      setStep(3); // success
+      setStep('success');
       onAdd({
         bankName: formData.bankName,
         accountType: formData.accountType,
@@ -59,29 +59,30 @@ function BankModal({ isOpen, onClose, onAdd }) {
       });
       setTimeout(() => {
         onClose();
-        setStep(1);
-        setFormData({ ...formData, bankName: '', accountNumber: '', ifsc: '' });
+        setStep('form');
+        setBankSearch('');
+        setFormData({ ...formData, bankName: '', accountNumber: '', ifsc: '', aaConsent: false });
       }, 1500);
     }, 2000);
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-container" onClick={e => e.stopPropagation()}>
-        <button className="close-btn" onClick={onClose}><X size={20} /></button>
+      <div className="modal-content bank-modal" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}><X size={24} /></button>
         
-        {step === 1 && (
-          <>
+        {step === 'form' && (
+          <div className="modal-padding">
             <div className="modal-header">
-              <CreditCard className="header-icon" />
+              <div className="icon-circle"><CreditCard size={24} /></div>
               <h2>Connect Bank Account</h2>
               <p>Securely link your business accounts via RBI AA framework</p>
             </div>
 
-            <div className="modal-form">
+            <div className="form-body">
               <div className="form-group">
                 <label>Bank Name</label>
-                <div className="search-input">
+                <div className="search-input-wrapper">
                   <Search size={16} className="search-icon" />
                   <input 
                     type="text" 
@@ -107,6 +108,7 @@ function BankModal({ isOpen, onClose, onAdd }) {
                     </div>
                   )}
                 </div>
+                {errors.bankName && <span className="error-text">{errors.bankName}</span>}
               </div>
 
               <div className="form-row">
@@ -127,12 +129,13 @@ function BankModal({ isOpen, onClose, onAdd }) {
                 <div className="form-group">
                   <label>Account Number</label>
                   <input 
-                    className={errors.accountNumber ? 'error' : ''}
+                    className={errors.accountNumber ? 'input-error' : ''}
                     type="text" 
+                    placeholder="Enter account number"
                     value={formData.accountNumber}
-                    onChange={(e) => setFormData({...formData, accountNumber: e.target.value})}
+                    onChange={(e) => setFormData({...formData, accountNumber: e.target.value.replace(/\D/g, '')})}
                   />
-                  {errors.accountNumber && <span className="err-txt">{errors.accountNumber}</span>}
+                  {errors.accountNumber && <span className="error-text">{errors.accountNumber}</span>}
                 </div>
               </div>
 
@@ -140,12 +143,13 @@ function BankModal({ isOpen, onClose, onAdd }) {
                 <div className="form-group">
                   <label>IFSC Code</label>
                   <input 
-                    className={errors.ifsc ? 'error' : ''}
+                    className={errors.ifsc ? 'input-error' : ''}
                     type="text" 
+                    placeholder="e.g. HDFC0000123"
                     value={formData.ifsc}
                     onChange={(e) => setFormData({...formData, ifsc: e.target.value.toUpperCase()})}
                   />
-                  {errors.ifsc && <span className="err-txt">{errors.ifsc}</span>}
+                  {errors.ifsc && <span className="error-text">{errors.ifsc}</span>}
                 </div>
                 <div className="form-group">
                   <label>Account Holder</label>
@@ -157,203 +161,106 @@ function BankModal({ isOpen, onClose, onAdd }) {
                 </div>
               </div>
 
-              <div className="aa-toggle">
-                <div className="aa-info">
-                  <strong>Enable Account Aggregator (AA) Integration</strong>
-                  <span>RBI regulated secure data sharing framework</span>
+              <div className={`aa-consent-box ${formData.aaConsent ? 'active' : ''}`}>
+                <div className="aa-flex">
+                  <div className="aa-info">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <strong>Enable Account Aggregator (AA) Integration</strong>
+                      <span className="aa-logo">AA</span>
+                    </div>
+                    <span>RBI regulated secure data sharing framework</span>
+                  </div>
+                  <label className="toggle-switch">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.aaConsent}
+                      onChange={(e) => setFormData({...formData, aaConsent: e.target.checked})}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
                 </div>
-                <label className="switch">
-                  <input 
-                    type="checkbox" 
-                    checked={formData.aaConsent}
-                    onChange={(e) => setFormData({...formData, aaConsent: e.target.checked})}
-                  />
-                  <span className="slider"></span>
-                </label>
+                {formData.aaConsent && (
+                  <div className="aa-explanation">
+                    <Shield size={14} />
+                    <span>You are granting 1-year revocable consent to शर्मा Textiles Pvt Ltd to fetch your transaction data directly from your bank using the NBFC-AA framework.</span>
+                  </div>
+                )}
               </div>
 
-              <div className="modal-footer">
-                <button className="btn-cancel" onClick={onClose}>Cancel</button>
-                <button className="btn-connect" onClick={handleConnect}>Connect Bank Account</button>
+              <div className="modal-actions">
+                <button className="btn-secondary" onClick={onClose}>Cancel</button>
+                <button className="btn-primary" onClick={handleConnect}>Connect Bank Account</button>
               </div>
             </div>
-          </>
+          </div>
         )}
 
-        {step === 2 && (
-          <div className="loading-state">
-            <div className="spinner"></div>
+        {step === 'loading' && (
+          <div className="status-state">
+            <Loader2 className="spinner" size={48} />
             <h3>Connecting to {formData.bankName}...</h3>
             <p>Authenticating via RBI secure gateway</p>
           </div>
         )}
 
-        {step === 3 && (
-          <div className="success-state">
-            <div className="success-icon"><CheckCircle size={60} /></div>
-            <h3>Account Connected Successfully!</h3>
-            <p>Your bank data will be synchronized shortly.</p>
+        {step === 'success' && (
+          <div className="status-state">
+            <div className="success-icon-wrapper"><CheckCircle size={60} /></div>
+            <h3 style={{ color: '#10b981' }}>Account Connected!</h3>
+            <p>Your financial data is now being synchronized.</p>
           </div>
         )}
       </div>
 
       <style jsx>{`
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.8);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          backdrop-filter: blur(8px);
-        }
-        .modal-container {
-          background: white;
-          width: 520px;
-          border-radius: 20px;
-          padding: 40px;
-          position: relative;
-          color: #1a1a1a;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
-        .close-btn {
-          position: absolute;
-          right: 20px;
-          top: 20px;
-          border: none;
-          background: transparent;
-          cursor: pointer;
-          color: #999;
-        }
-        .modal-header {
-          text-align: center;
-          margin-bottom: 30px;
-        }
-        .header-icon {
-          color: var(--accent-blue);
-          margin-bottom: 12px;
-          width: 40px;
-          height: 40px;
-        }
-        .modal-header h2 {
-          font-size: 24px;
-          margin-bottom: 8px;
-        }
-        .modal-header p {
-          color: #666;
-          font-size: 14px;
-        }
-        .form-group {
-          margin-bottom: 20px;
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-        .form-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-        }
-        label {
-          font-size: 12px;
-          font-weight: 700;
-          color: #333;
-          text-transform: uppercase;
-        }
-        input, select {
-          padding: 12px;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          font-size: 14px;
-        }
-        input.error { border-color: #ff4d4f; }
-        .err-txt { font-size: 10px; color: #ff4d4f; margin-top: -4px; }
-        .search-input { position: relative; }
-        .search-icon { position: absolute; left: 12px; top: 14px; color: #999; }
-        .search-input input { padding-left: 40px; width: 100%; }
-        .bank-dropdown {
-          position: absolute;
-          top: 100%;
-          left: 0;
-          right: 0;
-          background: white;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          margin-top: 4px;
-          box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-          z-index: 10;
-        }
-        .bank-option {
-          padding: 10px 16px;
-          cursor: pointer;
-        }
-        .bank-option:hover { background: #f5f5f5; }
-        .aa-toggle {
-          background: #f8fafc;
-          padding: 16px;
-          border-radius: 12px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 30px;
-        }
-        .aa-info { display: flex; flex-direction: column; }
-        .aa-info strong { font-size: 13px; }
-        .aa-info span { font-size: 11px; color: #666; }
-        .modal-footer {
-          display: grid;
-          grid-template-columns: 1fr 2fr;
-          gap: 16px;
-        }
-        .btn-cancel {
-          padding: 14px;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          background: white;
-          font-weight: 600;
-          cursor: pointer;
-        }
-        .btn-connect {
-          padding: 14px;
-          border: none;
-          background: #020a1c;
-          color: white;
-          border-radius: 8px;
-          font-weight: 700;
-          cursor: pointer;
-        }
-        .loading-state, .success-state {
-          text-align: center;
-          padding: 40px 0;
-        }
-        .spinner {
-          width: 50px;
-          height: 50px;
-          border: 4px solid #f3f3f3;
-          border-top: 4px solid #3b82f6;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin: 0 auto 24px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .success-icon { color: #52c41a; margin-bottom: 24px; }
-        /* Switch styling */
-        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-          position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-          background-color: #ccc; transition: .4s; border-radius: 24px;
-        }
-        .slider:before {
-          position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
-          background-color: white; transition: .4s; border-radius: 50%;
-        }
-        input:checked + .slider { background-color: #3b82f6; }
-        input:checked + .slider:before { transform: translateX(20px); }
+        .modal-padding { padding: 40px; }
+        .modal-header { text-align: center; margin-bottom: 32px; }
+        .icon-circle { width: 56px; height: 56px; background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+        .modal-header h2 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+        .modal-header p { color: var(--text-secondary); font-size: 14px; }
+
+        .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+        
+        input, select { padding: 12px 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); border-radius: 10px; color: #fff; font-size: 14px; outline: none; }
+        input:focus { border-color: var(--accent-blue); }
+        .input-error { border-color: #ff4d4f !important; }
+        .error-text { color: #ff4d4f; font-size: 11px; font-weight: 600; }
+
+        .search-input-wrapper { position: relative; }
+        .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); }
+        .search-input-wrapper input { padding-left: 42px; width: 100%; }
+
+        .bank-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #1e293b; border: 1px solid var(--border); border-radius: 10px; margin-top: 4px; z-index: 100; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .bank-option { padding: 12px 16px; cursor: pointer; font-size: 14px; }
+        .bank-option:hover { background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); }
+
+        .aa-consent-box { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin: 10px 0 30px; transition: all 0.3s; }
+        .aa-consent-box.active { border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.05); }
+        .aa-flex { display: flex; justify-content: space-between; align-items: flex-start; }
+        .aa-info { display: flex; flex-direction: column; gap: 4px; }
+        .aa-info strong { font-size: 14px; }
+        .aa-info span { font-size: 11px; color: var(--text-secondary); }
+        .aa-logo { background: var(--accent-blue); color: #fff; font-size: 10px; font-weight: 900; padding: 2px 6px; border-radius: 4px; }
+        
+        .aa-explanation { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); display: flex; gap: 10px; font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
+
+        .modal-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
+        .btn-secondary { padding: 14px; background: transparent; border: 1px solid var(--border); color: #fff; border-radius: 10px; font-weight: 600; cursor: pointer; }
+        .btn-primary { padding: 14px; background: var(--accent-blue); border: none; color: #fff; border-radius: 10px; font-weight: 700; cursor: pointer; }
+
+        .status-state { text-align: center; padding: 60px 40px; }
+        .spinner { animation: spin 1s linear infinite; color: var(--accent-blue); margin: 0 auto 24px; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .success-icon-wrapper { color: #10b981; margin-bottom: 24px; }
+
+        .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 24px; }
+        .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .toggle-slider { background-color: var(--accent-blue); }
+        input:checked + .toggle-slider:before { transform: translateX(20px); }
       `}</style>
     </div>
   );

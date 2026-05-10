@@ -1,28 +1,22 @@
 import React from 'react';
+import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
 
-const mockData = {
-  operating: 2200000,
-  investing: -1200000,
-  financing: 500000,
-  net_change: 1500000,
-  opening_cash: 2500000,
-  closing_cash: 4000000
-};
+function CashFlowStatement({ period }) {
+  const data = LedgerEngine.calcCashFlow(period);
 
-function CashFlowStatement() {
-  const fmt = v => {
-    if (v === 0) return '—';
-    const isNeg = v < 0;
-    const absV = Math.abs(v);
-    const str = `₹${absV.toLocaleString('en-IN')}`;
-    return isNeg ? `(${str})` : str;
-  };
+  const Row = ({ label, value, isSubtotal, isTotal, indent }) => (
+    <tr className={`${isSubtotal ? 'subtotal' : ''} ${isTotal ? 'grand-total' : ''}`}>
+      <td style={{ paddingLeft: indent ? 32 : 12 }}>{label}</td>
+      <td className="right">{value < 0 ? `(${formatINR(Math.abs(value))})` : (value === "" ? "" : formatINR(value))}</td>
+    </tr>
+  );
 
   return (
     <div className="card glass-card statement-card">
       <div style={{ textAlign: 'center', marginBottom: 40 }}>
-        <h2 style={{ fontSize: 20, marginBottom: 8 }}>Cash Flow Statement for the year ended 31 March 2026</h2>
-        <h3 style={{ fontSize: 18, color: 'var(--accent-blue)', margin: 0 }}>Sharma Textiles Pvt Ltd</h3>
+        <h2 style={{ fontSize: 20, fontWeight: 700 }}>Cash Flow Statement for the Year Ended 31 March 2026</h2>
+        <h3 style={{ fontSize: 16, color: 'var(--accent-blue)', margin: '8px 0' }}>Sharma Textiles Pvt Ltd</h3>
+        <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>(As per AS 3 - Indirect Method) | Period: {period}</p>
       </div>
 
       <table className="ca-table">
@@ -33,110 +27,54 @@ function CashFlowStatement() {
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td className="section-head">A — Cash Flow from Operating Activities</td>
-            <td className="right section-head">{fmt(mockData.operating)}</td>
-          </tr>
-          <tr>
-            <td className="indent">Net Profit before Tax</td>
-            <td className="right">{fmt(2500000)}</td>
-          </tr>
-          <tr>
-            <td className="indent">Adjustments for Depreciation</td>
-            <td className="right">{fmt(300000)}</td>
-          </tr>
-          <tr>
-            <td className="indent">Working Capital Changes</td>
-            <td className="right">{fmt(-600000)}</td>
-          </tr>
+          <tr className="section-head"><td colSpan={2}>A. CASH FLOW FROM OPERATING ACTIVITIES</td></tr>
+          <Row label="Net Profit Before Tax" value={data.operating.netProfitBeforeTax} indent />
+          <Row label="Adjustments for:" value="" indent />
+          <Row label="Depreciation" value={data.operating.adjustments.depreciation} indent style={{ paddingLeft: 48 }} />
+          <Row label="Finance Costs" value={data.operating.adjustments.interestExpense} indent style={{ paddingLeft: 48 }} />
+          
+          <Row label="Operating Profit before Working Capital changes" value={data.operating.netProfitBeforeTax + data.operating.adjustments.depreciation + data.operating.adjustments.interestExpense} isSubtotal indent />
+          
+          <Row label="Adjustments for Working Capital changes:" value="" indent />
+          <Row label="(Increase)/Decrease in Receivables" value={data.operating.wcChanges.receivables} indent style={{ paddingLeft: 48 }} />
+          <Row label="Increase/(Decrease) in Payables" value={data.operating.wcChanges.payables} indent style={{ paddingLeft: 48 }} />
+          <Row label="(Increase)/Decrease in Inventory" value={data.operating.wcChanges.inventory} indent style={{ paddingLeft: 48 }} />
+          
+          <Row label="Cash generated from operations" value={data.operating.netCashFromOperating + data.operating.taxPaid} isSubtotal indent />
+          <Row label="Less: Income Tax Paid" value={-data.operating.taxPaid} indent />
+          <Row label="Net Cash from Operating Activities (A)" value={data.operating.netCashFromOperating} isTotal />
 
-          <tr><td colSpan={2} style={{height: 10}}></td></tr>
+          <tr><td colSpan={2} style={{ height: 20 }}></td></tr>
 
-          <tr>
-            <td className="section-head">B — Cash Flow from Investing Activities</td>
-            <td className="right section-head">{fmt(mockData.investing)}</td>
-          </tr>
-          <tr>
-            <td className="indent">Purchase of Fixed Assets</td>
-            <td className="right">{fmt(-1500000)}</td>
-          </tr>
-          <tr>
-            <td className="indent">Sale of Investments</td>
-            <td className="right">{fmt(300000)}</td>
-          </tr>
+          <tr className="section-head"><td colSpan={2}>B. CASH FLOW FROM INVESTING ACTIVITIES</td></tr>
+          <Row label="Purchase of Fixed Assets" value={data.investing.capex} indent />
+          <Row label="Sale of Investments" value={data.investing.assetSales} indent />
+          <Row label="Net Cash from Investing Activities (B)" value={data.investing.netCashFromInvesting} isTotal />
 
-          <tr><td colSpan={2} style={{height: 10}}></td></tr>
+          <tr><td colSpan={2} style={{ height: 20 }}></td></tr>
 
-          <tr>
-            <td className="section-head">C — Cash Flow from Financing Activities</td>
-            <td className="right section-head">{fmt(mockData.financing)}</td>
-          </tr>
-          <tr>
-            <td className="indent">Proceeds from Share Capital</td>
-            <td className="right">{fmt(1000000)}</td>
-          </tr>
-          <tr>
-            <td className="indent">Repayment of Loans</td>
-            <td className="right">{fmt(-500000)}</td>
-          </tr>
+          <tr className="section-head"><td colSpan={2}>C. CASH FLOW FROM FINANCING ACTIVITIES</td></tr>
+          <Row label="Proceeds from Share Capital" value={data.financing.loanProceeds} indent />
+          <Row label="Repayment of Long-term Borrowings" value={data.financing.loanRepayment} indent />
+          <Row label="Interest Paid" value={-data.financing.interestPaid} indent />
+          <Row label="Net Cash from Financing Activities (C)" value={data.financing.netCashFromFinancing} isTotal />
 
-          <tr><td colSpan={2} style={{height: 20}}></td></tr>
+          <tr><td colSpan={2} style={{ height: 30 }}></td></tr>
 
-          <tr className="subtotal">
-            <td>Net Increase/(Decrease) in Cash (A+B+C)</td>
-            <td className="right">{fmt(mockData.net_change)}</td>
-          </tr>
-          <tr>
-            <td>Add: Opening Cash and Cash Equivalents</td>
-            <td className="right">{fmt(mockData.opening_cash)}</td>
-          </tr>
-          <tr className="grand-total">
-            <td>Closing Cash and Cash Equivalents</td>
-            <td className="right">{fmt(mockData.closing_cash)}</td>
-          </tr>
+          <Row label="Net Increase / (Decrease) in Cash (A+B+C)" value={data.netChange} isSubtotal />
+          <Row label="Opening Cash and Cash Equivalents" value={data.openingBalance} />
+          <Row label="Closing Cash and Cash Equivalents" value={data.closingBalance} isTotal style={{ color: 'var(--accent-cyan)' }} />
         </tbody>
       </table>
 
       <style jsx>{`
-        .ca-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-        .ca-table th {
-          text-align: left;
-          padding: 12px;
-          border-bottom: 2px solid var(--border);
-          color: var(--text-secondary);
-          font-size: 13px;
-        }
-        .ca-table td {
-          padding: 10px 12px;
-          font-size: 14px;
-        }
-        .section-head {
-          font-weight: 700;
-          color: white;
-          background: rgba(59, 130, 246, 0.05);
-        }
-        .indent {
-          padding-left: 32px !important;
-          color: var(--text-secondary);
-        }
-        .right {
-          text-align: right;
-        }
-        .subtotal {
-          font-weight: 700;
-          border-top: 1px solid var(--border);
-        }
-        .grand-total {
-          font-weight: 800;
-          font-size: 16px !important;
-          border-top: 1px solid var(--text-primary);
-          border-bottom: 4px double var(--accent-cyan);
-          color: var(--accent-cyan);
-          background: rgba(0, 229, 255, 0.05);
-        }
+        .ca-table { width: 100%; border-collapse: collapse; }
+        .ca-table th { text-align: left; padding: 12px; border-bottom: 2px solid var(--border); color: var(--text-secondary); font-size: 13px; text-transform: uppercase; }
+        .ca-table td { padding: 10px 12px; font-size: 14px; }
+        .right { text-align: right; }
+        .section-head { font-weight: 700; color: #fff; background: rgba(255,255,255,0.03); }
+        .subtotal { font-weight: 700; border-top: 1px solid var(--border); }
+        .grand-total { font-weight: 800; font-size: 15px !important; border-top: 2px solid var(--text-primary); border-bottom: 3px double var(--accent-cyan); color: var(--accent-cyan); }
       `}</style>
     </div>
   );

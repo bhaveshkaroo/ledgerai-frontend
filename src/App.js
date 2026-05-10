@@ -4,29 +4,29 @@ import Dashboard from './components/Dashboard';
 import TransactionList from './components/TransactionList';
 import ReportCard from './components/ReportCard';
 import Ledger from './components/Ledger';
-import TrialBalance from './components/TrialBalance';
-import GSTCalculator from './components/GSTCalculator';
-import BalanceSheet from './components/BalanceSheet';
-import CashFlowStatement from './components/CashFlowStatement';
 import Statements from './components/Statements';
-import { LayoutDashboard, ReceiptText, FileText, Settings, Sparkles, BookOpen } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, FileText, Settings, Sparkles, BookOpen, LogOut } from 'lucide-react';
 
 function App() {
   const [activeTab, setActiveTab] = useState('Dashboard');
+  const [period, setPeriod] = useState('Full Year'); // Global period state
 
   useEffect(() => {
-    // Force dark mode logic for the new UI to match design requested
     document.body.classList.add('dark-mode');
   }, []);
 
   const menuItems = [
-    { name: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-    { name: 'Transactions', icon: <ReceiptText size={18} /> },
-    { name: 'Statements', icon: <FileText size={18} /> },
-    { name: 'Ledger Book', icon: <BookOpen size={18} /> },
-    { name: 'AI Summary', icon: <Sparkles size={18} /> },
-    { name: 'Settings', icon: <Settings size={18} /> }
+    { id: 'Dashboard', name: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+    { id: 'Transactions', name: 'Transactions', icon: <ReceiptText size={18} /> },
+    { id: 'Statements', name: 'Statements', icon: <FileText size={18} /> },
+    { id: 'LedgerBook', name: 'Ledger Book', icon: <BookOpen size={18} /> },
+    { id: 'AISummary', name: 'AI Summary', icon: <Sparkles size={18} /> },
+    { id: 'Settings', name: 'Settings', icon: <Settings size={18} /> }
   ];
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+  };
 
   return (
     <div className="app-container">
@@ -36,29 +36,54 @@ function App() {
         <div className="sidebar-menu">
           {menuItems.map(item => (
             <button
-              key={item.name}
-              className={`sidebar-btn ${activeTab === item.name ? 'active' : ''}`}
-              onClick={() => setActiveTab(item.name)}
+              key={item.id}
+              className={`sidebar-item ${activeTab === item.id ? 'active' : ''}`}
+              onClick={() => handleTabChange(item.id)}
             >
               {item.icon}
               <span>{item.name}</span>
             </button>
           ))}
         </div>
+        
+        <div style={{ marginTop: 'auto', padding: '0 28px' }}>
+          <div className="sidebar-item" style={{ color: 'var(--red)', borderLeft: 'none' }}>
+            <LogOut size={18} />
+            <span>Logout</span>
+          </div>
+        </div>
       </div>
 
       {/* Main Content */}
       <div className="main-content">
-        {activeTab === 'Dashboard' && <Dashboard />}
-        {activeTab === 'Transactions' && <TransactionList />}
-        {activeTab === 'Statements' && <Statements />}
-        {activeTab === 'AI Summary' && <ReportCard />}
-        {activeTab === 'Ledger Book' && <Ledger />}
-        {/* Placeholder for settings or other old components */}
-        {(activeTab === 'Ledger' || activeTab === 'Trial Balance' || activeTab === 'GST Calculator') && (
-           <div style={{color: 'var(--text-muted)'}}>Please use Statements tab or specific routes.</div>
-        )}
+        <div id="Dashboard" className={activeTab === 'Dashboard' ? '' : 'hidden'}>
+          <Dashboard period={period} setPeriod={setPeriod} />
+        </div>
+        <div id="Transactions" className={activeTab === 'Transactions' ? '' : 'hidden'}>
+          <TransactionList period={period} />
+        </div>
+        <div id="Statements" className={activeTab === 'Statements' ? '' : 'hidden'}>
+          <Statements period={period} />
+        </div>
+        <div id="LedgerBook" className={activeTab === 'LedgerBook' ? '' : 'hidden'}>
+          <Ledger period={period} />
+        </div>
+        <div id="AISummary" className={activeTab === 'AISummary' ? '' : 'hidden'}>
+          <ReportCard />
+        </div>
+        <div id="Settings" className={activeTab === 'Settings' ? '' : 'hidden'}>
+          <div className="card">
+            <h2>Settings</h2>
+            <p style={{ color: 'var(--text-secondary)', marginTop: 10 }}>Configuration and preferences.</p>
+          </div>
+        </div>
       </div>
+
+      <style jsx>{`
+        .hidden {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 }
