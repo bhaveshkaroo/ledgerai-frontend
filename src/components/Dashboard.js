@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CheckCircle2, AlertCircle, CreditCard, ChevronDown } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { CheckCircle2, AlertCircle, CreditCard, ChevronDown } from 'lucide-react';
 import BankModal from './BankModal';
 
 const FULL_YEAR_DATA = [
