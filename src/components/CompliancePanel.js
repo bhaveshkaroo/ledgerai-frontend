@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, AlertCircle, CheckCircle, Info, X, Upload, FileText, Download, Play, Search, MessageSquare } from 'lucide-react';
+import { Shield, AlertCircle, CheckCircle, Info, X, Upload, FileText, Download, Play, Search, MessageSquare, Sparkles } from 'lucide-react';
 import { AccountingStandardsDB, ASValidationEngine } from '../utils/ASComplianceEngine';
 import { LedgerEngine } from '../utils/LedgerEngine';
 
