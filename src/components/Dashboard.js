@@ -1,143 +1,193 @@
 import React, { useState, useEffect } from 'react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const mockPlData = [
+  { day: 'Sun', income: 10000, expense: 8000 },
+  { day: 'Mon', income: 12000, expense: 9000 },
+  { day: 'Tue', income: 9000, expense: 11000 },
+  { day: 'Wed', income: 15000, expense: 8500 },
+  { day: 'Thu', income: 11000, expense: 10000 },
+  { day: 'Fri', income: 16000, expense: 12000 },
+  { day: 'Sat', income: 14000, expense: 9000 },
+];
 
-const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const mockCashFlowData = [
+  { month: 'Feb', amount: 5000 },
+  { month: 'Mar', amount: 9000 },
+  { month: 'Apr', amount: 11000 },
+  { month: 'May', amount: 10000 },
+  { month: 'Jun', amount: 8000 },
+  { month: 'Jul', amount: 17000 },
+  { month: 'Aug', amount: 12000 },
+];
 
 function Dashboard() {
-  const [pl, setPl] = useState(null);
-  const [monthly, setMonthly] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    Promise.all([
-      fetch(`${API}/reports/pl`).then(r => r.json()),
-      fetch(`${API}/reports/monthly-cashflow`).then(r => r.json())
-    ])
-    .then(([plData, monthlyData]) => {
-      setPl(plData);
-      setMonthly(monthlyData);
-    })
-    .catch(err => setError('Failed to connect to backend.'))
-    .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div className="loading">Loading dashboard</div>;
-  if (error) return (
-    <div className="card" style={{margin: 20, background:'var(--badge-danger-bg)', borderColor:'var(--red)'}}>
-      <h3 style={{color:'var(--badge-danger-text)', margin:'0 0 8px'}}>Connection Error</h3>
-      <p>{error}</p>
-    </div>
-  );
-
-  const fmt = v => v < 0
-    ? `(₹${Math.abs(v).toLocaleString('en-IN')})`
-    : `₹${v.toLocaleString('en-IN')}`;
-
-  const maxVal = monthly
-    ? Math.max(...monthly.map(m => Math.max(m.inflow, m.outflow, 1)))
-    : 1;
-
+  const [timeFilter, setTimeFilter] = useState('Week');
+  
   return (
-    <div className="report-container">
-      <div className="report-header"><h2>Dashboard</h2></div>
+    <div>
+      <div className="dash-header">
+        <div>
+          <h2 className="dash-title">P&L Overview</h2>
+        </div>
+        <div className="dash-accounts">
+          <span>Connected Accounts<br/><small style={{opacity:0.6}}>Account Aggregator</small></span>
+          <div className="account-pill">Bank of America</div>
+          <div className="account-pill">Chase</div>
+          <div className="account-pill">HDFC Bank</div>
+          <div className="account-pill">JPMorgan</div>
+          <div className="account-pill" style={{background: '#3b82f6', border: 'none'}}>+ Add Bank</div>
+        </div>
+      </div>
 
-      {/* KPI Cards */}
-      <div className="card-grid card-grid-3">
-        <div className="card stat-card">
-          <div className="label">Total Revenue</div>
-          <div className="value positive">{fmt(pl.total_revenue)}</div>
+      <div style={{display:'flex', justifyContent:'space-between'}}>
+        <div className="time-filters">
+          {['Week', 'Month', 'Year', 'All Time'].map(f => (
+            <button 
+              key={f} 
+              className={`time-pill ${timeFilter === f ? 'active' : ''}`}
+              onClick={() => setTimeFilter(f)}
+            >
+              {f}
+            </button>
+          ))}
         </div>
-        <div className="card stat-card">
-          <div className="label">Total Expenses</div>
-          <div className="value negative">{fmt(pl.total_expenses)}</div>
+        <div className="time-filters">
+          <span style={{fontSize: 13, color: 'var(--text-muted)', display:'flex', alignItems:'center', gap: 16}}>
+            <span>Today</span>
+            <span>7d</span>
+            <span>30d</span>
+            <span>90d</span>
+          </span>
         </div>
-        <div className="card stat-card">
-          <div className="label">Net Profit</div>
-          <div className={`value ${pl.net_profit >= 0 ? 'positive' : 'negative'}`}>
-            {fmt(pl.net_profit)}
+      </div>
+
+      <div className="dash-grid">
+        <div className="charts-row">
+          {/* Profit & Loss Chart */}
+          <div className="glass-card">
+            <h3 className="card-title">Profit & Loss</h3>
+            <div className="chart-legend-top">
+              <div><span className="legend-dot" style={{background:'#00e5ff'}}></span>Income</div>
+              <div><span className="legend-dot" style={{background:'#3b82f6'}}></span>Expenses</div>
+            </div>
+            <div style={{ width: '100%', height: 200 }}>
+              <ResponsiveContainer>
+                <AreaChart data={mockPlData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#00e5ff" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#8899aa', fontSize: 11}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#8899aa', fontSize: 11}} tickFormatter={v => `$${v/1000}k`} />
+                  <Tooltip contentStyle={{background: '#161b27', border: '1px solid #2d3748', borderRadius: 8}} />
+                  <Area type="monotone" dataKey="expense" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
+                  <Area type="monotone" dataKey="income" stroke="#00e5ff" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Cash Flow Chart */}
+          <div className="glass-card">
+            <h3 className="card-title">Cash Flow</h3>
+            <div style={{ width: '100%', height: 236, position: 'relative' }}>
+               {/* Label simulation */}
+               <div style={{position:'absolute', right: '20%', top: '10%', background:'white', color:'black', padding:'4px 8px', borderRadius:4, fontSize:12, fontWeight:600, zIndex:10}}>
+                 ↑ $12,308
+               </div>
+              <ResponsiveContainer>
+                <AreaChart data={mockCashFlowData} margin={{ top: 30, right: 0, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorCash" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.6}/>
+                      <stop offset="95%" stopColor="#00e5ff" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#8899aa', fontSize: 11}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#8899aa', fontSize: 11}} tickFormatter={v => `$${v/1000}k`} />
+                  <Tooltip contentStyle={{background: '#161b27', border: '1px solid #2d3748', borderRadius: 8}} />
+                  <Area type="monotone" dataKey="amount" stroke="#00e5ff" strokeWidth={3} fillOpacity={1} fill="url(#colorCash)" activeDot={{r: 6, fill: '#00e5ff', stroke: 'white', strokeWidth: 2}} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Balance Sheet Summary */}
+        <div className="glass-card">
+          <h3 className="card-title">Balance Sheet</h3>
+          <div style={{marginTop: 32}}>
+            <div className="bs-item">
+              <div className="bs-label">Total Assets</div>
+              <div className="bs-value">$325,567.89</div>
+            </div>
+            <div className="bs-item">
+              <div className="bs-label">Total Liabilities</div>
+              <div className="bs-value">$155,778.23</div>
+            </div>
+            <div className="bs-item">
+              <div className="bs-label">Net Worth</div>
+              <div className="bs-value">$169,789.66</div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Monthly Cash Flow Chart */}
-      <div className="chart-container">
-        <h3 className="chart-title">Monthly Cash Flow — FY 2026</h3>
-        <div className="chart-legend">
-          <div className="chart-legend-item">
-            <div className="chart-legend-dot" style={{background:'var(--green)'}}></div>
-            <span>Inflow</span>
-          </div>
-          <div className="chart-legend-item">
-            <div className="chart-legend-dot" style={{background:'var(--red)'}}></div>
-            <span>Outflow</span>
-          </div>
-          <div className="chart-legend-item">
-            <div className="chart-legend-dot" style={{background:'var(--blue)'}}></div>
-            <span>Net</span>
-          </div>
-        </div>
-        <div className="bar-chart">
-          {monthly && monthly.map((m, i) => {
-            const inflowH = Math.max((m.inflow / maxVal) * 200, 2);
-            const outflowH = Math.max((m.outflow / maxVal) * 200, 2);
-            const netAbs = Math.abs(m.net);
-            const netH = Math.max((netAbs / maxVal) * 200, 2);
-            const monthLabel = MONTH_NAMES[parseInt(m.month.split('-')[1]) - 1] || m.month;
-            return (
-              <div className="bar-group" key={m.month}>
-                <div className="bar-pair">
-                  <div className="bar bar-inflow" style={{height: inflowH}}>
-                    <div className="bar-tooltip">In: {fmt(m.inflow)}</div>
-                  </div>
-                  <div className="bar bar-outflow" style={{height: outflowH}}>
-                    <div className="bar-tooltip">Out: {fmt(m.outflow)}</div>
-                  </div>
-                  <div className="bar bar-net" style={{height: netH, opacity: m.net < 0 ? 0.6 : 1}}>
-                    <div className="bar-tooltip">Net: {fmt(m.net)}</div>
-                  </div>
-                </div>
-                <div className="bar-label">{monthLabel}</div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Recent Transactions Table */}
+      <div className="glass-card">
+        <h3 className="card-title">Recent Transactions</h3>
+        <table className="modern-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Type</th>
+              <th>Amount</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>15/03/2025</td>
+              <td>Office Rent</td>
+              <td>Expense</td>
+              <td style={{color: 'white'}}>- $2,500.00</td>
+              <td>Rent</td>
+              <td><span className="status-badge approved"><CheckCircle2 size={14}/> Approved</span></td>
+              <td><a className="action-link">View Details</a></td>
+            </tr>
+            <tr>
+              <td>15/03/2025</td>
+              <td>Payment from Client</td>
+              <td>Income</td>
+              <td style={{color: 'white'}}>+ $4,250.00</td>
+              <td>Work</td>
+              <td><span className="status-badge pending"><AlertCircle size={14}/> Pending</span></td>
+              <td><a className="action-link">View Details</a></td>
+            </tr>
+            <tr>
+              <td>14/03/2025</td>
+              <td>Software Subscriptions</td>
+              <td>Expense</td>
+              <td style={{color: 'white'}}>- $120.00</td>
+              <td>Software</td>
+              <td><span className="status-badge approved"><CheckCircle2 size={14}/> Approved</span></td>
+              <td><a className="action-link">View Details</a></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      {/* Monthly Summary Table */}
-      {monthly && (
-        <div style={{marginTop: 24}}>
-          <table className="acc-table">
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th className="right">Inflow (Cr)</th>
-                <th className="right">Outflow (Dr)</th>
-                <th className="right">Net Movement</th>
-              </tr>
-            </thead>
-            <tbody>
-              {monthly.map(m => (
-                <tr key={m.month}>
-                  <td>{MONTH_NAMES[parseInt(m.month.split('-')[1]) - 1]} 2026</td>
-                  <td className="right" style={{color:'var(--green)'}}>{fmt(m.inflow)}</td>
-                  <td className="right" style={{color:'var(--red)'}}>{fmt(m.outflow)}</td>
-                  <td className="right" style={{fontWeight:600, color: m.net >= 0 ? 'var(--green)' : 'var(--red)'}}>
-                    {fmt(m.net)}
-                  </td>
-                </tr>
-              ))}
-              <tr className="total-row">
-                <td>TOTAL</td>
-                <td className="right">{fmt(monthly.reduce((s,m) => s+m.inflow, 0))}</td>
-                <td className="right">{fmt(monthly.reduce((s,m) => s+m.outflow, 0))}</td>
-                <td className="right">{fmt(monthly.reduce((s,m) => s+m.net, 0))}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 }

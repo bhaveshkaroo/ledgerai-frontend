@@ -9,96 +9,59 @@ import GSTCalculator from './components/GSTCalculator';
 import BalanceSheet from './components/BalanceSheet';
 import CashFlowStatement from './components/CashFlowStatement';
 import IncomeStatement from './components/IncomeStatement';
+import { LayoutDashboard, ReceiptText, FileText, Settings, Sparkles } from 'lucide-react';
 
 function App() {
   const [activeTab, setActiveTab] = useState('Dashboard');
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('theme') === 'dark';
-  });
 
   useEffect(() => {
-    if (darkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [darkMode]);
+    // Force dark mode logic for the new UI to match design requested
+    document.body.classList.add('dark-mode');
+  }, []);
 
-  const tabs = [
-    'Dashboard', 'Transactions', 'Ledger', 'Trial Balance',
-    'GST Calculator', 'Balance Sheet', 'Cash Flow', 'Income Statement', 'AI Summary'
+  const menuItems = [
+    { name: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+    { name: 'Transactions', icon: <ReceiptText size={18} /> },
+    { name: 'Statements', icon: <FileText size={18} /> },
+    { name: 'AI Summary', icon: <Sparkles size={18} /> },
+    { name: 'Settings', icon: <Settings size={18} /> }
   ];
 
   return (
-    <div style={{ margin: 0, padding: 0, minHeight: '100vh', background: 'var(--bg)' }}>
-      {/* Navbar */}
-      <nav style={{
-        backgroundColor: 'var(--topbar-bg)',
-        color: 'var(--text)',
-        padding: '16px 24px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottom: '1px solid var(--border)'
-      }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: 1, color: 'var(--accent)' }}>LedgerAI</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button className="topbar-btn">Export</button>
-          <button 
-            className="topbar-btn icon-btn" 
-            onClick={() => setDarkMode(!darkMode)}
-            title="Toggle Dark Mode"
-          >
-            {darkMode ? '☀️' : '🌙'}
-          </button>
-          <button className="topbar-btn">Settings</button>
+    <div className="app-container">
+      {/* Sidebar */}
+      <div className="sidebar">
+        <div className="sidebar-logo">LedgerAI</div>
+        <div className="sidebar-menu">
+          {menuItems.map(item => (
+            <button
+              key={item.name}
+              className={`sidebar-btn ${activeTab === item.name ? 'active' : ''}`}
+              onClick={() => setActiveTab(item.name)}
+            >
+              {item.icon}
+              <span>{item.name}</span>
+            </button>
+          ))}
         </div>
-      </nav>
-
-      {/* Tab Bar */}
-      <div style={{
-        display: 'flex',
-        backgroundColor: 'var(--card)',
-        padding: '0 16px',
-        borderBottom: '1px solid var(--border)',
-        overflowX: 'auto',
-        whiteSpace: 'nowrap'
-      }}>
-        {tabs.map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: '12px 18px',
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
-              fontWeight: activeTab === tab ? 700 : 500,
-              fontSize: 14,
-              color: activeTab === tab ? 'var(--accent)' : 'var(--text-muted)',
-              borderBottom: activeTab === tab ? '3px solid var(--accent)' : '3px solid transparent',
-              transition: 'all 0.2s',
-              flexShrink: 0
-            }}
-          >
-            {tab}
-          </button>
-        ))}
       </div>
 
-      {/* Content */}
-      <div style={{ padding: '24px 16px' }}>
+      {/* Main Content */}
+      <div className="main-content">
         {activeTab === 'Dashboard' && <Dashboard />}
         {activeTab === 'Transactions' && <TransactionList />}
-        {activeTab === 'Ledger' && <Ledger />}
-        {activeTab === 'Trial Balance' && <TrialBalance />}
-        {activeTab === 'GST Calculator' && <GSTCalculator />}
-        {activeTab === 'Balance Sheet' && <BalanceSheet />}
-        {activeTab === 'Cash Flow' && <CashFlowStatement />}
-        {activeTab === 'Income Statement' && <IncomeStatement />}
+        {activeTab === 'Statements' && (
+          <div style={{display:'flex', gap:20, flexDirection:'column'}}>
+            <IncomeStatement />
+            <BalanceSheet />
+            <CashFlowStatement />
+          </div>
+        )}
         {activeTab === 'AI Summary' && <ReportCard />}
+        {/* Placeholder for settings or other old components */}
+        {(activeTab === 'Ledger' || activeTab === 'Trial Balance' || activeTab === 'GST Calculator') && (
+           <div style={{color: 'var(--text-muted)'}}>Please use Statements tab or specific routes.</div>
+        )}
       </div>
     </div>
   );
