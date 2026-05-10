@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, Search, CreditCard, Shield, Loader2 } from 'lucide-react';
+import { X, CheckCircle, Search, CreditCard, Shield, Loader2, Info } from 'lucide-react';
 
 const BANKS = [
   "State Bank of India", "Punjab National Bank", "Bank of Baroda", "Canara Bank", "Union Bank of India", 
@@ -21,9 +21,10 @@ const BANKS = [
 ];
 
 function BankModal({ isOpen, onClose, onAdd }) {
-  const [step, setStep] = useState('form'); // 'form', 'loading', 'success'
+  const [step, setStep] = useState('form'); 
   const [bankSearch, setBankSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [existingCount, setExistingCount] = useState(0);
   const [formData, setFormData] = useState({
     bankName: '',
     accountType: 'Current Account',
@@ -33,6 +34,11 @@ function BankModal({ isOpen, onClose, onAdd }) {
     aaConsent: false
   });
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    const saved = localStorage.getItem('ledgerai_connected_banks');
+    if (saved) setExistingCount(JSON.parse(saved).length);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -50,13 +56,27 @@ function BankModal({ isOpen, onClose, onAdd }) {
   const handleConnect = () => {
     if (!validate()) return;
     setStep('loading');
+    
     setTimeout(() => {
-      setStep('success');
-      onAdd({
+      const masked = `XXXX-XXXX-${formData.accountNumber.slice(-4)}`;
+      const newBank = {
         bankName: formData.bankName,
         accountType: formData.accountType,
-        accountNumber: formData.accountNumber.slice(-4)
-      });
+        accountNumberMasked: masked,
+        ifscCode: formData.ifsc,
+        accountHolderName: formData.accountHolder,
+        aaEnabled: formData.aaConsent,
+        connectedAt: new Date().toISOString()
+      };
+
+      const saved = localStorage.getItem('ledgerai_connected_banks');
+      const banks = saved ? JSON.parse(saved) : [];
+      banks.push(newBank);
+      localStorage.setItem('ledgerai_connected_banks', JSON.stringify(banks));
+
+      setStep('success');
+      onAdd(newBank);
+      
       setTimeout(() => {
         onClose();
         setStep('form');
@@ -73,6 +93,11 @@ function BankModal({ isOpen, onClose, onAdd }) {
         
         {step === 'form' && (
           <div className="modal-padding">
+            {existingCount > 0 && (
+              <div className="existing-notice">
+                <Info size={14}/> <span>You have {existingCount} bank account(s) connected. You can add another below.</span>
+              </div>
+            )}
             <div className="modal-header">
               <div className="icon-circle"><CreditCard size={24} /></div>
               <h2>Connect Bank Account</h2>
@@ -84,26 +109,11 @@ function BankModal({ isOpen, onClose, onAdd }) {
                 <label>Bank Name</label>
                 <div className="search-input-wrapper">
                   <Search size={16} className="search-icon" />
-                  <input 
-                    type="text" 
-                    placeholder="Search for your bank..." 
-                    value={bankSearch}
-                    onChange={(e) => {
-                      setBankSearch(e.target.value);
-                      setShowDropdown(true);
-                    }}
-                    onFocus={() => setShowDropdown(true)}
-                  />
+                  <input type="text" placeholder="Search for your bank..." value={bankSearch} onChange={(e) => { setBankSearch(e.target.value); setShowDropdown(true); }} onFocus={() => setShowDropdown(true)} />
                   {showDropdown && bankSearch && (
                     <div className="bank-dropdown">
                       {filteredBanks.map(b => (
-                        <div key={b} className="bank-option" onClick={() => {
-                          setFormData({...formData, bankName: b});
-                          setBankSearch(b);
-                          setShowDropdown(false);
-                        }}>
-                          {b}
-                        </div>
+                        <div key={b} className="bank-option" onClick={() => { setFormData({...formData, bankName: b}); setBankSearch(b); setShowDropdown(false); }}>{b}</div>
                       ))}
                     </div>
                   )}
@@ -114,27 +124,14 @@ function BankModal({ isOpen, onClose, onAdd }) {
               <div className="form-row">
                 <div className="form-group">
                   <label>Account Type</label>
-                  <select 
-                    value={formData.accountType}
-                    onChange={(e) => setFormData({...formData, accountType: e.target.value})}
-                  >
-                    <option>Current Account</option>
-                    <option>Savings Account</option>
-                    <option>Cash Credit Account</option>
-                    <option>Overdraft Account</option>
-                    <option>Fixed Deposit Account</option>
-                    <option>Loan Account</option>
+                  <select value={formData.accountType} onChange={(e) => setFormData({...formData, accountType: e.target.value})}>
+                    <option>Current Account</option><option>Savings Account</option><option>Cash Credit Account</option>
+                    <option>Overdraft Account</option><option>Fixed Deposit Account</option><option>Loan Account</option>
                   </select>
                 </div>
                 <div className="form-group">
                   <label>Account Number</label>
-                  <input 
-                    className={errors.accountNumber ? 'input-error' : ''}
-                    type="text" 
-                    placeholder="Enter account number"
-                    value={formData.accountNumber}
-                    onChange={(e) => setFormData({...formData, accountNumber: e.target.value.replace(/\D/g, '')})}
-                  />
+                  <input className={errors.accountNumber ? 'input-error' : ''} type="text" placeholder="Enter account number" value={formData.accountNumber} onChange={(e) => setFormData({...formData, accountNumber: e.target.value.replace(/\D/g, '')})} />
                   {errors.accountNumber && <span className="error-text">{errors.accountNumber}</span>}
                 </div>
               </div>
@@ -142,22 +139,12 @@ function BankModal({ isOpen, onClose, onAdd }) {
               <div className="form-row">
                 <div className="form-group">
                   <label>IFSC Code</label>
-                  <input 
-                    className={errors.ifsc ? 'input-error' : ''}
-                    type="text" 
-                    placeholder="e.g. HDFC0000123"
-                    value={formData.ifsc}
-                    onChange={(e) => setFormData({...formData, ifsc: e.target.value.toUpperCase()})}
-                  />
+                  <input className={errors.ifsc ? 'input-error' : ''} type="text" placeholder="e.g. HDFC0000123" value={formData.ifsc} onChange={(e) => setFormData({...formData, ifsc: e.target.value.toUpperCase()})} />
                   {errors.ifsc && <span className="error-text">{errors.ifsc}</span>}
                 </div>
                 <div className="form-group">
                   <label>Account Holder</label>
-                  <input 
-                    type="text" 
-                    value={formData.accountHolder}
-                    onChange={(e) => setFormData({...formData, accountHolder: e.target.value})}
-                  />
+                  <input type="text" value={formData.accountHolder} onChange={(e) => setFormData({...formData, accountHolder: e.target.value})} />
                 </div>
               </div>
 
@@ -171,11 +158,7 @@ function BankModal({ isOpen, onClose, onAdd }) {
                     <span>RBI regulated secure data sharing framework</span>
                   </div>
                   <label className="toggle-switch">
-                    <input 
-                      type="checkbox" 
-                      checked={formData.aaConsent}
-                      onChange={(e) => setFormData({...formData, aaConsent: e.target.checked})}
-                    />
+                    <input type="checkbox" checked={formData.aaConsent} onChange={(e) => setFormData({...formData, aaConsent: e.target.checked})} />
                     <span className="toggle-slider"></span>
                   </label>
                 </div>
@@ -213,48 +196,29 @@ function BankModal({ isOpen, onClose, onAdd }) {
       </div>
 
       <style jsx>{`
+        .existing-notice { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); color: #3b82f6; padding: 10px 16px; border-radius: 8px; font-size: 12px; display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
         .modal-padding { padding: 40px; }
         .modal-header { text-align: center; margin-bottom: 32px; }
         .icon-circle { width: 56px; height: 56px; background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
         .modal-header h2 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
         .modal-header p { color: var(--text-secondary); font-size: 14px; }
-
         .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
-        
         input, select { padding: 12px 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); border-radius: 10px; color: #fff; font-size: 14px; outline: none; }
-        input:focus { border-color: var(--accent-blue); }
-        .input-error { border-color: #ff4d4f !important; }
-        .error-text { color: #ff4d4f; font-size: 11px; font-weight: 600; }
-
         .search-input-wrapper { position: relative; }
         .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); }
-        .search-input-wrapper input { padding-left: 42px; width: 100%; }
-
         .bank-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #1e293b; border: 1px solid var(--border); border-radius: 10px; margin-top: 4px; z-index: 100; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .bank-option { padding: 12px 16px; cursor: pointer; font-size: 14px; }
         .bank-option:hover { background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); }
-
         .aa-consent-box { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin: 10px 0 30px; transition: all 0.3s; }
         .aa-consent-box.active { border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.05); }
-        .aa-flex { display: flex; justify-content: space-between; align-items: flex-start; }
-        .aa-info { display: flex; flex-direction: column; gap: 4px; }
-        .aa-info strong { font-size: 14px; }
-        .aa-info span { font-size: 11px; color: var(--text-secondary); }
-        .aa-logo { background: var(--accent-blue); color: #fff; font-size: 10px; font-weight: 900; padding: 2px 6px; border-radius: 4px; }
-        
-        .aa-explanation { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); display: flex; gap: 10px; font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
-
         .modal-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
         .btn-secondary { padding: 14px; background: transparent; border: 1px solid var(--border); color: #fff; border-radius: 10px; font-weight: 600; cursor: pointer; }
         .btn-primary { padding: 14px; background: var(--accent-blue); border: none; color: #fff; border-radius: 10px; font-weight: 700; cursor: pointer; }
-
         .status-state { text-align: center; padding: 60px 40px; }
         .spinner { animation: spin 1s linear infinite; color: var(--accent-blue); margin: 0 auto 24px; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .success-icon-wrapper { color: #10b981; margin-bottom: 24px; }
-
         .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
         .toggle-switch input { opacity: 0; width: 0; height: 0; }
         .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 24px; }
