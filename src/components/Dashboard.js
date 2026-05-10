@@ -1,336 +1,415 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell, LineChart, Line, ComposedChart, PieChart, Pie, Legend } from 'recharts';
-import { CheckCircle2, AlertCircle, CreditCard, ChevronDown, X, Download, Star, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
-import BankModal from './BankModal';
-import { LedgerEngine, formatINR, CHART_OF_ACCOUNTS } from '../utils/LedgerEngine';
+import { 
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
+  CartesianGrid, AreaChart, Area, Cell, Line
+} from 'recharts';
+import { 
+  ArrowUp, ArrowDown, Calendar, AlertCircle, Sparkles, 
+  Clock, FileText, TrendingUp, IndianRupee, CheckCircle2
+} from 'lucide-react';
+import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
 
 const MONTHS = ['Apr 2025', 'May 2025', 'Jun 2025', 'Jul 2025', 'Aug 2025', 'Sep 2025', 'Oct 2025', 'Nov 2025', 'Dec 2025', 'Jan 2026', 'Feb 2026', 'Mar 2026'];
+const MONTHS_SHORT = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
 
-const CATEGORY_COLORS = {
-  'Raw Materials': '#f59e0b',
-  'Salary': '#3b82f6',
-  'Rent': '#8b5cf6',
-  'Expense': '#06b6d4',
-  'GST Payment': '#ec4899',
-  'Freight': '#10b981',
-  'Other': '#94a3b8'
-};
+const Sparkline = ({ data, color }) => (
+  <svg width="100%" height="40" viewBox="0 0 100 40" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id={`grad-${color}`} x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" style={{ stopColor: color, stopOpacity: 0.3 }} />
+        <stop offset="100%" style={{ stopColor: color, stopOpacity: 0 }} />
+      </linearGradient>
+    </defs>
+    <path
+      d={`M 0 40 ${data.map((v, i) => `L ${(i / (data.length - 1)) * 100} ${40 - (v / Math.max(...data, 1)) * 30}`).join(' ')} L 100 40 Z`}
+      fill={`url(#grad-${color})`}
+    />
+    <path
+      d={`M 0 ${40 - (data[0] / Math.max(...data, 1)) * 30} ${data.map((v, i) => `L ${(i / (data.length - 1)) * 100} ${40 - (v / Math.max(...data, 1)) * 30}`).join(' ')}`}
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+  </svg>
+);
 
-const PanoramicOverlay = ({ isOpen, onClose, type, period, data }) => {
-  const [drillPeriod, setDrillPeriod] = useState(period);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="panoramic-overlay">
-      <div className="panoramic-header">
-        <div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: '#fff' }}>{type} Analysis — Sharma Textiles Pvt Ltd</h2>
-          <p style={{ color: '#94a3b8', fontSize: 13 }}>{drillPeriod} Data | FY 2025-26</p>
-        </div>
-        <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
-          <X size={32} />
-        </button>
-      </div>
-
-      <div className="panoramic-content">
-        <div className="card" style={{ height: 450, background: '#1e293b', border: '1px solid #334155', padding: 24 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-              <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} tickFormatter={v => formatINR(v)} />
-              <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} content={<CustomTooltip />} />
-              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={type === 'Cash Flow' ? (entry.value >= 0 ? '#22c55e' : '#ef4444') : '#3b82f6'} />
-                ))}
-              </Bar>
-              {type === 'Cash Flow' && <Line type="monotone" dataKey="zero" stroke="#64748b" strokeWidth={2} dot={false} />}
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="card" style={{ marginTop: 40, padding: 0, overflow: 'hidden', border: '1px solid #334155' }}>
-          <table className="modern-table">
-            <thead>
-              <tr>
-                <th>Period</th>
-                <th className="right">Amount (₹)</th>
-                <th className="right">Contribution</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((d, i) => (
-                <tr key={i}>
-                  <td>{d.name}</td>
-                  <td className={`right ${d.value < 0 ? 'text-red' : ''}`}>{formatINR(d.value)}</td>
-                  <td className="right">{((Math.abs(d.value) / data.reduce((s,x)=>s+Math.abs(x.value),0)) * 100).toFixed(1)}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <button className="pill primary" style={{ marginTop: 32, padding: '12px 24px' }}>
-          <Download size={18} /> Download CSV
-        </button>
-      </div>
-    </div>
-  );
-};
-
-function Dashboard({ period, setPeriod }) {
-  const [periodType, setPeriodType] = useState('Full Year'); 
-  const [isBankModalOpen, setIsBankModalOpen] = useState(false);
-  const [panoramic, setPanoramic] = useState({ open: false, type: '' });
-  const [connectedBanks, setConnectedBanks] = useState([]);
-
+const CountUpNumber = ({ value, prefix = '₹' }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+  
   useEffect(() => {
-    const saved = localStorage.getItem('ledgerai_connected_banks');
-    if (saved) setConnectedBanks(JSON.parse(saved));
-  }, []);
-
-  const chartData = useMemo(() => {
-    const txs = LedgerEngine.getFilteredTransactions(period);
+    let start = 0;
+    const end = value;
+    const duration = 800;
+    const increment = end / (duration / 16);
     
-    // If Monthly period, group by week
-    if (MONTHS.includes(period)) {
-      const weeks = [{ name: 'Week 1', value: 0 }, { name: 'Week 2', value: 0 }, { name: 'Week 3', value: 0 }, { name: 'Week 4', value: 0 }];
-      const revenue = [...weeks].map(w => ({ ...w }));
-      const expense = [...weeks].map(w => ({ ...w }));
-      const cashflow = [...weeks].map(w => ({ ...w, zero: 0 }));
-
-      txs.forEach(t => {
-        const d = new Date(t.date).getDate();
-        const weekIdx = Math.min(3, Math.floor((d - 1) / 7));
-        const val = t.amount;
-        
-        if (t.account === 'Sales Revenue') {
-          revenue[weekIdx].value += val;
-          cashflow[weekIdx].value += val;
-        } else {
-          expense[weekIdx].value += val;
-          cashflow[weekIdx].value -= val;
-        }
-      });
-      return { revenue, expense, cashflow };
-    }
-
-    // Otherwise group by month
-    const monthsData = MONTHS.map(m => {
-      const is = LedgerEngine.calcIncomeStatement(m);
-      const cf = LedgerEngine.calcCashFlow(m);
-      return {
-        name: m,
-        revenue: is.totalRevenue,
-        expense: is.totalExpenses,
-        cashflow: cf.netChange,
-        zero: 0
-      };
-    }).filter(d => {
-      if (period === 'Full Year') return true;
-      if (period.startsWith('Q')) {
-        const qMap = { 'Q1': ['Apr', 'May', 'Jun'], 'Q2': ['Jul', 'Aug', 'Sep'], 'Q3': ['Oct', 'Nov', 'Dec'], 'Q4': ['Jan', 'Feb', 'Mar'] };
-        return qMap[period].some(m => d.name.startsWith(m));
+    const timer = setInterval(() => {
+      start += increment;
+      if (start >= end) {
+        setDisplayValue(end);
+        clearInterval(timer);
+      } else {
+        setDisplayValue(start);
       }
-      return false;
-    });
+    }, 16);
+    
+    return () => clearInterval(timer);
+  }, [value]);
 
-    return {
-      revenue: monthsData.map(d => ({ name: d.name, value: d.revenue })),
-      expense: monthsData.map(d => ({ name: d.name, value: d.expense })),
-      cashflow: monthsData.map(d => ({ name: d.name, value: d.cashflow, zero: 0 }))
-    };
-  }, [period]);
+  return <span>{prefix}{formatINR(displayValue)}</span>;
+};
 
-  const expenseBreakdown = useMemo(() => {
-    const txs = LedgerEngine.getFilteredTransactions(period).filter(t => t.type === 'Debit');
-    const categories = {};
-    txs.forEach(t => {
-      const cat = t.category || 'Other';
-      categories[cat] = (categories[cat] || 0) + t.amount;
-    });
-    return Object.entries(categories).map(([name, value]) => ({ name, value, fill: CATEGORY_COLORS[name] || '#94a3b8' }));
-  }, [period]);
-
-  const kpis = useMemo(() => LedgerEngine.calcKPIs(period), [period]);
-
-  const maxRevenue = Math.max(...chartData.revenue.map(d => d.value), 1);
-
-  return (
-    <div style={{ animation: 'fadeIn 0.8s ease-out' }}>
-      <div className="dash-header">
-        <div>
-          <h1 className="dash-title">Financial Dashboard</h1>
-          <p style={{color: '#94a3b8', fontSize: 13, marginTop: 4}}>
-            Sharma Textiles Pvt Ltd | <span style={{ color: '#3b82f6', fontWeight: 600 }}>{period}</span>
-          </p>
-        </div>
-        <div className="account-pills">
-          {connectedBanks.map((b, i) => (
-            <div key={i} className="pill" style={{ background: '#1e293b', border: '1px solid #334155' }}>
-              {b.bankName} (..{b.accountNumberMasked.slice(-4)})
-            </div>
-          ))}
-          <div className="pill primary" onClick={() => setIsBankModalOpen(true)}>+ Add Bank</div>
-        </div>
-      </div>
-
-      <div className="filters-row">
-        <div className="filter-group" style={{ background: '#1e293b' }}>
-          {['Monthly', 'Quarterly', 'Full Year'].map(f => (
-            <button 
-              key={f} 
-              className={`filter-btn ${periodType === f ? 'active' : ''}`}
-              onClick={() => {
-                setPeriodType(f);
-                if (f === 'Full Year') setPeriod('Full Year');
-                if (f === 'Quarterly') setPeriod('Q1');
-                if (f === 'Monthly') setPeriod('Apr 2025');
-              }}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-        {periodType === 'Monthly' && (
-          <select 
-            value={period} 
-            onChange={(e) => setPeriod(e.target.value)}
-            style={{ marginLeft: 12, padding: '8px 16px', borderRadius: 30, background: '#1e293b', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600 }}
-          >
-            {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
-        )}
-      </div>
-
-      <div className="dashboard-grid kpi-row" style={{gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 30}}>
-        {[
-          { label: 'Total Revenue', value: kpis.totalRevenue, color: 'text-green' },
-          { label: 'Total Expenses', value: kpis.totalExpenses, color: 'text-red' },
-          { label: 'Net Profit', value: kpis.netProfit, color: 'text-white' },
-          { label: 'Cash Balance', value: kpis.cashBalance, color: 'text-blue' }
-        ].map((k, i) => (
-          <div key={i} className="card kpi-card" style={{ background: '#1e293b', border: '1px solid #334155' }}>
-            <span className="kpi-label">{k.label}</span>
-            <span className={`kpi-value ${k.color}`}>{formatINR(k.value)}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-        <div className="card clickable-chart" onClick={() => setPanoramic({ open: true, type: 'Revenue' })} style={{ background: '#1e293b', border: '1px solid #334155' }}>
-          <h3 className="card-title">Revenue Trends <ExternalLink size={14} /></h3>
-          <div style={{ height: 250, marginTop: 20 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData.revenue}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="name" tick={{fill: '#94a3b8', fontSize: 10}} />
-                <YAxis hide domain={[0, maxRevenue * 1.15]} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="card clickable-chart" onClick={() => setPanoramic({ open: true, type: 'Cash Flow' })} style={{ background: '#1e293b', border: '1px solid #334155' }}>
-          <h3 className="card-title">Cash Flow Analysis <ExternalLink size={14} /></h3>
-          <div style={{ height: 250, marginTop: 20 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData.cashflow}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="name" tick={{fill: '#94a3b8', fontSize: 10}} />
-                <YAxis tick={{fill: '#94a3b8', fontSize: 10}} tickFormatter={v => formatINR(v)} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value">
-                  {chartData.cashflow.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.value >= 0 ? '#22c55e' : '#ef4444'} />
-                  ))}
-                </Bar>
-                <Line type="monotone" dataKey="zero" stroke="#64748b" strokeWidth={1} dot={false} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      <div className="dashboard-grid" style={{ gridTemplateColumns: '1.5fr 1fr', marginTop: 30 }}>
-        <div className="card" style={{ background: '#1e293b', border: '1px solid #334155' }}>
-          <h3 className="card-title">Expense Breakdown</h3>
-          <div style={{ height: 300, display: 'flex' }}>
-            <ResponsiveContainer width="60%" height="100%">
-              <PieChart>
-                <Pie data={expenseBreakdown} dataKey="value" nameKey="name" innerRadius={60} outerRadius={100} paddingAngle={5} />
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div style={{ width: '40%', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 12 }}>
-              {expenseBreakdown.map(e => (
-                <div key={e.name} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                  <div style={{ width: 12, height: 12, borderRadius: 3, background: e.fill }} />
-                  <span style={{ color: '#94a3b8' }}>{e.name}:</span>
-                  <span style={{ fontWeight: 600 }}>{formatINR(e.value)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="card" style={{ background: '#1e293b', border: '1px solid #334155' }}>
-          <h3 className="card-title">Profitability</h3>
-          <div className="summary-cards" style={{ gridTemplateColumns: '1fr', marginTop: 20 }}>
-            <div className="summary-card" style={{ background: 'rgba(34, 197, 94, 0.05)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
-              <label>Gross Margin</label>
-              <div className="amount" style={{ color: '#22c55e' }}>{LedgerEngine.calcIncomeStatement(period).grossMargin.toFixed(1)}%</div>
-            </div>
-            <div className="summary-card" style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-              <label>Net Margin</label>
-              <div className="amount" style={{ color: '#3b82f6' }}>{LedgerEngine.calcIncomeStatement(period).netMargin.toFixed(1)}%</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <BankModal isOpen={isBankModalOpen} onClose={() => setIsBankModalOpen(false)} onAdd={() => {
-        const saved = localStorage.getItem('ledgerai_connected_banks');
-        if (saved) setConnectedBanks(JSON.parse(saved));
-      }} />
-
-      <PanoramicOverlay 
-        isOpen={panoramic.open} 
-        onClose={() => setPanoramic({ open: false, type: '' })}
-        type={panoramic.type}
-        period={period}
-        data={panoramic.type === 'Revenue' ? chartData.revenue : chartData.cashflow}
-      />
-
-      <style jsx>{`
-        .text-blue { color: #3b82f6; }
-        .clickable-chart { cursor: pointer; transition: 0.2s; }
-        .clickable-chart:hover { border-color: #3b82f6 !important; transform: translateY(-2px); }
-        .kpi-card { padding: 24px; display: flex; flex-direction: column; gap: 8px; }
-        .kpi-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
-        .kpi-value { font-size: 24px; font-weight: 700; }
-        .text-green { color: #22c55e; }
-        .text-red { color: #ef4444; }
-      `}</style>
-    </div>
-  );
-}
-
-const CustomTooltip = ({ active, payload }) => {
+const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="custom-tooltip" style={{ background: '#0f172a', border: '1px solid #334155', padding: 12, borderRadius: 8 }}>
-        <p style={{fontWeight: 700, marginBottom: 4, color: '#fff'}}>{payload[0].payload.name}</p>
+      <div className="card" style={{ padding: '12px', border: '1px solid var(--border-light)', backgroundColor: 'var(--bg-secondary)', boxShadow: 'var(--shadow-sm)' }}>
+        <p style={{ fontWeight: 700, marginBottom: 8, fontSize: 13 }}>{label}</p>
         {payload.map((p, i) => (
-          <p key={i} style={{color: p.color || p.fill, fontSize: 12}}>{p.name}: {formatINR(p.value)}</p>
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 20, fontSize: 12 }}>
+            <span style={{ color: p.color }}>{p.name}:</span>
+            <span style={{ fontWeight: 600 }}>{formatINR(p.value)}</span>
+          </div>
         ))}
+        <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 8 }}>
+          {( (payload[0].value / 12000000) * 100 ).toFixed(1)}% of Annual Total
+        </p>
       </div>
     );
   }
   return null;
 };
+
+const QuickStatsRibbon = ({ kpis }) => (
+  <div className="stats-ribbon card" style={{ padding: '12px 24px', flexDirection: 'row', justifyContent: 'space-between', display: 'flex', marginBottom: 20 }}>
+    <div className="stat-item">
+      <FileText size={16} color="var(--accent-gold)" />
+      <div>
+        <div className="stat-label">Invoices Raised</div>
+        <div className="stat-value mono">142</div>
+      </div>
+    </div>
+    <div className="stat-item">
+      <TrendingUp size={16} color="var(--accent-teal)" />
+      <div>
+        <div className="stat-label">Avg Invoice</div>
+        <div className="stat-value mono">₹84,500</div>
+      </div>
+    </div>
+    <div className="stat-item">
+      <IndianRupee size={16} color="var(--accent-navy)" />
+      <div>
+        <div className="stat-label">Largest Tx</div>
+        <div className="stat-value mono">₹12.4L</div>
+      </div>
+    </div>
+    <div className="stat-item">
+      <Clock size={16} color="var(--accent-amber)" />
+      <div>
+        <div className="stat-label">Last GST</div>
+        <div className="stat-value mono">12 Days Ago</div>
+      </div>
+    </div>
+    <div className="stat-item">
+      <CheckCircle2 size={16} color="var(--accent-teal)" />
+      <div>
+        <div className="stat-label">MoM Growth</div>
+        <div className="stat-value mono">+14.2%</div>
+      </div>
+    </div>
+  </div>
+);
+
+const ComplianceCalendar = () => (
+  <div className="card" style={{ flex: 1 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <h3 style={{ fontSize: 16, fontWeight: 700 }}>Compliance Calendar</h3>
+      <Calendar size={18} color="var(--text-muted)" />
+    </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {[
+        { name: 'GSTR-3B Filing', date: 'May 20', status: 'red', period: 'Apr 2025', penalty: '₹5,000' },
+        { name: 'TDS Payment', date: 'Jun 07', status: 'amber', period: 'May 2025', penalty: '1.5% Interest' },
+        { name: 'PF Contribution', date: 'Jun 15', status: 'green', period: 'May 2025', penalty: '₹2,500' },
+        { name: 'GSTR-1 Filing', date: 'Jun 11', status: 'green', period: 'May 2025', penalty: '₹50/day' },
+        { name: 'Advance Tax', date: 'Jun 15', status: 'green', period: 'Q1 FY26', penalty: '1% per month' }
+      ].map((item, i) => (
+        <div key={i} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+          <div style={{ 
+            padding: '4px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, 
+            backgroundColor: item.status === 'red' ? 'var(--accent-red)' : (item.status === 'amber' ? 'var(--accent-amber)' : 'var(--accent-teal)'),
+            color: '#fff', minWidth: 50, textAlign: 'center'
+          }}>
+            {item.date}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>{item.name}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{item.period} | Penalty: {item.penalty}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+function Dashboard({ period, setPeriod }) {
+  const [periodType, setPeriodType] = useState('Full Year');
+
+  const kpis = useMemo(() => LedgerEngine.calcKPIs(period), [period]);
+  
+  const mainChartData = useMemo(() => {
+    return MONTHS_SHORT.map((m, i) => {
+      const is = LedgerEngine.calcIncomeStatement(MONTHS[i]);
+      return {
+        name: m,
+        revenue: is.totalRevenue,
+        expense: is.totalExpenses
+      };
+    });
+  }, []);
+
+  const cashBalanceData = useMemo(() => {
+    let balance = 2500000;
+    return MONTHS_SHORT.map((m, i) => {
+      const cf = LedgerEngine.calcCashFlow(MONTHS[i]);
+      balance += cf.netChange;
+      return { name: m, balance };
+    });
+  }, []);
+
+  const expenseCategories = useMemo(() => {
+    return [
+      { name: 'Raw Materials', value: 4500000 },
+      { name: 'Salaries', value: 2800000 },
+      { name: 'Logistics', value: 1200000 },
+      { name: 'Marketing', value: 850000 },
+      { name: 'Utilities', value: 420000 }
+    ].sort((a, b) => b.value - a.value);
+  }, []);
+
+  const formatLakhs = (tickItem) => {
+    return `${(tickItem / 100000).toFixed(0)}L`;
+  };
+
+  return (
+    <div className="animate-fade-in">
+      <div className="dashboard-layout">
+        {/* Left Column (60%) */}
+        <div className="dashboard-left">
+          {/* Date Navigation Bar */}
+          <div className="date-nav-wrapper">
+            <div className="date-tabs">
+              {['Monthly', 'Quarterly', 'Full Year'].map(t => (
+                <button 
+                  key={t} 
+                  className={`date-tab-btn ${periodType === t ? 'active' : ''}`}
+                  onClick={() => setPeriodType(t)}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            {periodType !== 'Full Year' && (
+              <div className="month-pills-row">
+                {(periodType === 'Monthly' ? MONTHS : ['Q1', 'Q2', 'Q3', 'Q4']).map(m => (
+                  <div 
+                    key={m} 
+                    className={`month-pill ${period === m ? 'active' : ''}`}
+                    onClick={() => setPeriod(m)}
+                  >
+                    {m}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <QuickStatsRibbon kpis={kpis} />
+
+          {/* KPI 2x2 Grid */}
+          <div className="kpi-grid">
+            <div className="card kpi-card revenue">
+              <div>
+                <div className="kpi-label">Total Revenue</div>
+                <div className="kpi-value mono"><CountUpNumber value={kpis.totalRevenue} /></div>
+              </div>
+              <div className="kpi-trend">
+                <Sparkline data={[40, 55, 45, 60, 75, 70]} color="var(--accent-teal)" />
+              </div>
+              <div className="delta-badge delta-positive">+12.5%</div>
+            </div>
+            <div className="card kpi-card expense">
+              <div>
+                <div className="kpi-label">Total Expenses</div>
+                <div className="kpi-value mono"><CountUpNumber value={kpis.totalExpenses} /></div>
+              </div>
+              <div className="kpi-trend">
+                <Sparkline data={[30, 40, 35, 50, 45, 55]} color="var(--accent-red)" />
+              </div>
+              <div className="delta-badge delta-negative">+8.2%</div>
+            </div>
+            <div className="card kpi-card profit">
+              <div>
+                <div className="kpi-label">Net Profit</div>
+                <div className="kpi-value mono"><CountUpNumber value={kpis.netProfit} /></div>
+              </div>
+              <div className="kpi-trend">
+                <Sparkline data={[20, 25, 22, 30, 35, 32]} color="var(--accent-gold)" />
+              </div>
+              <div className="delta-badge delta-positive">+15.1%</div>
+            </div>
+            <div className="card kpi-card cash">
+              <div>
+                <div className="kpi-label">Cash Balance</div>
+                <div className="kpi-value mono"><CountUpNumber value={kpis.cashBalance} /></div>
+              </div>
+              <div className="kpi-trend">
+                <Sparkline data={[50, 45, 48, 55, 52, 60]} color="var(--accent-navy)" />
+              </div>
+              <div className="delta-badge delta-positive">+4.3%</div>
+            </div>
+          </div>
+
+          {/* Main Bar Chart */}
+          <div className="card" style={{ marginTop: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700 }}>Revenue vs Expenses</h3>
+              <div style={{ display: 'flex', gap: 16, fontSize: 12 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--bg-sidebar)' }} /> Revenue</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-amber)' }} /> Expenses</span>
+              </div>
+            </div>
+            <div className="chart-container">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={mainChartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickFormatter={formatLakhs} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.02)' }} />
+                  <Bar 
+                    dataKey="revenue" 
+                    fill="var(--bg-sidebar)" 
+                    radius={[4, 4, 0, 0]} 
+                    name="Revenue" 
+                    animationDuration={1000}
+                    animationBegin={200}
+                  />
+                  <Bar 
+                    dataKey="expense" 
+                    fill="var(--accent-amber)" 
+                    radius={[4, 4, 0, 0]} 
+                    name="Expenses" 
+                    animationDuration={1000}
+                    animationBegin={400}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Sub Charts Row */}
+          <div className="sub-charts-row">
+            <div className="card">
+              <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>Cash Balance Trend</h3>
+              <div style={{ height: 200 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={cashBalanceData}>
+                    <defs>
+                      <linearGradient id="colorCash" x1="0" y1="0" x2="0" y2="100%">
+                        <stop offset="5%" stopColor="var(--accent-teal)" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="var(--accent-teal)" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" />
+                    <XAxis dataKey="name" hide />
+                    <YAxis hide />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="balance" stroke="var(--accent-teal)" fillOpacity={1} fill="url(#colorCash)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="card">
+              <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>Top Expense Categories</h3>
+              <div style={{ height: 200 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={expenseCategories} layout="vertical">
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 600 }} width={80} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="value" fill="var(--accent-gold)" radius={[0, 4, 4, 0]} barSize={20} animationDuration={1000}>
+                      {expenseCategories.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fillOpacity={1 - index * 0.15} animationBegin={index * 100} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column (40%) */}
+        <div className="dashboard-right">
+          {/* Quick AI Insight */}
+          <div className="card" style={{ background: 'var(--bg-sidebar)', color: '#fff' }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
+              <Sparkles size={20} color="var(--accent-gold)" />
+              <h3 style={{ fontSize: 16, fontWeight: 700 }}>AI Financial Insight</h3>
+            </div>
+            <p style={{ fontSize: 14, lineHeight: 1.6, opacity: 0.9 }}>
+              Revenue has increased by 12.5% MoM, but raw material costs are rising faster. Consider renegotiating supplier contracts or optimizing inventory levels to maintain current net margins.
+            </p>
+            <div style={{ marginTop: 16, fontSize: 11, color: 'var(--accent-gold)', fontWeight: 700, textTransform: 'uppercase' }}>
+              Action recommended
+            </div>
+          </div>
+
+          <ComplianceCalendar />
+
+          {/* Activity Feed */}
+          <div className="card" style={{ flex: 1 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>Live Activity</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12 }}>Today</div>
+                {[
+                  { desc: 'Payment received from Reliance Ind.', amount: '+₹1,45,000', time: '10:45 AM', type: 'credit' },
+                  { desc: 'Electricity Bill Paid', amount: '-₹12,400', time: '09:20 AM', type: 'debit' }
+                ].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{item.desc}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{item.time}</div>
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: item.type === 'credit' ? 'var(--accent-teal)' : 'var(--accent-red)' }}>
+                      {item.amount}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12 }}>Yesterday</div>
+                {[
+                  { desc: 'Raw Material Purchase', amount: '-₹4,20,000', time: '04:30 PM', type: 'debit' },
+                  { desc: 'GST Filing Confirmation', amount: 'N/A', time: '02:15 PM', type: 'neutral' }
+                ].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{item.desc}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{item.time}</div>
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: item.type === 'credit' ? 'var(--accent-teal)' : (item.type === 'debit' ? 'var(--accent-red)' : 'var(--text-primary)') }}>
+                      {item.amount}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default Dashboard;

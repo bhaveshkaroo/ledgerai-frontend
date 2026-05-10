@@ -87,144 +87,87 @@ function BankModal({ isOpen, onClose, onAdd }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content bank-modal" onClick={e => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}><X size={24} /></button>
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 3000 }}>
+      <div className="modal-content card" onClick={e => e.stopPropagation()} style={{ padding: 0, overflow: 'hidden', maxWidth: 600, width: '90%' }}>
+        <button className="modal-close" onClick={onClose} style={{ position: 'absolute', top: 20, right: 20, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={24} /></button>
         
         {step === 'form' && (
-          <div className="modal-padding">
-            {existingCount > 0 && (
-              <div className="existing-notice">
-                <Info size={14}/> <span>You have {existingCount} bank account(s) connected. You can add another below.</span>
+          <div style={{ padding: 40 }}>
+            <div style={{ textAlign: 'center', marginBottom: 32 }}>
+              <div style={{ width: 56, height: 56, background: 'var(--bg-primary)', color: 'var(--accent-navy)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <CreditCard size={28} />
               </div>
-            )}
-            <div className="modal-header">
-              <div className="icon-circle"><CreditCard size={24} /></div>
-              <h2>Connect Bank Account</h2>
-              <p>Securely link your business accounts via RBI AA framework</p>
+              <h2 className="heading-serif" style={{ fontSize: 24, fontWeight: 700, margin: '0 0 8px 0' }}>Connect Bank Account</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Securely link your business accounts via RBI AA framework</p>
             </div>
 
-            <div className="form-body">
-              <div className="form-group">
-                <label>Bank Name</label>
-                <div className="search-input-wrapper">
-                  <Search size={16} className="search-icon" />
-                  <input type="text" placeholder="Search for your bank..." value={bankSearch} onChange={(e) => { setBankSearch(e.target.value); setShowDropdown(true); }} onFocus={() => setShowDropdown(true)} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Bank Name</label>
+                <div style={{ position: 'relative' }}>
+                  <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input 
+                    type="text" placeholder="Search for your bank..." value={bankSearch} 
+                    onChange={(e) => { setBankSearch(e.target.value); setShowDropdown(true); }} 
+                    onFocus={() => setShowDropdown(true)} 
+                    style={{ width: '100%', padding: '12px 16px 12px 40px', borderRadius: 8, border: '1px solid var(--border-light)', fontSize: 14 }}
+                  />
                   {showDropdown && bankSearch && (
-                    <div className="bank-dropdown">
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid var(--border-light)', borderRadius: 8, marginTop: 4, zIndex: 100, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
                       {filteredBanks.map(b => (
-                        <div key={b} className="bank-option" onClick={() => { setFormData({...formData, bankName: b}); setBankSearch(b); setShowDropdown(false); }}>{b}</div>
+                        <div key={b} onClick={() => { setFormData({...formData, bankName: b}); setBankSearch(b); setShowDropdown(false); }} style={{ padding: '12px 16px', cursor: 'pointer', fontSize: 14 }}>{b}</div>
                       ))}
                     </div>
                   )}
                 </div>
-                {errors.bankName && <span className="error-text">{errors.bankName}</span>}
               </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Account Type</label>
-                  <select value={formData.accountType} onChange={(e) => setFormData({...formData, accountType: e.target.value})}>
-                    <option>Current Account</option><option>Savings Account</option><option>Cash Credit Account</option>
-                    <option>Overdraft Account</option><option>Fixed Deposit Account</option><option>Loan Account</option>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Account Type</label>
+                  <select value={formData.accountType} onChange={(e) => setFormData({...formData, accountType: e.target.value})} style={{ padding: '12px', borderRadius: 8, border: '1px solid var(--border-light)', fontSize: 14 }}>
+                    <option>Current Account</option><option>Savings Account</option><option>Loan Account</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Account Number</label>
-                  <input className={errors.accountNumber ? 'input-error' : ''} type="text" placeholder="Enter account number" value={formData.accountNumber} onChange={(e) => setFormData({...formData, accountNumber: e.target.value.replace(/\D/g, '')})} />
-                  {errors.accountNumber && <span className="error-text">{errors.accountNumber}</span>}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Account Number</label>
+                  <input type="text" placeholder="Enter number" value={formData.accountNumber} onChange={(e) => setFormData({...formData, accountNumber: e.target.value.replace(/\D/g, '')})} style={{ padding: '12px', borderRadius: 8, border: '1px solid var(--border-light)', fontSize: 14 }} />
                 </div>
               </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label>IFSC Code</label>
-                  <input className={errors.ifsc ? 'input-error' : ''} type="text" placeholder="e.g. HDFC0000123" value={formData.ifsc} onChange={(e) => setFormData({...formData, ifsc: e.target.value.toUpperCase()})} />
-                  {errors.ifsc && <span className="error-text">{errors.ifsc}</span>}
-                </div>
-                <div className="form-group">
-                  <label>Account Holder</label>
-                  <input type="text" value={formData.accountHolder} onChange={(e) => setFormData({...formData, accountHolder: e.target.value})} />
-                </div>
-              </div>
-
-              <div className={`aa-consent-box ${formData.aaConsent ? 'active' : ''}`}>
-                <div className="aa-flex">
-                  <div className="aa-info">
+              <div style={{ background: 'var(--bg-primary)', padding: 20, borderRadius: 12, border: `1px solid ${formData.aaConsent ? 'var(--accent-teal)' : 'var(--border-light)'}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <strong>Enable Account Aggregator (AA) Integration</strong>
-                      <span className="aa-logo">AA</span>
+                      <strong style={{ fontSize: 13 }}>Enable RBI AA Integration</strong>
+                      <span style={{ fontSize: 10, fontWeight: 800, background: 'var(--accent-navy)', color: '#fff', padding: '2px 6px', borderRadius: 4 }}>NBFC-AA</span>
                     </div>
-                    <span>RBI regulated secure data sharing framework</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Secure regulated data sharing framework</span>
                   </div>
-                  <label className="toggle-switch">
-                    <input type="checkbox" checked={formData.aaConsent} onChange={(e) => setFormData({...formData, aaConsent: e.target.checked})} />
-                    <span className="toggle-slider"></span>
-                  </label>
+                  <input type="checkbox" checked={formData.aaConsent} onChange={(e) => setFormData({...formData, aaConsent: e.target.checked})} style={{ width: 20, height: 20 }} />
                 </div>
-                {formData.aaConsent && (
-                  <div className="aa-explanation">
-                    <Shield size={14} />
-                    <span>You are granting 1-year revocable consent to शर्मा Textiles Pvt Ltd to fetch your transaction data directly from your bank using the NBFC-AA framework.</span>
-                  </div>
-                )}
               </div>
 
-              <div className="modal-actions">
-                <button className="btn-secondary" onClick={onClose}>Cancel</button>
-                <button className="btn-primary" onClick={handleConnect}>Connect Bank Account</button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16, marginTop: 12 }}>
+                <button onClick={onClose} style={{ padding: '14px', background: 'transparent', border: '1px solid var(--border-light)', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                <button onClick={handleConnect} style={{ padding: '14px', background: 'var(--accent-navy)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }}>Connect Bank Account</button>
               </div>
             </div>
           </div>
         )}
 
-        {step === 'loading' && (
-          <div className="status-state">
-            <Loader2 className="spinner" size={48} />
-            <h3>Connecting to {formData.bankName}...</h3>
-            <p>Authenticating via RBI secure gateway</p>
-          </div>
-        )}
-
-        {step === 'success' && (
-          <div className="status-state">
-            <div className="success-icon-wrapper"><CheckCircle size={60} /></div>
-            <h3 style={{ color: '#10b981' }}>Account Connected!</h3>
-            <p>Your financial data is now being synchronized.</p>
+        {(step === 'loading' || step === 'success') && (
+          <div style={{ padding: '80px 40px', textAlign: 'center' }}>
+            {step === 'loading' ? <Loader2 size={48} className="animate-spin" style={{ margin: '0 auto 24px', color: 'var(--accent-navy)' }} /> : <CheckCircle size={60} style={{ margin: '0 auto 24px', color: 'var(--accent-teal)' }} />}
+            <h3 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 8px 0' }}>{step === 'loading' ? `Connecting to ${formData.bankName}...` : 'Account Connected!'}</h3>
+            <p style={{ color: 'var(--text-muted)' }}>{step === 'loading' ? 'Authenticating via secure gateway' : 'Your data is being synchronized.'}</p>
           </div>
         )}
       </div>
-
+      
       <style jsx>{`
-        .existing-notice { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); color: #3b82f6; padding: 10px 16px; border-radius: 8px; font-size: 12px; display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
-        .modal-padding { padding: 40px; }
-        .modal-header { text-align: center; margin-bottom: 32px; }
-        .icon-circle { width: 56px; height: 56px; background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
-        .modal-header h2 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
-        .modal-header p { color: var(--text-secondary); font-size: 14px; }
-        .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
-        input, select { padding: 12px 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); border-radius: 10px; color: #fff; font-size: 14px; outline: none; }
-        .search-input-wrapper { position: relative; }
-        .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); }
-        .bank-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #1e293b; border: 1px solid var(--border); border-radius: 10px; margin-top: 4px; z-index: 100; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .bank-option { padding: 12px 16px; cursor: pointer; font-size: 14px; }
-        .bank-option:hover { background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); }
-        .aa-consent-box { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin: 10px 0 30px; transition: all 0.3s; }
-        .aa-consent-box.active { border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.05); }
-        .modal-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
-        .btn-secondary { padding: 14px; background: transparent; border: 1px solid var(--border); color: #fff; border-radius: 10px; font-weight: 600; cursor: pointer; }
-        .btn-primary { padding: 14px; background: var(--accent-blue); border: none; color: #fff; border-radius: 10px; font-weight: 700; cursor: pointer; }
-        .status-state { text-align: center; padding: 60px 40px; }
-        .spinner { animation: spin 1s linear infinite; color: var(--accent-blue); margin: 0 auto 24px; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
-        .toggle-switch input { opacity: 0; width: 0; height: 0; }
-        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 24px; }
-        .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .toggle-slider { background-color: var(--accent-blue); }
-        input:checked + .toggle-slider:before { transform: translateX(20px); }
+        .animate-spin { animation: spin 1s linear infinite; }
       `}</style>
     </div>
   );

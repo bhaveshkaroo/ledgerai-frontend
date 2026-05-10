@@ -85,7 +85,6 @@ function CompliancePanel({ isOpen, onClose, onRefresh }) {
     setLoading(true);
     setAiResponse('Consulting Accounting Standards DB...');
     
-    // Simulate lookup delay
     setTimeout(() => {
       const response = AccountingStandardsDB.query(query, asDb, complianceMode);
       setAiResponse(response);
@@ -109,136 +108,153 @@ function CompliancePanel({ isOpen, onClose, onRefresh }) {
 
   return (
     <div className="compliance-sidepanel">
-      <div className="panel-header">
+      <div className="panel-header" style={{ background: 'var(--bg-sidebar)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Shield size={24} style={{ color: stats.errors > 0 ? '#ef4444' : '#10b981' }} />
+          <Shield size={24} style={{ color: stats.errors > 0 ? 'var(--accent-red)' : 'var(--accent-teal)' }} />
           <div>
-            <h2 style={{ fontSize: 18, color: '#fff' }}>Compliance Report</h2>
-            <p style={{ fontSize: 11, color: '#94a3b8' }}>{asDb ? `Database: ${asDb.version}` : 'No Database Loaded'}</p>
+            <h2 className="heading-serif" style={{ fontSize: 20, color: '#fff' }}>Compliance Audit</h2>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}> Sharma Textiles Pvt Ltd</p>
           </div>
         </div>
         <button className="btn-close" onClick={onClose}><X size={20}/></button>
       </div>
 
-      <div className="panel-content">
-        <div className="mode-selector" style={{ marginBottom: 24, background: '#1e293b', padding: 16, borderRadius: 12, border: '1px solid #334155' }}>
-          <label style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12, display: 'block' }}>Compliance Framework</label>
+      <div className="panel-content" style={{ background: 'var(--bg-sidebar)' }}>
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12, display: 'block' }}>Compliance Framework</label>
           <div style={{ display: 'flex', gap: 8 }}>
             {Object.values(COMPLIANCE_MODES).map(mode => (
               <button 
                 key={mode} 
                 className={`mode-btn ${complianceMode === mode ? 'active' : ''}`}
                 onClick={() => handleModeChange(mode)}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)',
+                  background: complianceMode === mode ? 'var(--accent-gold)' : 'transparent',
+                  color: complianceMode === mode ? 'var(--bg-sidebar)' : '#fff',
+                  fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s'
+                }}
               >
-                {mode === COMPLIANCE_MODES.IND_AS ? <Sparkles size={12} /> : <FileText size={12} />}
                 {mode}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="compliance-summary">
-          <div className="stat-box error"><span>{stats.errors}</span><label>Errors</label></div>
-          <div className="stat-box warning"><span>{stats.warnings}</span><label>Warnings</label></div>
-          <div className="stat-box info"><span>{stats.info}</span><label>Notices</label></div>
-        </div>
-
-        <div className="action-row" style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
-          <button className="pill primary" style={{ flex: 1 }} onClick={runValidation}><Play size={14}/> Run Audit</button>
-          <button className="pill" style={{ background: '#1e293b' }} onClick={exportReport}><Download size={14}/> Export CSV</button>
-        </div>
-
-        {!asDb && (
-          <div className="upload-notice">
-            <Upload size={32} />
-            <h4>Load Accounting Standards</h4>
-            <input type="file" id="as-upload" hidden onChange={handleFileUpload} />
-            <label htmlFor="as-upload" className="pill primary" style={{ marginTop: 12, cursor: 'pointer' }}>Select OCR File</label>
-            <p style={{ fontSize: 11, marginTop: 8 }}>Upload the txt file to enable the AI Assistant.</p>
+        <div className="compliance-summary" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 24 }}>
+          <div className="stat-box" style={{ background: 'rgba(239, 68, 68, 0.1)', padding: 16, borderRadius: 12, textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+            <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--accent-red)' }}>{stats.errors}</span>
+            <label style={{ fontSize: 9, textTransform: 'uppercase', color: 'var(--accent-red)', fontWeight: 700, display: 'block', marginTop: 4 }}>Errors</label>
           </div>
-        )}
+          <div className="stat-box" style={{ background: 'rgba(201, 168, 76, 0.1)', padding: 16, borderRadius: 12, textAlign: 'center', border: '1px solid rgba(201, 168, 76, 0.2)' }}>
+            <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--accent-gold)' }}>{stats.warnings}</span>
+            <label style={{ fontSize: 9, textTransform: 'uppercase', color: 'var(--accent-gold)', fontWeight: 700, display: 'block', marginTop: 4 }}>Warnings</label>
+          </div>
+          <div className="stat-box" style={{ background: 'rgba(20, 184, 166, 0.1)', padding: 16, borderRadius: 12, textAlign: 'center', border: '1px solid rgba(20, 184, 166, 0.2)' }}>
+            <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--accent-teal)' }}>{stats.info}</span>
+            <label style={{ fontSize: 9, textTransform: 'uppercase', color: 'var(--accent-teal)', fontWeight: 700, display: 'block', marginTop: 4 }}>Notices</label>
+          </div>
+        </div>
 
-        <div className="pill-nav" style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+          <button 
+            onClick={runValidation}
+            style={{ 
+              flex: 1, padding: '12px', borderRadius: 8, background: '#fff', color: 'var(--bg-sidebar)',
+              border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+            }}
+          >
+            <Play size={16} fill="currentColor" /> Run Audit Engine
+          </button>
+          <button 
+            onClick={exportReport}
+            style={{ 
+              padding: '12px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', color: '#fff',
+              border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer'
+            }}
+          >
+            <Download size={18} />
+          </button>
+        </div>
+
+        <div className="pill-nav" style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
           {['Active', 'Reviewed'].map(t => (
-            <button key={t} className={`pill-btn ${activeTab === t ? 'active' : ''}`} onClick={() => setActiveTab(t)}>{t}</button>
+            <button 
+              key={t} 
+              onClick={() => setActiveTab(t)}
+              style={{
+                flex: 1, padding: '8px', borderRadius: 20, border: 'none',
+                background: activeTab === t ? 'rgba(255,255,255,0.1)' : 'transparent',
+                color: activeTab === t ? '#fff' : 'rgba(255,255,255,0.4)',
+                fontSize: 12, fontWeight: 600, cursor: 'pointer'
+              }}
+            >
+              {t}
+            </button>
           ))}
         </div>
 
         <div className="findings-list">
           {filteredFindings.map((f, i) => (
-            <div key={i} className={`finding-card ${f.severity.toLowerCase()}`}>
-              <div className="finding-header">
-                <span className="finding-id">{f.id}</span>
-                <span className={`severity-badge ${f.severity.toLowerCase()}`}>{f.severity}</span>
+            <div key={i} style={{ 
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)',
+              borderRadius: 12, padding: 16, marginBottom: 16, borderLeft: `4px solid ${f.severity === 'ERROR' ? 'var(--accent-red)' : (f.severity === 'WARNING' ? 'var(--accent-gold)' : 'var(--accent-teal)')}`
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.4)' }}>{f.id}</span>
+                <span style={{ fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 4, background: f.severity === 'ERROR' ? 'var(--accent-red)' : 'rgba(255,255,255,0.1)', color: '#fff' }}>{f.severity}</span>
               </div>
-              <p className="finding-message">{f.message}</p>
-              <div className="finding-suggestion">
-                <strong>Fix:</strong> {f.suggestion}
+              <p style={{ fontSize: 13, color: '#fff', lineHeight: 1.5, marginBottom: 12 }}>{f.message}</p>
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: 12, borderRadius: 6, fontSize: 12, color: 'rgba(255,255,255,0.7)', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                <strong>Recommendation:</strong> {f.suggestion}
               </div>
-              <div className="finding-footer">
-                <span>{f.standard}</span>
-                <button onClick={() => toggleResolved(f.id, f.txId)}>{f.status === 'Resolved' ? 'Reopen' : 'Mark Reviewed'}</button>
+              <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{f.standard}</span>
+                <button 
+                  onClick={() => toggleResolved(f.id, f.txId)}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--accent-gold)', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
+                >
+                  {f.status === 'Resolved' ? 'Reopen' : 'Dismiss'}
+                </button>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="ai-query-section" style={{ marginTop: 40, paddingTop: 30, borderTop: '1px solid #334155' }}>
+        <div style={{ marginTop: 40, paddingTop: 30, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <Sparkles size={18} style={{ color: '#3b82f6' }} />
-            <h3 style={{ fontSize: 16, color: '#fff' }}>AS Assistant (Senior CA)</h3>
+            <Sparkles size={18} color="var(--accent-gold)" />
+            <h3 className="heading-serif" style={{ fontSize: 18, color: '#fff' }}>AS Assistant (Senior CA)</h3>
           </div>
-          <div className="query-box">
+          <div style={{ position: 'relative' }}>
             <textarea 
-              placeholder="Ask about inventory, revenue, leases..." 
+              placeholder="Ask about Ind AS requirements, tax implications..." 
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleAIQuery()}
+              style={{ width: '100%', height: 100, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 12, color: '#fff', fontSize: 13, outline: 'none' }}
             />
-            <button onClick={handleAIQuery} disabled={loading}><MessageSquare size={16}/></button>
+            <button 
+              onClick={handleAIQuery} 
+              disabled={loading}
+              style={{ position: 'absolute', bottom: 12, right: 12, background: 'var(--accent-gold)', color: 'var(--bg-sidebar)', border: 'none', padding: 8, borderRadius: 8, cursor: 'pointer' }}
+            >
+              <MessageSquare size={16} />
+            </button>
           </div>
           {aiResponse && (
-            <div className="ai-response">
-              <div style={{ whiteSpace: 'pre-wrap' }}>{aiResponse}</div>
+            <div style={{ marginTop: 16, background: 'rgba(201, 168, 76, 0.1)', padding: 16, borderRadius: 12, border: '1px solid rgba(201, 168, 76, 0.2)', fontSize: 13, color: '#fff', lineHeight: 1.6 }}>
+              {aiResponse}
             </div>
           )}
         </div>
       </div>
 
       <style jsx>{`
-        .compliance-sidepanel { position: fixed; top: 0; right: 0; width: 450px; height: 100vh; background: #0f172a; border-left: 1px solid #334155; z-index: 2000; display: flex; flex-direction: column; animation: slideIn 0.3s ease-out; }
+        .compliance-sidepanel { position: fixed; top: 0; right: 0; width: 450px; height: 100vh; background: var(--bg-sidebar); z-index: 2000; display: flex; flex-direction: column; animation: slideIn 0.3s ease-out; box-shadow: -20px 0 50px rgba(0,0,0,0.5); }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-        .panel-header { padding: 24px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
-        .btn-close { background: transparent; border: none; color: #94a3b8; cursor: pointer; }
+        .panel-header { padding: 24px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-close { background: transparent; border: none; color: rgba(255,255,255,0.5); cursor: pointer; }
         .panel-content { padding: 24px; overflow-y: auto; flex: 1; }
-        .mode-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #64748b; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
-        .mode-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
-        .compliance-summary { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
-        .stat-box { padding: 16px; border-radius: 12px; text-align: center; display: flex; flex-direction: column; gap: 4px; }
-        .stat-box.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
-        .stat-box.warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2); }
-        .stat-box.info { background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); }
-        .stat-box span { font-size: 24px; font-weight: 800; }
-        .stat-box label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
-        .finding-card { background: #1e293b; border-radius: 12px; border: 1px solid #334155; padding: 16px; margin-bottom: 16px; border-left: 4px solid #334155; }
-        .finding-card.error { border-left-color: #ef4444; }
-        .finding-card.warning { border-left-color: #f59e0b; }
-        .finding-card.info { border-left-color: #3b82f6; }
-        .finding-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-        .finding-id { font-size: 11px; font-weight: 700; color: #94a3b8; }
-        .severity-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 800; }
-        .severity-badge.error { background: #ef4444; color: #fff; }
-        .severity-badge.warning { background: #f59e0b; color: #fff; }
-        .severity-badge.info { background: #3b82f6; color: #fff; }
-        .finding-message { font-size: 13px; color: #fff; line-height: 1.5; margin-bottom: 12px; }
-        .finding-suggestion { background: rgba(255,255,255,0.02); padding: 10px; border-radius: 6px; font-size: 12px; color: #cbd5e1; border: 1px dashed #334155; }
-        .finding-footer { margin-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #94a3b8; }
-        .finding-footer button { background: transparent; border: none; color: #3b82f6; font-weight: 700; cursor: pointer; }
-        .upload-notice { text-align: center; padding: 40px 20px; background: rgba(59, 130, 246, 0.05); border: 2px dashed #334155; border-radius: 16px; margin-bottom: 24px; color: #94a3b8; }
-        .query-box { position: relative; }
-        .query-box textarea { width: 100%; height: 100px; background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 12px; color: #fff; font-size: 13px; outline: none; }
-        .query-box button { position: absolute; bottom: 12px; right: 12px; background: #3b82f6; color: #fff; border: none; padding: 8px; border-radius: 8px; cursor: pointer; }
-        .ai-response { margin-top: 16px; background: rgba(59, 130, 246, 0.1); padding: 16px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.2); font-size: 13px; color: #cbd5e1; line-height: 1.6; }
       `}</style>
     </div>
   );

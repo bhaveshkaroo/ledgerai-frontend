@@ -1,14 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&display=swap');
+
+:root {
+  /* Colors - Light Mode */
+  --bg-primary: #F4F5F7;
+  --bg-secondary: #FFFFFF;
+  --bg-sidebar: #0B1426;
+  --bg-sidebar-active: rgba(201, 168, 76, 0.1);
+  
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+  
+  --accent-gold: #C9A84C;
+  --accent-navy: #0B1426;
+  --accent-teal: #14B8A6;
+  --accent-red: #EF4444;
+  --accent-amber: #F59E0B;
+  
+  --border-light: rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  
+  /* Typography */
+  --font-heading: 'DM Serif Display', serif;
+  --font-body: 'Instrument Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  
+  /* Spacing */
+  --space-unit: 8px;
+  --padding-content: 32px;
+  --padding-card: 24px;
+  --gap-grid: 20px;
+}
+
+[data-theme='dark'] {
+  --bg-primary: #0D1117;
+  --bg-secondary: #161B27;
+  --bg-sidebar: #080E1A;
+  --bg-sidebar-secondary: #1C2333;
+  
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  
+  --border-light: rgba(255, 255, 255, 0.08);
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--bg);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+h1, h2, h3, h4, .heading-serif {
+  font-family: var(--font-heading);
+}
+
+.mono {
+  font-family: var(--font-mono);
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: var(--font-mono);
 }

@@ -1,168 +1,113 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Printer, Download, ChevronDown, BookText, ArrowRightLeft, CreditCard, ShoppingBag, RotateCcw, ScrollText } from 'lucide-react';
 import { LedgerEngine, formatINR, CHART_OF_ACCOUNTS } from '../utils/LedgerEngine';
+import { Search } from 'lucide-react';
 
 function Ledger({ period }) {
-  const [activeSubTab, setActiveSubTab] = useState('General Ledger');
   const [selectedAccount, setSelectedAccount] = useState(CHART_OF_ACCOUNTS[0].name);
-  const [selectedSubBook, setSelectedSubBook] = useState('Sales Book');
   const [searchTerm, setSearchTerm] = useState('');
 
   const ledgerEntries = useMemo(() => {
     const txs = LedgerEngine.getFilteredTransactions(period);
-    let runningBalance = selectedAccount === 'Cash and Bank' ? 4500000 : 0;
-    const entries = [{
-      date: '2025-04-01', particulars: 'Opening Balance', ref: 'OB', debit: runningBalance, credit: 0, balance: runningBalance, type: 'Dr'
-    }];
+    let runningBalance = 0;
+    const entries = [];
     
+    // Simple logic to find opening balance or use fixed starting point
+    if (selectedAccount === 'Cash and Bank') runningBalance = 4500000;
+    
+    entries.push({
+      date: '2025-04-01', particulars: 'Opening Balance', voucher: 'OB-001', debit: runningBalance, credit: 0, balance: runningBalance
+    });
+
     txs.filter(t => t.account === selectedAccount).sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(t => {
       if (t.type === 'Debit') runningBalance += t.amount;
       else runningBalance -= t.amount;
       entries.push({
-        date: t.date, particulars: t.narration, ref: t.ref,
+        date: t.date, particulars: t.narration, voucher: t.ref,
         debit: t.type === 'Debit' ? t.amount : 0,
         credit: t.type === 'Credit' ? t.amount : 0,
-        balance: Math.abs(runningBalance),
-        type: runningBalance >= 0 ? 'Dr' : 'Cr'
+        balance: runningBalance
       });
     });
 
     return entries.filter(e => 
       e.particulars.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.date.includes(searchTerm) ||
-      e.ref.toLowerCase().includes(searchTerm.toLowerCase())
+      e.voucher.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [selectedAccount, period, searchTerm]);
 
-  const subBookData = useMemo(() => {
-    const allTxs = LedgerEngine.getFilteredTransactions(period);
-    if (selectedSubBook === 'Sales Book') {
-      return allTxs.filter(t => t.account === 'Sales Revenue').map((t, i) => ({
-        date: t.date, invoice: t.ref, customer: t.narration.replace('Credit Sale to ', ''), particulars: t.narration, amount: t.amount, gst: Math.floor(t.amount * 0.18), total: Math.floor(t.amount * 1.18)
-      }));
-    }
-    if (selectedSubBook === 'Purchase Book') {
-      return allTxs.filter(t => t.account === 'Cost of Materials Consumed').map((t, i) => ({
-        date: t.date, invoice: t.ref, supplier: t.narration.replace('Purchase from ', ''), particulars: t.narration, amount: t.amount, gst: Math.floor(t.amount * 0.18), total: Math.floor(t.amount * 1.18)
-      }));
-    }
-    if (selectedSubBook === 'Cash Book') {
-      return allTxs.filter(t => t.category === 'Expense' || t.category === 'Salary' || t.category === 'Rent').map(t => ({
-        date: t.date, particulars: t.narration, ref: t.ref, receipt: t.type === 'Credit' ? t.amount : 0, payment: t.type === 'Debit' ? t.amount : 0
-      }));
-    }
-    return [];
-  }, [selectedSubBook, period]);
-
   const closingBalance = ledgerEntries.length > 0 ? ledgerEntries[ledgerEntries.length - 1].balance : 0;
-  const closingType = ledgerEntries.length > 0 ? ledgerEntries[ledgerEntries.length - 1].type : 'Dr';
 
   return (
-    <div className="ledger-book-container">
-      <div className="pill-nav" style={{ display: 'flex', flexDirection: 'row', gap: 12, padding: '16px 0', flexWrap: 'wrap', marginBottom: 20 }}>
-        <button className={`pill-btn ${activeSubTab === 'General Ledger' ? 'active' : ''}`} onClick={() => setActiveSubTab('General Ledger')}>General Ledger</button>
-        <button className={`pill-btn ${activeSubTab === 'Subsidiary Books' ? 'active' : ''}`} onClick={() => setActiveSubTab('Subsidiary Books')}>Subsidiary Books</button>
+    <div className="ledger-container animate-fade-in">
+      <div className="card" style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+          <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)' }}>Account:</label>
+          <select 
+            value={selectedAccount} 
+            onChange={(e) => setSelectedAccount(e.target.value)} 
+            className="ledger-select"
+            style={{ 
+              padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border-light)', 
+              background: '#fff', fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' 
+            }}
+          >
+            {CHART_OF_ACCOUNTS.map(acc => <option key={acc.name} value={acc.name}>{acc.name}</option>)}
+          </select>
+        </div>
+        <div style={{ position: 'relative' }}>
+          <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input 
+            type="text" placeholder="Search entries..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ padding: '8px 16px 8px 40px', borderRadius: 8, border: '1px solid var(--border-light)', background: '#fff', width: 250 }}
+          />
+        </div>
       </div>
 
-      {activeSubTab === 'General Ledger' ? (
-        <div className="general-ledger-section">
-          <div className="ledger-header card" style={{ background: '#1e293b', padding: 24, border: '1px solid #334155', borderRadius: 12, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <div className="account-selector-wrapper">
-              <label style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8, display: 'block' }}>Select Ledger Account</label>
-              <select value={selectedAccount} onChange={(e) => setSelectedAccount(e.target.value)} className="ledger-select" style={{ background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '10px 16px', borderRadius: 8 }}>
-                {CHART_OF_ACCOUNTS.map(acc => <option key={acc.name} value={acc.name}>{acc.name}</option>)}
-              </select>
+      <div className="statement-document">
+        <div className="document-header" style={{ borderBottom: 'none', marginBottom: 0 }}>
+          <h1 className="company-name heading-serif">Sharma Textiles Pvt Ltd</h1>
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #000', paddingBottom: 8, marginTop: 20 }}>
+            <span style={{ fontWeight: 700 }}>Dr.</span>
+            <div style={{ textAlign: 'center' }}>
+              <h2 className="heading-serif" style={{ fontSize: 24, margin: 0 }}>{selectedAccount}</h2>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Account Code: 100-{(CHART_OF_ACCOUNTS.findIndex(a => a.name === selectedAccount) + 1).toString().padStart(3, '0')}</span>
             </div>
-            <div className="ledger-actions" style={{ display: 'flex', gap: 12 }}>
-              <div style={{ position: 'relative' }}>
-                <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-                <input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ padding: '10px 16px 10px 40px', background: '#0f172a', border: '1px solid #334155', borderRadius: 8, color: '#fff' }} />
-              </div>
-              <button className="btn-icon" onClick={() => window.print()} style={{ background: '#0f172a', color: '#94a3b8', border: '1px solid #334155', borderRadius: 8, width: 44, display: 'flex', alignItems: 'center', justifyCenter: 'center' }}><Printer size={18} /></button>
-            </div>
+            <span style={{ fontWeight: 700 }}>Cr.</span>
           </div>
+        </div>
 
-          <div className="card glass-card">
-            <div style={{ padding: 30, display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #334155' }}>
-              <div>
-                <h2 style={{ fontSize: 24, fontWeight: 700, color: '#3b82f6' }}>{selectedAccount}</h2>
-                <p style={{ color: '#94a3b8', fontSize: 13 }}>Sharma Textiles Pvt Ltd | FY 2025-26</p>
-              </div>
-              <div style={{ display: 'flex', gap: 40, textAlign: 'right' }}>
-                <div><span style={{ fontSize: 11, color: '#94a3b8' }}>CLOSING BALANCE</span><div style={{ fontSize: 22, fontWeight: 700 }}>{formatINR(closingBalance)} {closingType}</div></div>
-              </div>
-            </div>
-            <table className="modern-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Particulars</th>
-                  <th>Ref</th>
-                  <th className="right">Debit (₹)</th>
-                  <th className="right">Credit (₹)</th>
-                  <th className="right">Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ledgerEntries.map((e, i) => (
-                  <tr key={i}>
-                    <td>{e.date}</td>
-                    <td style={{ fontWeight: 600 }}>{e.particulars}</td>
-                    <td style={{ color: '#3b82f6' }}>{e.ref}</td>
-                    <td className="right text-red">{e.debit > 0 ? formatINR(e.debit) : '—'}</td>
-                    <td className="right text-green">{e.credit > 0 ? formatINR(e.credit) : '—'}</td>
-                    <td className="right" style={{ fontWeight: 700 }}>{formatINR(e.balance)} {e.type}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <table className="ledger-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: 20 }}>
+          <thead>
+            <tr style={{ background: 'var(--bg-primary)', borderBottom: '1px solid #000' }}>
+              <th style={{ padding: 12, textAlign: 'left', fontSize: 12 }}>Date</th>
+              <th style={{ padding: 12, textAlign: 'left', fontSize: 12 }}>Particulars</th>
+              <th style={{ padding: 12, textAlign: 'left', fontSize: 12 }}>Voucher No.</th>
+              <th style={{ padding: 12, textAlign: 'right', fontSize: 12 }}>Debit (₹)</th>
+              <th style={{ padding: 12, textAlign: 'right', fontSize: 12 }}>Credit (₹)</th>
+              <th style={{ padding: 12, textAlign: 'right', fontSize: 12 }}>Balance (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ledgerEntries.map((e, i) => (
+              <tr key={i} style={{ backgroundColor: i % 2 === 0 ? '#fff' : 'rgba(0,0,0,0.02)' }}>
+                <td style={{ padding: 12, fontSize: 13 }}>{e.date}</td>
+                <td style={{ padding: 12, fontSize: 13, fontWeight: 600 }}>{e.particulars}</td>
+                <td style={{ padding: 12, fontSize: 13, color: 'var(--text-muted)' }}>{e.voucher}</td>
+                <td style={{ padding: 12, fontSize: 13, textAlign: 'right', color: e.debit > 0 ? 'var(--accent-red)' : 'inherit' }}>{e.debit > 0 ? formatINR(e.debit) : '—'}</td>
+                <td style={{ padding: 12, fontSize: 13, textAlign: 'right', color: e.credit > 0 ? 'var(--accent-teal)' : 'inherit' }}>{e.credit > 0 ? formatINR(e.credit) : '—'}</td>
+                <td style={{ padding: 12, fontSize: 13, textAlign: 'right', fontWeight: 700 }}>{formatINR(e.balance)} {e.balance >= 0 ? 'Dr' : 'Cr'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div style={{ marginTop: 32, display: 'flex', justifyContent: 'flex-end' }}>
+          <div className="card" style={{ background: 'var(--bg-primary)', padding: '16px 24px', minWidth: 250 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Closing Balance</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--accent-navy)' }}>{formatINR(Math.abs(closingBalance))} {closingBalance >= 0 ? 'Dr' : 'Cr'}</div>
           </div>
         </div>
-      ) : (
-        <div className="subsidiary-books-section">
-          <div className="ledger-header card" style={{ background: '#1e293b', padding: 24, border: '1px solid #334155', borderRadius: 12, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <div>
-              <label style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8, display: 'block' }}>Select Subsidiary Book</label>
-              <select value={selectedSubBook} onChange={(e) => setSelectedSubBook(e.target.value)} className="ledger-select" style={{ background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '10px 16px', borderRadius: 8 }}>
-                <option>Sales Book</option>
-                <option>Purchase Book</option>
-                <option>Cash Book</option>
-              </select>
-            </div>
-          </div>
-          <div className="card glass-card">
-            <h3 style={{ padding: '24px 30px', borderBottom: '1px solid #334155' }}>{selectedSubBook} - Detailed Records</h3>
-            <table className="modern-table">
-              {selectedSubBook === 'Sales Book' && (
-                <>
-                  <thead><tr><th>Date</th><th>Invoice</th><th>Customer</th><th className="right">Amount</th><th className="right">GST</th><th className="right">Total</th></tr></thead>
-                  <tbody>{subBookData.map((d, i) => <tr key={i}><td>{d.date}</td><td style={{ color: '#3b82f6' }}>{d.invoice}</td><td>{d.customer}</td><td className="right">{formatINR(d.amount)}</td><td className="right">{formatINR(d.gst)}</td><td className="right" style={{ fontWeight: 700 }}>{formatINR(d.total)}</td></tr>)}</tbody>
-                </>
-              )}
-              {selectedSubBook === 'Purchase Book' && (
-                <>
-                  <thead><tr><th>Date</th><th>Invoice</th><th>Supplier</th><th className="right">Amount</th><th className="right">GST</th><th className="right">Total</th></tr></thead>
-                  <tbody>{subBookData.map((d, i) => <tr key={i}><td>{d.date}</td><td style={{ color: '#3b82f6' }}>{d.invoice}</td><td>{d.supplier}</td><td className="right">{formatINR(d.amount)}</td><td className="right">{formatINR(d.gst)}</td><td className="right" style={{ fontWeight: 700 }}>{formatINR(d.total)}</td></tr>)}</tbody>
-                </>
-              )}
-              {selectedSubBook === 'Cash Book' && (
-                <>
-                  <thead><tr><th>Date</th><th>Particulars</th><th>Ref</th><th className="right">Receipts</th><th className="right">Payments</th></tr></thead>
-                  <tbody>{subBookData.map((d, i) => <tr key={i}><td>{d.date}</td><td>{d.particulars}</td><td style={{ color: '#3b82f6' }}>{d.ref}</td><td className="right text-green">{d.receipt > 0 ? formatINR(d.receipt) : '—'}</td><td className="right text-red">{d.payment > 0 ? formatINR(d.payment) : '—'}</td></tr>)}</tbody>
-                </>
-              )}
-            </table>
-          </div>
-        </div>
-      )}
-      <style jsx>{`
-        .modern-table { width: 100%; border-collapse: collapse; }
-        .modern-table th { text-align: left; padding: 16px 30px; color: #94a3b8; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #334155; }
-        .modern-table td { padding: 16px 30px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.02); }
-        .right { text-align: right; }
-        .text-red { color: #ef4444; }
-        .text-green { color: #22c55e; }
-      `}</style>
+      </div>
     </div>
   );
 }

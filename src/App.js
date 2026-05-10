@@ -6,20 +6,27 @@ import ReportCard from './components/ReportCard';
 import Ledger from './components/Ledger';
 import Statements from './components/Statements';
 import CompliancePanel from './components/CompliancePanel';
-import { LayoutDashboard, ReceiptText, FileText, Settings, Sparkles, BookOpen, LogOut, Trash2, Shield, Bell } from 'lucide-react';
+import FloatingActionButton from './components/FloatingActionButton';
+import { 
+  LayoutGrid, ArrowRightLeft, FileText, Scale, Droplets, ClipboardCheck, 
+  BookOpen, PenTool, Percent, CalendarDays, CalendarCheck, Sparkles, 
+  Search, BarChart3, Settings, LogOut, User, Bell, ChevronRight, Export
+} from 'lucide-react';
 import { ASValidationEngine } from './utils/ASComplianceEngine';
 import { LedgerEngine } from './utils/LedgerEngine';
 
 function App() {
   const [activeTab, setActiveTab] = useState('Dashboard');
+  const [expandedSection, setExpandedSection] = useState(null);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [period, setPeriod] = useState('Full Year');
-  const [connectedBanks, setConnectedBanks] = useState([]);
   const [isComplianceOpen, setIsComplianceOpen] = useState(false);
+  const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [complianceStats, setComplianceStats] = useState({ errors: 0, warnings: 0 });
 
   useEffect(() => {
-    document.body.classList.add('dark-mode');
-    loadBanks();
+    // Start in Light mode as per design direction "warm light grey page background"
+    document.body.classList.remove('dark-mode');
     runInitialValidation();
   }, []);
 
@@ -29,7 +36,6 @@ function App() {
     if (saved) {
       findings = JSON.parse(saved);
     } else {
-      // Run once on fresh load if no log exists
       const txs = LedgerEngine.transactions;
       const is = LedgerEngine.calcIncomeStatement('Full Year');
       const cf = LedgerEngine.calcCashFlow('Full Year');
@@ -45,129 +51,246 @@ function App() {
     setComplianceStats({ errors, warnings });
   };
 
-  const loadBanks = () => {
-    const saved = localStorage.getItem('ledgerai_connected_banks');
-    if (saved) setConnectedBanks(JSON.parse(saved));
-  };
+  const navSections = [
+    {
+      label: null,
+      items: [
+        { id: 'Dashboard', name: 'Dashboard', icon: <LayoutGrid size={20} /> },
+        { id: 'Transactions', name: 'Transactions', icon: <ArrowRightLeft size={20} /> },
+      ]
+    },
+    {
+      label: 'Reports',
+      items: [
+        { id: 'IncomeStatement', name: 'Income Statement', icon: <FileText size={20} /> },
+        { id: 'BalanceSheet', name: 'Balance Sheet', icon: <Scale size={20} /> },
+        { id: 'CashFlow', name: 'Cash Flow', icon: <Droplets size={20} /> },
+        { id: 'TrialBalance', name: 'Trial Balance', icon: <ClipboardCheck size={20} /> },
+      ]
+    },
+    {
+      label: 'Books',
+      items: [
+        { id: 'LedgerBook', name: 'Ledger Book', icon: <BookOpen size={20} /> },
+        { id: 'JournalEntries', name: 'Journal Entries', icon: <PenTool size={20} /> },
+      ]
+    },
+    {
+      label: 'Tax',
+      items: [
+        { id: 'GSTCalculator', name: 'GST Calculator', icon: <Percent size={20} /> },
+        { id: 'TDSTracker', name: 'TDS Tracker', icon: <CalendarDays size={20} /> },
+        { id: 'ComplianceCalendar', name: 'Compliance Calendar', icon: <CalendarCheck size={20} /> },
+      ]
+    },
+    {
+      label: 'Intelligence',
+      items: [
+        { id: 'AISummary', name: 'AI Insights', icon: <Sparkles size={20} /> },
+        { id: 'Audit', name: 'Audit', icon: <Search size={20} /> },
+        { id: 'Benchmarking', name: 'Benchmarking', icon: <BarChart3 size={20} /> },
+      ]
+    },
+  ];
 
-  const removeBank = (index) => {
-    if (window.confirm("Are you sure you want to disconnect this bank account?")) {
-      const updated = connectedBanks.filter((_, i) => i !== index);
-      setConnectedBanks(updated);
-      localStorage.setItem('ledgerai_connected_banks', JSON.stringify(updated));
+  const handleIconClick = (sectionIndex) => {
+    if (expandedSection === sectionIndex && isSidebarExpanded) {
+      setIsSidebarExpanded(false);
+    } else {
+      setExpandedSection(sectionIndex);
+      setIsSidebarExpanded(true);
     }
   };
 
-  const menuItems = [
-    { id: 'Dashboard', name: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-    { id: 'Transactions', name: 'Transactions', icon: <ReceiptText size={18} /> },
-    { id: 'Statements', name: 'Statements', icon: <FileText size={18} /> },
-    { id: 'LedgerBook', name: 'Ledger Book', icon: <BookOpen size={18} /> },
-    { id: 'AISummary', name: 'AI Summary', icon: <Sparkles size={18} /> },
-    { id: 'Settings', name: 'Settings', icon: <Settings size={18} /> }
-  ];
+  const getPageTitle = () => {
+    for (const section of navSections) {
+      const item = section.items.find(i => i.id === activeTab);
+      if (item) return item.name;
+    }
+    if (activeTab === 'Settings') return 'Settings';
+    return 'Dashboard';
+  };
 
   return (
-    <div className="app-container">
-      {/* Sidebar */}
-      <div className="sidebar">
-        <div className="sidebar-logo">LedgerAI</div>
-        <div className="sidebar-menu">
-          {menuItems.map(item => (
-            <button key={item.id} className={`sidebar-item ${activeTab === item.id ? 'active' : ''}`} onClick={() => setActiveTab(item.id)}>
-              {item.icon}
-              <span>{item.name}</span>
-            </button>
-          ))}
-        </div>
-        
-        <div className="sidebar-banks" style={{ marginTop: 'auto', padding: '20px' }}>
-          <label style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12, display: 'block' }}>Connected Banks</label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {connectedBanks.map((bank, i) => (
-              <div key={i} className="bank-sidebar-card" style={{ background: '#1e293b', padding: 12, borderRadius: 8, border: '1px solid #334155', position: 'relative' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{bank.bankName}</div>
-                <div style={{ fontSize: 10, color: '#94a3b8', margin: '2px 0' }}>{bank.accountType}</div>
-                <div style={{ fontSize: 11, color: '#cbd5e1', fontFamily: 'monospace' }}>{bank.accountNumberMasked}</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                  <span style={{ fontSize: 9, color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} /> Connected
-                  </span>
-                  <button onClick={() => removeBank(i)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 4 }}>
-                    <Trash2 size={12} />
-                  </button>
+    <div className="app-container" data-theme={document.body.classList.contains('dark-mode') ? 'dark' : 'light'}>
+      {/* Redesigned Sidebar */}
+      <div className={`sidebar-wrapper ${isSidebarExpanded ? 'expanded' : ''}`}>
+        <div className="sidebar-primary">
+          <div className="sidebar-logo-icon">
+            <Scale size={24} strokeWidth={3} />
+          </div>
+          
+          <div className="sidebar-nav-group">
+            {navSections.map((section, idx) => (
+              section.items.map(item => (
+                <div 
+                  key={item.id} 
+                  className={`sidebar-item-icon ${activeTab === item.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    handleIconClick(idx);
+                  }}
+                >
+                  {item.icon}
+                  <div className="sidebar-tooltip">{item.name}</div>
                 </div>
-              </div>
+              ))
             ))}
-            {connectedBanks.length === 0 && (
-              <div style={{ fontSize: 11, color: '#475569', fontStyle: 'italic', textAlign: 'center', padding: '10px 0' }}>No banks connected</div>
-            )}
+          </div>
+
+          <div style={{ marginTop: 'auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className={`sidebar-item-icon ${activeTab === 'Settings' ? 'active' : ''}`} onClick={() => setActiveTab('Settings')}>
+              <Settings size={20} />
+              <div className="sidebar-tooltip">Settings</div>
+            </div>
+            <div className="sidebar-item-icon">
+              <User size={20} />
+              <div className="sidebar-tooltip">Profile</div>
+            </div>
+            <div className="sidebar-item-icon" style={{ color: '#ef4444' }}>
+              <LogOut size={20} />
+              <div className="sidebar-tooltip">Logout</div>
+            </div>
           </div>
         </div>
 
-        <div style={{ padding: '20px' }}>
-          <div className="sidebar-item" style={{ color: '#ef4444', borderLeft: 'none', padding: '12px' }}>
-            <LogOut size={18} />
-            <span>Logout</span>
+        <div className="sidebar-secondary">
+          <div style={{ padding: '24px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: 18 }}>LedgerAI</span>
           </div>
+          {expandedSection !== null && (
+            <>
+              {navSections[expandedSection].label && (
+                <div className="sidebar-section-label">{navSections[expandedSection].label}</div>
+              )}
+              {navSections[expandedSection].items.map(item => (
+                <div 
+                  key={item.id} 
+                  className={`sidebar-sub-item ${activeTab === item.id ? 'active' : ''}`}
+                  onClick={() => setActiveTab(item.id)}
+                >
+                  {item.name}
+                </div>
+              ))}
+            </>
+          )}
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="main-content" style={{ marginLeft: '220px', width: 'calc(100% - 220px)' }}>
-        {/* Topbar */}
-        <div className="topbar" style={{ display: 'flex', justifyContent: 'flex-end', padding: '16px 40px', background: 'transparent', position: 'sticky', top: 0, zIndex: 100 }}>
-          <div className="compliance-trigger" onClick={() => setIsComplianceOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#1e293b', padding: '8px 16px', borderRadius: 30, cursor: 'pointer', border: '1px solid #334155' }}>
-            <Shield size={18} style={{ color: complianceStats.errors > 0 ? '#ef4444' : (complianceStats.warnings > 0 ? '#f59e0b' : '#10b981') }} />
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>AS Compliance</span>
-            {(complianceStats.errors > 0 || complianceStats.warnings > 0) && (
-              <span className={`compliance-badge ${complianceStats.errors > 0 ? 'error' : 'warning'}`}>
-                {complianceStats.errors > 0 ? complianceStats.errors : complianceStats.warnings}
-              </span>
-            )}
+      <div className="main-content">
+        {/* Content Area Header */}
+        <div className="content-header">
+          <div>
+            <h1 className="page-title">{getPageTitle()}</h1>
+            <div className="breadcrumb">
+              <span>Main</span> <ChevronRight size={12} /> <span>{getPageTitle()}</span>
+            </div>
+            <div className="last-updated">Last updated: Today, 09:45 AM</div>
+          </div>
+          
+          <div className="header-actions">
+            <div style={{ display: 'flex', background: '#E2E8F0', padding: 4, borderRadius: 8 }}>
+              {['Monthly', 'Quarterly', 'Full Year'].map(p => (
+                <button 
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  style={{
+                    padding: '6px 12px',
+                    border: 'none',
+                    borderRadius: 6,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: period === p ? '#fff' : 'transparent',
+                    color: period === p ? '#0B1426' : '#64748B',
+                    boxShadow: period === p ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+            
+            <button 
+              onClick={() => setIsBankModalOpen(true)}
+              style={{ 
+                display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', 
+                borderRadius: 8, background: 'var(--accent-navy)', color: '#fff',
+                border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer'
+              }}
+            >
+              <Droplets size={16} /> Connect Bank
+            </button>
+
+            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setIsComplianceOpen(true)}>
+              <Bell size={20} color="#64748B" />
+              {(complianceStats.errors > 0 || complianceStats.warnings > 0) && (
+                <div style={{ 
+                  position: 'absolute', top: -4, right: -4, width: 8, height: 8, 
+                  borderRadius: '50%', background: '#ef4444' 
+                }} />
+              )}
+            </div>
+
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#C9A84C', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: '#fff', fontWeight: 700, fontSize: 14 }}>
+              JD
+            </div>
           </div>
         </div>
 
-        <div id="Dashboard" className={activeTab === 'Dashboard' ? '' : 'hidden'}>
-          <Dashboard period={period} setPeriod={setPeriod} />
-        </div>
-        <div id="Transactions" className={activeTab === 'Transactions' ? '' : 'hidden'}>
-          <TransactionList period={period} />
-        </div>
-        <div id="Statements" className={activeTab === 'Statements' ? '' : 'hidden'}>
-          <Statements period={period} />
-        </div>
-        <div id="LedgerBook" className={activeTab === 'LedgerBook' ? '' : 'hidden'}>
-          <Ledger period={period} />
-        </div>
-        <div id="AISummary" className={activeTab === 'AISummary' ? '' : 'hidden'}>
-          <ReportCard />
-        </div>
-        <div id="Settings" className={activeTab === 'Settings' ? '' : 'hidden'}>
-          <div className="card">
-            <h2>Settings</h2>
-            <p style={{ color: 'var(--text-secondary)', marginTop: 10 }}>Configuration and preferences.</p>
-          </div>
+        {/* Tab Content */}
+        <div className="tab-content" style={{ flex: 1 }}>
+          {activeTab === 'Dashboard' && <Dashboard period={period} setPeriod={setPeriod} />}
+          {activeTab === 'Transactions' && <TransactionList period={period} />}
+          {['IncomeStatement', 'BalanceSheet', 'CashFlow', 'TrialBalance'].includes(activeTab) && <Statements period={period} initialTab={activeTab} />}
+          {activeTab === 'LedgerBook' && <Ledger period={period} />}
+          {activeTab === 'GSTCalculator' && <GSTCalculator />}
+          {activeTab === 'AISummary' && <ReportCard />}
+          {activeTab === 'Settings' && (
+            <div className="card">
+              <h2>Settings</h2>
+              <p style={{ color: 'var(--text-secondary)', marginTop: 10 }}>Configuration and preferences.</p>
+            </div>
+          )}
         </div>
       </div>
 
       <CompliancePanel 
         isOpen={isComplianceOpen} 
         onClose={() => setIsComplianceOpen(false)} 
-        onRefresh={() => {
-          const saved = localStorage.getItem('ledgerai-compliance-log');
-          if (saved) updateStats(JSON.parse(saved));
-        }}
+        onRefresh={runInitialValidation}
       />
+      <BankModal isOpen={isBankModalOpen} onClose={() => setIsBankModalOpen(false)} onAdd={() => {}} />
+      <FloatingActionButton />
 
-      <style jsx>{`
-        .hidden { display: none; }
-        .compliance-badge { font-size: 10px; font-weight: 800; color: #fff; padding: 2px 6px; border-radius: 10px; min-width: 18px; text-align: center; }
-        .compliance-badge.error { background: #ef4444; }
-        .compliance-badge.warning { background: #f59e0b; }
-      `}</style>
+      {/* Mobile Bottom Navigation */}
+      <div className="bottom-nav">
+        {[
+          { id: 'Dashboard', icon: <LayoutGrid size={20} />, label: 'Dash' },
+          { id: 'Transactions', icon: <ArrowRightLeft size={20} />, label: 'TX' },
+          { id: 'IncomeStatement', icon: <FileText size={20} />, label: 'Reports' },
+          { id: 'GSTCalculator', icon: <Percent size={20} />, label: 'Tax' },
+          { id: 'AISummary', icon: <Sparkles size={20} />, label: 'AI' }
+        ].map(item => (
+          <div 
+            key={item.id} 
+            className={`bottom-nav-item ${activeTab === item.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(item.id)}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+              color: activeTab === item.id ? 'var(--accent-gold)' : 'var(--text-muted)',
+              cursor: 'pointer'
+            }}
+          >
+            {item.icon}
+            <span style={{ fontSize: 10, fontWeight: 700 }}>{item.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
+
 
 export default App;

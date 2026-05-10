@@ -1,83 +1,77 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import IncomeStatement from './IncomeStatement';
 import CashFlowStatement from './CashFlowStatement';
 import BalanceSheet from './BalanceSheet';
-import { AlertCircle } from 'lucide-react';
+import Ledger from './Ledger';
+import { Download, Printer } from 'lucide-react';
 
-function Statements({ period }) {
+function Statements({ period, initialTab }) {
   const [activeSubTab, setActiveSubTab] = useState('Income Statement');
 
-  const tabs = ['Income Statement', 'Cash Flow Statement', 'Balance Sheet'];
+  useEffect(() => {
+    if (initialTab) {
+      const tabMap = {
+        'IncomeStatement': 'Income Statement',
+        'BalanceSheet': 'Balance Sheet',
+        'CashFlow': 'Cash Flow Statement',
+        'TrialBalance': 'Trial Balance',
+        'LedgerBook': 'Ledger Book'
+      };
+      if (tabMap[initialTab]) setActiveSubTab(tabMap[initialTab]);
+    }
+  }, [initialTab]);
+
+  const tabs = ['Income Statement', 'Cash Flow Statement', 'Balance Sheet', 'Ledger Book'];
 
   return (
-    <div className="statements-wrapper">
-      <div className="period-notice">
-        <AlertCircle size={16} />
-        <span>Currently viewing data for <strong>{period}</strong> | FY 2025-26</span>
-      </div>
-
-      <div className="sub-nav">
-        {tabs.map(tab => (
-          <button
-            key={tab}
-            className={`sub-nav-btn ${activeSubTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveSubTab(tab)}
-          >
-            {tab}
+    <div className="statements-container" style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="pill-nav">
+          {tabs.map(tab => (
+            <button
+              key={tab}
+              className={`pill-btn ${activeSubTab === tab ? 'active' : ''}`}
+              onClick={() => setActiveSubTab(tab)}
+              style={{
+                padding: '10px 24px',
+                borderRadius: 30,
+                border: activeSubTab === tab ? '1px solid var(--accent-navy)' : 'none',
+                background: activeSubTab === tab ? '#fff' : '#E2E8F0',
+                color: activeSubTab === tab ? 'var(--accent-navy)' : 'var(--text-secondary)',
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button style={{ 
+            display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', 
+            borderRadius: 8, border: '1px solid #E2E8F0', background: '#fff',
+            fontSize: 13, fontWeight: 600, cursor: 'pointer'
+          }}>
+            <Printer size={16} /> Print Document
           </button>
-        ))}
+          <button style={{ 
+            display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', 
+            borderRadius: 8, background: 'var(--accent-navy)', color: '#fff',
+            border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer'
+          }}>
+            <Download size={16} /> Download PDF
+          </button>
+        </div>
       </div>
 
-      <div className="statement-content">
+      <div className="statement-render-area">
         {activeSubTab === 'Income Statement' && <IncomeStatement period={period} />}
         {activeSubTab === 'Cash Flow Statement' && <CashFlowStatement period={period} />}
         {activeSubTab === 'Balance Sheet' && <BalanceSheet period={period} />}
+        {activeSubTab === 'Ledger Book' && <Ledger period={period} />}
       </div>
-
-      <style jsx>{`
-        .statements-wrapper {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-        .period-notice {
-          background: rgba(59, 130, 246, 0.1);
-          border: 1px solid rgba(59, 130, 246, 0.2);
-          color: var(--accent-blue);
-          padding: 12px 20px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          font-size: 13px;
-        }
-        .sub-nav {
-          display: flex;
-          gap: 12px;
-          padding: 8px 0;
-          border-bottom: 1px solid var(--border);
-          margin-bottom: 8px;
-        }
-        .sub-nav-btn {
-          padding: 10px 20px;
-          border: none;
-          background: transparent;
-          color: var(--text-secondary);
-          font-weight: 600;
-          font-size: 14px;
-          cursor: pointer;
-          border-radius: 30px;
-          transition: all 0.2s;
-        }
-        .sub-nav-btn:hover {
-          color: var(--text-primary);
-          background: rgba(255, 255, 255, 0.05);
-        }
-        .sub-nav-btn.active {
-          background: rgba(0, 229, 255, 0.1);
-          color: var(--accent-cyan);
-        }
-      `}</style>
     </div>
   );
 }
