@@ -7,6 +7,8 @@ import Ledger from './components/Ledger';
 import Statements from './components/Statements';
 import CompliancePanel from './components/CompliancePanel';
 import FloatingActionButton from './components/FloatingActionButton';
+import GSTCalculator from './components/GSTCalculator';
+import BankModal from './components/BankModal';
 import { 
   LayoutGrid, ArrowRightLeft, FileText, Scale, Droplets, ClipboardCheck, 
   BookOpen, PenTool, Percent, CalendarDays, CalendarCheck, Sparkles, 
