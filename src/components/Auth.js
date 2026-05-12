@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { LogOut, User, Mail, Lock, Building, ArrowRight } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 
-const Auth = () => {
+const Auth = ({ onDemoLogin }) => {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -46,109 +46,79 @@ const Auth = () => {
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!email) {
-      setError("Please enter your email first");
-      return;
-    }
-    setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
-    if (error) setError(error.message);
-    else setError("Password reset email sent!");
-    setLoading(false);
-  };
-
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <div className="auth-logo">L</div>
-        <h1 className="auth-title">LedgerAI</h1>
-        <p className="auth-subtitle">{isSignUp ? "Create your professional account" : "Sign in to your dashboard"}</p>
+    <div className="auth-container" style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh',
+      background: 'var(--bg-page)', backgroundImage: 'radial-gradient(at 0% 0%, oklch(18% 0.02 260) 0px, transparent 50%), radial-gradient(at 100% 0%, oklch(15% 0.01 160 / 0.1) 0px, transparent 50%)'
+    }}>
+      <div className="auth-card" style={{
+        width: '100%', maxWidth: '400px', padding: 'var(--space-12)', background: 'var(--bg-card)',
+        borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-bright)', boxShadow: 'var(--shadow-linear)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-8)' }}>
+          <div className="sidebar-logo">L</div>
+        </div>
+        
+        <h1 style={{ fontSize: '24px', fontWeight: 600, textAlign: 'center', marginBottom: '8px' }}>LedgerAI</h1>
+        <p style={{ fontSize: '14px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 'var(--space-12)' }}>
+          The Precise Emerald Sanctuary
+        </p>
 
-        {error && <div className="auth-error">{error}</div>}
+        {error && <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#ef4444', fontSize: '13px', marginBottom: 'var(--space-6)' }}>{error}</div>}
 
-        <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="auth-form">
-          {isSignUp && (
-            <>
-              <div className="form-group">
-                <label className="form-label">Full Name</label>
-                <input
-                  type="text"
-                  className="auth-input"
-                  placeholder="John Doe"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Company Name</label>
-                <input
-                  type="text"
-                  className="auth-input"
-                  placeholder="Acme Corp"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  required
-                />
-              </div>
-            </>
-          )}
+        <button 
+          onClick={onDemoLogin}
+          style={{
+            width: '100%', padding: '12px', background: 'var(--bg-surface)', border: '1px solid var(--accent-emerald)',
+            borderRadius: '8px', color: 'var(--accent-emerald)', fontWeight: 600, fontSize: '14px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: 'var(--space-6)',
+            transition: 'all 0.2s'
+          }}
+          onMouseOver={e => e.currentTarget.style.background = 'var(--accent-emerald-glow)'}
+          onMouseOut={e => e.currentTarget.style.background = 'var(--bg-surface)'}
+        >
+          <Sparkles size={18} />
+          Enter Sanctuary (Demo Mode)
+          <ArrowRight size={16} />
+        </button>
 
-          <div className="form-group">
-            <label className="form-label">Email Address</label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '24px 0', opacity: 0.3 }}>
+          <div style={{ flex: 1, height: '1px', background: 'white' }}></div>
+          <span style={{ fontSize: '12px' }}>OR SIGN IN</span>
+          <div style={{ flex: 1, height: '1px', background: 'white' }}></div>
+        </div>
+
+        <form onSubmit={isSignUp ? handleSignUp : handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Email Address</label>
             <input
               type="email"
-              className="auth-input"
               placeholder="name@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
+              style={{ padding: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: '6px', color: 'white', outline: 'none' }}
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Password</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Password</label>
             <input
               type="password"
-              className="auth-input"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
+              style={{ padding: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: '6px', color: 'white', outline: 'none' }}
             />
           </div>
 
-          {isSignUp && (
-            <div className="form-group">
-              <label className="form-label">Confirm Password</label>
-              <input
-                type="password"
-                className="auth-input"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
-          )}
-
-          {!isSignUp && (
-            <div style={{ textAlign: 'right', marginBottom: 20 }}>
-              <span className="auth-link" style={{ fontSize: 13 }} onClick={handleForgotPassword}>
-                Forgot password?
-              </span>
-            </div>
-          )}
-
-          <button type="submit" className="auth-button" disabled={loading}>
+          <button type="submit" style={{ padding: '12px', background: 'white', color: 'black', border: 'none', borderRadius: '8px', fontWeight: 600, marginTop: '8px', cursor: 'pointer', opacity: loading ? 0.7 : 1 }} disabled={loading}>
             {loading ? "Processing..." : (isSignUp ? "Create Account" : "Sign In")}
           </button>
         </form>
 
-        <div className="auth-switch">
-          {isSignUp ? "Already have an account?" : "Don't have an account?"}
-          <span className="auth-link" onClick={() => { setIsSignUp(!isSignUp); setError(null); }}>
+        <div style={{ textAlign: 'center', marginTop: 'var(--space-8)', fontSize: '13px', color: 'var(--text-muted)' }}>
+          {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+          <span style={{ color: 'white', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setIsSignUp(!isSignUp)}>
             {isSignUp ? "Sign In" : "Sign Up"}
           </span>
         </div>

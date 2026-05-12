@@ -8,7 +8,7 @@ function ReportCard() {
       <div style={{ marginBottom: 'var(--space-12)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: 'var(--space-4)' }}>
           <div className="status-dot emerald"></div>
-          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letter-spacing: '0.05em' }}>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Intelligence Report • FY 2025-26
           </span>
         </div>
