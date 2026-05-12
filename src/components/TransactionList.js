@@ -1,21 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
-import { Search, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
-
-const CATEGORY_COLORS = {
-  'Revenue': '#14B8A6',
-  'Expenses': '#EF4444',
-  'GST': '#C9A84C',
-  'Salary': '#3B82F6',
-  'Loan': '#0B1426',
-  'Other': '#64748B'
-};
+import { Search, ChevronLeft, ChevronRight, Download, MoreHorizontal, Filter } from 'lucide-react';
+import { exportToPDF } from '../utils/exportUtils';
 
 function TransactionList({ period }) {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
-  const pageSize = 15;
+  const pageSize = 12;
 
   const filteredTransactions = useMemo(() => {
     let txs = LedgerEngine.getFilteredTransactions('Full Year');
@@ -34,123 +26,104 @@ function TransactionList({ period }) {
   const totalPages = Math.ceil(filteredTransactions.length / pageSize);
   const paginatedTxs = filteredTransactions.slice((page - 1) * pageSize, page * pageSize);
 
-  const maxBalance = 8000000;
-
   return (
-    <div className="animate-fade-in">
-      {/* Filter Bar */}
-      <div className="card" style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px' }}>
-        <div style={{ display: 'flex', gap: 12 }}>
-          {['All', 'Revenue', 'Expenses', 'GST', 'Salary', 'Loan'].map(f => (
+    <div className="tab-content" style={{ maxWidth: '1100px', margin: '0 auto' }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {['All', 'Revenue', 'Expenses'].map(f => (
             <button
               key={f}
               onClick={() => { setActiveFilter(f); setPage(1); }}
-              className={`pill-btn ${activeFilter === f ? 'active' : ''}`}
-              style={{
-                padding: '8px 20px',
-                borderRadius: 20,
-                border: activeFilter === f ? '1px solid var(--accent-navy)' : 'none',
-                background: activeFilter === f ? '#fff' : '#E2E8F0',
-                color: activeFilter === f ? 'var(--accent-navy)' : 'var(--text-secondary)',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: 'pointer'
-              }}
+              className={`sidebar-btn ${activeFilter === f ? 'active' : ''}`}
+              style={{ width: 'auto', background: activeFilter === f ? 'var(--bg-surface)' : 'transparent', padding: '4px 12px' }}
             >
               {f}
             </button>
           ))}
         </div>
-        
-        <div style={{ display: 'flex', gap: 16 }}>
-          <button style={{ 
-            display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', 
-            borderRadius: 8, border: '1px solid #E2E8F0', background: '#fff',
-            fontSize: 13, fontWeight: 600, cursor: 'pointer'
-          }}>
-            <Calendar size={16} /> Date Range
-          </button>
-          <div style={{ position: 'relative' }}>
-            <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div className="command-bar-trigger" style={{ width: '240px' }}>
+            <Search size={14} />
             <input 
-              type="text" placeholder="Search ledger..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ padding: '8px 16px 8px 40px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#fff', width: 250 }}
+              type="text" 
+              placeholder="Filter transactions..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '13px', outline: 'none', width: '100%' }}
             />
           </div>
+          <button className="sidebar-btn" style={{ width: 'auto' }} onClick={() => {
+            const headers = ['Date', 'Description', 'Category', 'Type', 'Amount'];
+            const data = paginatedTxs.map(t => [t.date, t.narration, t.category, t.type, t.amount.toString()]);
+            exportToPDF('Transaction List', headers, data, 'transactions.pdf');
+          }}>
+            <Download size={16} />
+          </button>
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table Card */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table className="transaction-ledger">
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
-            <tr style={{ background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-light)' }}>
-              <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Date</th>
-              <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Description</th>
-              <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Category</th>
-              <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Amount</th>
-              <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Balance</th>
+            <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
+              <th style={{ padding: '12px 24px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Date</th>
+              <th style={{ padding: '12px 24px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Description</th>
+              <th style={{ padding: '12px 24px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Category</th>
+              <th style={{ padding: '12px 24px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right' }}>Amount</th>
+              <th style={{ padding: '12px 24px', width: '48px' }}></th>
             </tr>
           </thead>
           <tbody>
-            {paginatedTxs.map((t, i) => {
-              const d = new Date(t.date);
-              const day = d.getDate();
-              const month = d.toLocaleString('default', { month: 'short' });
-              const balance = 4500000 + (i * 100000); // Simulated running balance
-              
-              return (
-                <tr key={t.id} className="ledger-row" style={{ height: 64 }}>
-                  <td style={{ padding: '0 24px' }}>
-                    <div className="date-cell">
-                      <span className="date-day">{day}</span>
-                      <span className="date-month">{month}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: '0 24px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span className="desc-primary">{t.narration}</span>
-                      <span className="desc-secondary">Ref: {t.ref}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: '0 24px' }}>
-                    <div className="category-pill" style={{ backgroundColor: `${CATEGORY_COLORS[t.category || 'Other']}15`, color: CATEGORY_COLORS[t.category || 'Other'] }}>
-                      <div className="dot-indicator" style={{ backgroundColor: CATEGORY_COLORS[t.category || 'Other'] }} />
-                      {t.category || 'Other'}
-                    </div>
-                  </td>
-                  <td style={{ padding: '0 24px', textAlign: 'right' }}>
-                    <span className={t.type === 'Credit' ? 'amount-credit' : 'amount-debit'} style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                      {t.type === 'Credit' ? '+' : '-'}{formatINR(t.amount)}
-                    </span>
-                  </td>
-                  <td style={{ padding: '0 24px', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                      <span className="mono" style={{ fontSize: 13, fontWeight: 600 }}>{formatINR(balance)}</span>
-                      <div style={{ width: 60, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, overflow: 'hidden' }}>
-                        <div style={{ width: `${(balance / maxBalance) * 100}%`, height: '100%', backgroundColor: 'var(--accent-navy)' }} />
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+            {paginatedTxs.map((t) => (
+              <tr key={t.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }} className="table-row-hover">
+                <td style={{ padding: '16px 24px', fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                  {t.date}
+                </td>
+                <td style={{ padding: '16px 24px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{t.narration}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{t.ref}</div>
+                </td>
+                <td style={{ padding: '16px 24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className={`status-dot ${t.type === 'Credit' ? 'emerald' : ''}`} style={{ background: t.type === 'Credit' ? 'var(--accent-emerald)' : 'rgba(255,255,255,0.2)' }}></div>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{t.category}</span>
+                  </div>
+                </td>
+                <td style={{ padding: '16px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600 }}>
+                  <span style={{ color: t.type === 'Credit' ? 'var(--accent-emerald)' : 'var(--text-primary)' }}>
+                    {t.type === 'Credit' ? '+' : ''}{formatINR(t.amount)}
+                  </span>
+                </td>
+                <td style={{ padding: '16px 24px', textAlign: 'center' }}>
+                  <MoreHorizontal size={16} color="var(--text-muted)" style={{ cursor: 'pointer' }} />
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
 
         {/* Pagination */}
-        <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-light)' }}>
-          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Page {page} of {totalPages}</span>
-          <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Showing {paginatedTxs.length} of {filteredTransactions.length} transactions
+          </span>
+          <div style={{ display: 'flex', gap: '8px' }}>
             <button 
-              disabled={page === 1} onClick={() => setPage(page - 1)}
-              style={{ padding: 8, borderRadius: 6, border: '1px solid #E2E8F0', background: '#fff', cursor: 'pointer', opacity: page === 1 ? 0.5 : 1 }}
+              className="sidebar-btn" 
+              style={{ width: 'auto', padding: '4px' }} 
+              disabled={page === 1}
+              onClick={() => setPage(page - 1)}
             >
               <ChevronLeft size={16} />
             </button>
             <button 
-              disabled={page === totalPages} onClick={() => setPage(page + 1)}
-              style={{ padding: 8, borderRadius: 6, border: '1px solid #E2E8F0', background: '#fff', cursor: 'pointer', opacity: page === totalPages ? 0.5 : 1 }}
+              className="sidebar-btn" 
+              style={{ width: 'auto', padding: '4px' }} 
+              disabled={page === totalPages}
+              onClick={() => setPage(page + 1)}
             >
               <ChevronRight size={16} />
             </button>

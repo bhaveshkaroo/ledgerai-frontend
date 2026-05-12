@@ -30,37 +30,33 @@ function GSTCalculator() {
   }, []);
 
   return (
-    <div className="animate-fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <Calculator size={24} color="var(--accent-navy)" />
-          <h3 className="heading-serif" style={{ fontSize: 20 }}>GST Calculator</h3>
+    <div className="gst-wrap">
+      <div className="gst-card">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
+          <Calculator size={20} color="var(--accent-navy)" />
+          <h3 style={{ fontSize: 18, fontWeight: 700 }}>GST Computation Tool</h3>
         </div>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           <div>
-            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8, display: 'block' }}>Base Amount (₹)</label>
+            <label className="gst-label">Base Taxable Amount (₹)</label>
             <input 
               type="number" 
+              className="gst-input"
               value={amount} 
               onChange={(e) => setAmount(e.target.value)} 
-              style={{ width: '100%', padding: '12px', borderRadius: 8, border: '1px solid var(--border-light)', fontSize: 16, fontWeight: 600 }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8, display: 'block' }}>GST Rate (%)</label>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <label className="gst-label">Select GST Slab (%)</label>
+            <div style={{ display: 'flex', gap: 12 }}>
               {[5, 12, 18, 28].map(r => (
                 <button 
                   key={r}
                   onClick={() => setRate(r)}
-                  style={{
-                    flex: 1, padding: '10px', borderRadius: 8, border: '1px solid var(--border-light)',
-                    background: rate === r ? 'var(--accent-navy)' : '#fff',
-                    color: rate === r ? '#fff' : 'var(--text-primary)',
-                    fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s'
-                  }}
+                  className={`filter-chip ${rate === r ? 'active' : ''}`}
+                  style={{ flex: 1, padding: '12px' }}
                 >
                   {r}%
                 </button>
@@ -68,53 +64,53 @@ function GSTCalculator() {
             </div>
           </div>
 
-          <div style={{ background: 'var(--bg-primary)', padding: 24, borderRadius: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: 14 }}>
-              <span style={{ color: 'var(--text-muted)' }}>CGST (9%)</span>
-              <span className="mono" style={{ fontWeight: 600 }}>₹{formatINR(calc.cgst)}</span>
+          <div style={{ marginTop: 12, padding: 24, background: 'var(--bg-page)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+            <div className="stmt-row">
+              <span className="stmt-label">CGST ({rate/2}%)</span>
+              <span className="stmt-amount">₹{formatINR(calc.cgst)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: 14 }}>
-              <span style={{ color: 'var(--text-muted)' }}>SGST (9%)</span>
-              <span className="mono" style={{ fontWeight: 600 }}>₹{formatINR(calc.sgst)}</span>
+            <div className="stmt-row">
+              <span className="stmt-label">SGST ({rate/2}%)</span>
+              <span className="stmt-amount">₹{formatINR(calc.sgst)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-light)', paddingTop: 12, marginBottom: 12 }}>
-              <span style={{ fontSize: 14, fontWeight: 700 }}>Total GST</span>
-              <span className="mono" style={{ fontWeight: 700, color: 'var(--accent-navy)' }}>₹{formatINR(calc.total_gst)}</span>
+            <div className="stmt-subtotal" style={{ marginTop: 16 }}>
+              <span className="stmt-label">Total GST Collected</span>
+              <span className="stmt-amount">₹{formatINR(calc.total_gst)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid var(--accent-navy)', paddingTop: 12 }}>
-              <span style={{ fontSize: 18, fontWeight: 800 }}>Invoice Total</span>
-              <span className="mono" style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-teal)' }}>₹{formatINR(calc.total_amount)}</span>
+            <div className="stmt-total" style={{ marginTop: 16, borderTop: '2px solid var(--accent-navy)' }}>
+              <span className="stmt-label">INVOICE TOTAL</span>
+              <span className="stmt-amount">₹{formatINR(calc.total_amount)}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="card" style={{ background: 'var(--bg-sidebar)', color: '#fff' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <PieChart size={24} color="var(--accent-gold)" />
-          <h3 className="heading-serif" style={{ fontSize: 20 }}>ITC & Liability Summary</h3>
+      <div className="gst-result-card">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
+          <PieChart size={20} color="var(--accent-gold)" />
+          <h3 style={{ fontSize: 18, fontWeight: 700 }}>ITC & Liability Summary</h3>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
           <div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: 4 }}>Output GST (Collected)</div>
-            <div className="mono" style={{ fontSize: 28, fontWeight: 800 }}>₹{formatINR(summary.gst_collected)}</div>
+            <div className="gst-label" style={{ color: 'rgba(255,255,255,0.6)' }}>Output GST (Sales)</div>
+            <div style={{ fontSize: 32, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>₹{formatINR(summary.gst_collected)}</div>
           </div>
           <div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: 4 }}>Input Tax Credit (Paid)</div>
-            <div className="mono" style={{ fontSize: 28, fontWeight: 800 }}>₹{formatINR(summary.gst_paid)}</div>
+            <div className="gst-label" style={{ color: 'rgba(255,255,255,0.6)' }}>Input Tax Credit (ITC)</div>
+            <div style={{ fontSize: 32, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>₹{formatINR(summary.gst_paid)}</div>
           </div>
           
-          <div style={{ background: 'rgba(255,255,255,0.05)', padding: 24, borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <ShieldCheck size={16} color="var(--accent-gold)" />
-              <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-gold)' }}>Net GST Payable</span>
+          <div style={{ background: 'rgba(255,255,255,0.05)', padding: 32, borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <ShieldCheck size={18} color="var(--accent-gold)" />
+              <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-gold)', letterSpacing: '0.05em' }}>Net GST Payable</span>
             </div>
-            <div className="mono" style={{ fontSize: 32, fontWeight: 800, color: 'var(--accent-gold)' }}>
+            <div style={{ fontSize: 40, fontWeight: 800, color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)' }}>
               ₹{formatINR(summary.net_liability)}
             </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 8 }}>
-              Next filing due by 20th May 2026
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 16 }}>
+              Next filing (GSTR-3B) due by 20th May 2026
             </div>
           </div>
         </div>

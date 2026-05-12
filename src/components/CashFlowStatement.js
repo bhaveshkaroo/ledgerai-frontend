@@ -16,59 +16,99 @@ function CashFlowStatement({ period }) {
   );
 
   return (
-    <div className="statement-document animate-fade-in">
-      <div className="document-header">
-        <h1 className="company-name heading-serif">Sharma Textiles Pvt Ltd</h1>
-        <h2 className="statement-name">Cash Flow Statement</h2>
-        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>
-          (Indirect Method as per AS 3) | Period Ended: {period}
+    <div className="statement-wrap">
+      <div className="statement-doc">
+        <div className="statement-header">
+          <div className="statement-company">Sharma Textiles Pvt Ltd</div>
+          <div className="statement-name">Cash Flow Statement</div>
+          <div className="statement-period">(Indirect Method as per AS 3) | Period Ended: {period}</div>
         </div>
-      </div>
-      
-      <div className="double-line"></div>
-      
-      <table className="accounting-table">
-        <tbody>
-          <Row label="A. CASH FLOW FROM OPERATING ACTIVITIES" value="" isSection />
-          <Row label="Net Profit Before Tax" value={data.operating.netProfitBeforeTax} indent />
-          <Row label="Adjustments for:" value="" indent />
-          <Row label="Depreciation" value={data.operating.adjustments.depreciation} indent />
-          <Row label="Finance Costs" value={data.operating.adjustments.interestExpense} indent />
-          <Row label="Operating Profit before Working Capital changes" value={data.operating.netProfitBeforeTax + data.operating.adjustments.depreciation + data.operating.adjustments.interestExpense} isTotal indent />
-          
-          <Row label="Adjustments for Working Capital changes:" value="" indent />
-          <Row label="(Increase)/Decrease in Receivables" value={data.operating.wcChanges.receivables} indent />
-          <Row label="Increase/(Decrease) in Payables" value={data.operating.wcChanges.payables} indent />
-          <Row label="(Increase)/Decrease in Inventory" value={data.operating.wcChanges.inventory} indent />
-          
-          <Row label="Net Cash from Operating Activities (A)" value={data.operating.netCashFromOperating} isTotal />
 
-          <tr style={{ height: 24 }}><td></td><td></td></tr>
+        <div className="statement-body">
+          <div className="stmt-section">
+            <div className="stmt-section-title">Operating Activities</div>
+            <div className="stmt-row">
+              <span className="stmt-label">Net Profit Before Tax</span>
+              <span className="stmt-amount positive">₹{formatINR(data.operating.netProfitBeforeTax)}</span>
+            </div>
+            <div className="stmt-row indent">
+              <span className="stmt-label">Depreciation</span>
+              <span className="stmt-amount positive">₹{formatINR(data.operating.adjustments.depreciation)}</span>
+            </div>
+            <div className="stmt-row indent">
+              <span className="stmt-label">Finance Costs</span>
+              <span className="stmt-amount positive">₹{formatINR(data.operating.adjustments.interestExpense)}</span>
+            </div>
+            <div className="stmt-row indent">
+              <span className="stmt-label">Changes in Receivables</span>
+              <span className="stmt-amount {data.operating.wcChanges.receivables < 0 ? 'negative' : 'positive'}">
+                ₹{formatINR(Math.abs(data.operating.wcChanges.receivables))}
+              </span>
+            </div>
+            <div className="stmt-row indent">
+              <span className="stmt-label">Changes in Payables</span>
+              <span className="stmt-amount {data.operating.wcChanges.payables < 0 ? 'negative' : 'positive'}">
+                ₹{formatINR(Math.abs(data.operating.wcChanges.payables))}
+              </span>
+            </div>
+            <div className="stmt-subtotal">
+              <span className="stmt-label">Net Cash from Operating Activities</span>
+              <span className="stmt-amount">₹{formatINR(data.operating.netCashFromOperating)}</span>
+            </div>
+          </div>
 
-          <Row label="B. CASH FLOW FROM INVESTING ACTIVITIES" value="" isSection />
-          <Row label="Purchase of Fixed Assets" value={data.investing.capex} indent />
-          <Row label="Sale of Investments" value={data.investing.assetSales} indent />
-          <Row label="Net Cash from Investing Activities (B)" value={data.investing.netCashFromInvesting} isTotal />
+          <div className="stmt-section">
+            <div className="stmt-section-title">Investing Activities</div>
+            <div className="stmt-row indent">
+              <span className="stmt-label">Purchase of Fixed Assets</span>
+              <span className="stmt-amount negative">₹{formatINR(Math.abs(data.investing.capex))}</span>
+            </div>
+            <div className="stmt-row indent">
+              <span className="stmt-label">Sale of Investments</span>
+              <span className="stmt-amount positive">₹{formatINR(data.investing.assetSales)}</span>
+            </div>
+            <div className="stmt-subtotal">
+              <span className="stmt-label">Net Cash from Investing Activities</span>
+              <span className="stmt-amount">₹{formatINR(data.investing.netCashFromInvesting)}</span>
+            </div>
+          </div>
 
-          <tr style={{ height: 24 }}><td></td><td></td></tr>
+          <div className="stmt-section">
+            <div className="stmt-section-title">Financing Activities</div>
+            <div className="stmt-row indent">
+              <span className="stmt-label">Proceeds from Share Capital</span>
+              <span className="stmt-amount positive">₹{formatINR(data.financing.loanProceeds)}</span>
+            </div>
+            <div className="stmt-row indent">
+              <span className="stmt-label">Repayment of Borrowings</span>
+              <span className="stmt-amount negative">₹{formatINR(Math.abs(data.financing.loanRepayment))}</span>
+            </div>
+            <div className="stmt-subtotal">
+              <span className="stmt-label">Net Cash from Financing Activities</span>
+              <span className="stmt-amount">₹{formatINR(data.financing.netCashFromFinancing)}</span>
+            </div>
+          </div>
 
-          <Row label="C. CASH FLOW FROM FINANCING ACTIVITIES" value="" isSection />
-          <Row label="Proceeds from Share Capital" value={data.financing.loanProceeds} indent />
-          <Row label="Repayment of Long-term Borrowings" value={data.financing.loanRepayment} indent />
-          <Row label="Interest Paid" value={-data.financing.interestPaid} indent />
-          <Row label="Net Cash from Financing Activities (C)" value={data.financing.netCashFromFinancing} isTotal />
+          <div className="stmt-section">
+            <div className="stmt-row" style={{ borderTop: '2px solid var(--accent-navy)', marginTop: 24 }}>
+              <span className="stmt-label bold">Net Increase / (Decrease) in Cash</span>
+              <span className="stmt-amount {data.netChange < 0 ? 'negative' : 'positive'}">₹{formatINR(data.netChange)}</span>
+            </div>
+            <div className="stmt-row">
+              <span className="stmt-label">Opening Cash Balance</span>
+              <span className="stmt-amount">₹{formatINR(data.openingBalance)}</span>
+            </div>
+            <div className="stmt-total">
+              <span className="stmt-label">CLOSING CASH BALANCE</span>
+              <span className="stmt-amount">₹{formatINR(data.closingBalance)}</span>
+            </div>
+          </div>
 
-          <tr style={{ height: 32 }}><td></td><td></td></tr>
-
-          <Row label="Net Increase / (Decrease) in Cash (A+B+C)" value={data.netChange} isTotal />
-          <Row label="Opening Cash and Cash Equivalents" value={data.openingBalance} />
-          <Row label="Closing Cash and Cash Equivalents" value={data.closingBalance} isGrandTotal />
-        </tbody>
-      </table>
-      
-      <div style={{ marginTop: 60, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-muted)' }}>
-        <div style={{ borderTop: '1px solid #000', width: 150, textAlign: 'center', paddingTop: 8 }}>Director</div>
-        <div style={{ borderTop: '1px solid #000', width: 150, textAlign: 'center', paddingTop: 8 }}>Chartered Accountant</div>
+          <div style={{ marginTop: 60, display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ borderTop: '1px solid var(--border)', width: 160, textAlign: 'center', paddingTop: 12 }}>Director</div>
+            <div style={{ borderTop: '1px solid var(--border)', width: 160, textAlign: 'center', paddingTop: 12 }}>Chartered Accountant</div>
+          </div>
+        </div>
       </div>
     </div>
   );

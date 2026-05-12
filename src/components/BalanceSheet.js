@@ -16,57 +16,114 @@ function BalanceSheet({ period }) {
   );
 
   return (
-    <div className="statement-document animate-fade-in">
-      <div className="document-header">
-        <h1 className="company-name heading-serif">Sharma Textiles Pvt Ltd</h1>
-        <h2 className="statement-name">Balance Sheet</h2>
-        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>
-          As at 31 March 2026 | Registration: MSME-MH-2024-001
+    <div className="statement-wrap">
+      <div className="statement-doc">
+        <div className="statement-header">
+          <div className="statement-company">Sharma Textiles Pvt Ltd</div>
+          <div className="statement-name">Balance Sheet</div>
+          <div className="statement-period">As at 31 March 2026 | Registration: MSME-MH-2024-001</div>
         </div>
-      </div>
-      
-      <div className="double-line"></div>
-      
-      <table className="accounting-table">
-        <tbody>
-          <Row label="I. EQUITY AND LIABILITIES" value="" isSection />
-          <Row label="1. Shareholders' Funds" value="" indent={1} />
-          <Row label="(a) Share Capital" value={data.equity.shareCapital} indent={2} />
-          <Row label="(b) Reserves and Surplus" value={data.equity.retainedEarnings} indent={2} />
-          <Row label="Sub-total: Shareholders' Funds" value={data.equity.shareCapital + data.equity.retainedEarnings} isTotal indent={1} />
-          
-          <Row label="2. Non-Current Liabilities" value="" indent={1} />
-          <Row label="(a) Long-Term Borrowings" value={data.liabilities.nonCurrent} indent={2} />
-          <Row label="Sub-total: Non-Current Liabilities" value={data.liabilities.nonCurrent} isTotal indent={1} />
 
-          <Row label="3. Current Liabilities" value="" indent={1} />
-          <Row label="(a) Trade Payables" value={600000} indent={2} />
-          <Row label="(b) Other Current Liabilities" value={600000} indent={2} />
-          <Row label="Sub-total: Current Liabilities" value={1200000} isTotal indent={1} />
+        <div className="statement-body">
+          <div className="balance-sheet-grid">
+            {/* Liabilities Side */}
+            <div>
+              <div className="bs-side-title">Equity & Liabilities</div>
+              
+              <div className="stmt-section">
+                <div className="stmt-section-title">Shareholders' Funds</div>
+                <div className="stmt-row indent">
+                  <span className="stmt-label">Share Capital</span>
+                  <span className="stmt-amount">₹{formatINR(data.equity.shareCapital)}</span>
+                </div>
+                <div className="stmt-row indent">
+                  <span className="stmt-label">Reserves and Surplus</span>
+                  <span className="stmt-amount">₹{formatINR(data.equity.retainedEarnings)}</span>
+                </div>
+                <div className="stmt-subtotal">
+                  <span className="stmt-label">Total Shareholders' Funds</span>
+                  <span className="stmt-amount">₹{formatINR(data.equity.shareCapital + data.equity.retainedEarnings)}</span>
+                </div>
+              </div>
 
-          <Row label="TOTAL EQUITY AND LIABILITIES" value={data.totalEquityLiabilities} isGrandTotal />
+              <div className="stmt-section">
+                <div className="stmt-section-title">Liabilities</div>
+                <div className="stmt-row indent">
+                  <span className="stmt-label">Long-Term Borrowings</span>
+                  <span className="stmt-amount">₹{formatINR(data.liabilities.nonCurrent)}</span>
+                </div>
+                <div className="stmt-row indent">
+                  <span className="stmt-label">Trade Payables</span>
+                  <span className="stmt-amount">₹{formatINR(600000)}</span>
+                </div>
+                <div className="stmt-row indent">
+                  <span className="stmt-label">Other Current Liabilities</span>
+                  <span className="stmt-amount">₹{formatINR(600000)}</span>
+                </div>
+                <div className="stmt-subtotal">
+                  <span className="stmt-label">Total Liabilities</span>
+                  <span className="stmt-amount">₹{formatINR(data.liabilities.nonCurrent + 1200000)}</span>
+                </div>
+              </div>
 
-          <tr style={{ height: 40 }}><td></td><td></td></tr>
+              <div className="stmt-total">
+                <span className="stmt-label">TOTAL EQUITY & LIABILITIES</span>
+                <span className="stmt-amount">₹{formatINR(data.totalEquityLiabilities)}</span>
+              </div>
+            </div>
 
-          <Row label="II. ASSETS" value="" isSection />
-          <Row label="1. Non-Current Assets" value="" indent={1} />
-          <Row label="(a) Fixed Assets (Net Block)" value={6500000} indent={2} />
-          <Row label="Sub-total: Non-Current Assets" value={6500000} isTotal indent={1} />
+            {/* Assets Side */}
+            <div>
+              <div className="bs-side-title">Assets</div>
 
-          <Row label="2. Current Assets" value="" indent={1} />
-          <Row label="(a) Inventories" value={1500000} indent={2} />
-          <Row label="(b) Trade Receivables" value={1200000} indent={2} />
-          <Row label="(c) Cash and Cash Equivalents" value={data.assets.current - 3500000} indent={2} />
-          <Row label="(d) Other Current Assets" value={800000} indent={2} />
-          <Row label="Sub-total: Current Assets" value={data.assets.current} isTotal indent={1} />
+              <div className="stmt-section">
+                <div className="stmt-section-title">Non-Current Assets</div>
+                <div className="stmt-row indent">
+                  <span className="stmt-label">Fixed Assets (Net Block)</span>
+                  <span className="stmt-amount">₹{formatINR(6500000)}</span>
+                </div>
+                <div className="stmt-subtotal">
+                  <span className="stmt-label">Total Non-Current Assets</span>
+                  <span className="stmt-amount">₹{formatINR(6500000)}</span>
+                </div>
+              </div>
 
-          <Row label="TOTAL ASSETS" value={data.totalAssets} isGrandTotal />
-        </tbody>
-      </table>
-      
-      <div style={{ marginTop: 60, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-muted)' }}>
-        <div style={{ borderTop: '1px solid #000', width: 150, textAlign: 'center', paddingTop: 8 }}>Director</div>
-        <div style={{ borderTop: '1px solid #000', width: 150, textAlign: 'center', paddingTop: 8 }}>Chartered Accountant</div>
+              <div className="stmt-section">
+                <div className="stmt-section-title">Current Assets</div>
+                <div className="stmt-row indent">
+                  <span className="stmt-label">Inventories</span>
+                  <span className="stmt-amount">₹{formatINR(1500000)}</span>
+                </div>
+                <div className="stmt-row indent">
+                  <span className="stmt-label">Trade Receivables</span>
+                  <span className="stmt-amount">₹{formatINR(1200000)}</span>
+                </div>
+                <div className="stmt-row indent">
+                  <span className="stmt-label">Cash and Equivalents</span>
+                  <span className="stmt-amount">₹{formatINR(data.assets.current - 3500000)}</span>
+                </div>
+                <div className="stmt-row indent">
+                  <span className="stmt-label">Other Current Assets</span>
+                  <span className="stmt-amount">₹{formatINR(800000)}</span>
+                </div>
+                <div className="stmt-subtotal">
+                  <span className="stmt-label">Total Current Assets</span>
+                  <span className="stmt-amount">₹{formatINR(data.assets.current)}</span>
+                </div>
+              </div>
+
+              <div className="stmt-total">
+                <span className="stmt-label">TOTAL ASSETS</span>
+                <span className="stmt-amount">₹{formatINR(data.totalAssets)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 60, display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ borderTop: '1px solid var(--border)', width: 160, textAlign: 'center', paddingTop: 12 }}>Director</div>
+            <div style={{ borderTop: '1px solid var(--border)', width: 160, textAlign: 'center', paddingTop: 12 }}>Chartered Accountant</div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, ReceiptText, FilePlus, Search, Sparkles } from 'lucide-react';
 
-const FloatingActionButton = () => {
+const FloatingActionButton = ({ onAction }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const actions = [
@@ -22,7 +22,14 @@ const FloatingActionButton = () => {
         pointerEvents: isOpen ? 'auto' : 'none'
       }}>
         {actions.map((action, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+          <div 
+            key={i} 
+            style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+            onClick={() => {
+              onAction && onAction(action.label);
+              setIsOpen(false);
+            }}
+          >
             <span style={{ 
               backgroundColor: '#fff', padding: '4px 12px', borderRadius: 4, 
               fontSize: 12, fontWeight: 700, boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
@@ -32,7 +39,7 @@ const FloatingActionButton = () => {
             </span>
             <div style={{ 
               width: 40, height: 40, borderRadius: '50%', backgroundColor: action.color,
-              display: 'flex', alignItems: 'center', justifyCenter: 'center', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
             }}>
               {action.icon}

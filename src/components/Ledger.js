@@ -38,73 +38,66 @@ function Ledger({ period }) {
   const closingBalance = ledgerEntries.length > 0 ? ledgerEntries[ledgerEntries.length - 1].balance : 0;
 
   return (
-    <div className="ledger-container animate-fade-in">
-      <div className="card" style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-          <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)' }}>Account:</label>
+    <div className="ledger-wrap">
+      <div className="ledger-header">
+        <div className="ledger-controls">
           <select 
             value={selectedAccount} 
             onChange={(e) => setSelectedAccount(e.target.value)} 
-            className="ledger-select"
-            style={{ 
-              padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border-light)', 
-              background: '#fff', fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' 
-            }}
+            className="ledger-acc-select"
           >
             {CHART_OF_ACCOUNTS.map(acc => <option key={acc.name} value={acc.name}>{acc.name}</option>)}
           </select>
-        </div>
-        <div style={{ position: 'relative' }}>
-          <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input 
-            type="text" placeholder="Search entries..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ padding: '8px 16px 8px 40px', borderRadius: 8, border: '1px solid var(--border-light)', background: '#fff', width: 250 }}
-          />
-        </div>
-      </div>
-
-      <div className="statement-document">
-        <div className="document-header" style={{ borderBottom: 'none', marginBottom: 0 }}>
-          <h1 className="company-name heading-serif">Sharma Textiles Pvt Ltd</h1>
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #000', paddingBottom: 8, marginTop: 20 }}>
-            <span style={{ fontWeight: 700 }}>Dr.</span>
-            <div style={{ textAlign: 'center' }}>
-              <h2 className="heading-serif" style={{ fontSize: 24, margin: 0 }}>{selectedAccount}</h2>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Account Code: 100-{(CHART_OF_ACCOUNTS.findIndex(a => a.name === selectedAccount) + 1).toString().padStart(3, '0')}</span>
-            </div>
-            <span style={{ fontWeight: 700 }}>Cr.</span>
+          <div className="txn-search" style={{ margin: 0, padding: '8px 16px' }}>
+            <Search size={16} color="var(--text-muted)" />
+            <input 
+              type="text" 
+              placeholder="Search particulars..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ border: 'none', outline: 'none', marginLeft: 8, fontSize: 13 }}
+            />
           </div>
         </div>
+        <button className="ledger-export-btn">Export Ledger (Excel)</button>
+      </div>
 
-        <table className="ledger-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: 20 }}>
+      <div className="statement-doc" style={{ marginTop: 24 }}>
+        <div className="statement-header">
+          <div className="statement-company">Sharma Textiles Pvt Ltd</div>
+          <div className="statement-name">{selectedAccount} — General Ledger</div>
+          <div className="statement-period">Account Code: 100-{(CHART_OF_ACCOUNTS.findIndex(a => a.name === selectedAccount) + 1).toString().padStart(3, '0')}</div>
+        </div>
+
+        <table className="ledger-table">
           <thead>
-            <tr style={{ background: 'var(--bg-primary)', borderBottom: '1px solid #000' }}>
-              <th style={{ padding: 12, textAlign: 'left', fontSize: 12 }}>Date</th>
-              <th style={{ padding: 12, textAlign: 'left', fontSize: 12 }}>Particulars</th>
-              <th style={{ padding: 12, textAlign: 'left', fontSize: 12 }}>Voucher No.</th>
-              <th style={{ padding: 12, textAlign: 'right', fontSize: 12 }}>Debit (₹)</th>
-              <th style={{ padding: 12, textAlign: 'right', fontSize: 12 }}>Credit (₹)</th>
-              <th style={{ padding: 12, textAlign: 'right', fontSize: 12 }}>Balance (₹)</th>
+            <tr>
+              <th>Date</th>
+              <th>Particulars</th>
+              <th>Voucher</th>
+              <th style={{ textAlign: 'right' }}>Debit (Dr)</th>
+              <th style={{ textAlign: 'right' }}>Credit (Cr)</th>
+              <th style={{ textAlign: 'right' }}>Balance</th>
             </tr>
           </thead>
           <tbody>
             {ledgerEntries.map((e, i) => (
-              <tr key={i} style={{ backgroundColor: i % 2 === 0 ? '#fff' : 'rgba(0,0,0,0.02)' }}>
-                <td style={{ padding: 12, fontSize: 13 }}>{e.date}</td>
-                <td style={{ padding: 12, fontSize: 13, fontWeight: 600 }}>{e.particulars}</td>
-                <td style={{ padding: 12, fontSize: 13, color: 'var(--text-muted)' }}>{e.voucher}</td>
-                <td style={{ padding: 12, fontSize: 13, textAlign: 'right', color: e.debit > 0 ? 'var(--accent-red)' : 'inherit' }}>{e.debit > 0 ? formatINR(e.debit) : '—'}</td>
-                <td style={{ padding: 12, fontSize: 13, textAlign: 'right', color: e.credit > 0 ? 'var(--accent-teal)' : 'inherit' }}>{e.credit > 0 ? formatINR(e.credit) : '—'}</td>
-                <td style={{ padding: 12, fontSize: 13, textAlign: 'right', fontWeight: 700 }}>{formatINR(e.balance)} {e.balance >= 0 ? 'Dr' : 'Cr'}</td>
+              <tr key={i} className="ledger-row">
+                <td>{e.date}</td>
+                <td style={{ fontWeight: 600 }}>{e.particulars}</td>
+                <td style={{ color: 'var(--text-muted)' }}>{e.voucher}</td>
+                <td style={{ textAlign: 'right' }} className="amount-debit">{e.debit > 0 ? formatINR(e.debit) : '—'}</td>
+                <td style={{ textAlign: 'right' }} className="amount-credit">{e.credit > 0 ? formatINR(e.credit) : '—'}</td>
+                <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatINR(Math.abs(e.balance))} {e.balance >= 0 ? 'Dr' : 'Cr'}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        <div style={{ marginTop: 32, display: 'flex', justifyContent: 'flex-end' }}>
-          <div className="card" style={{ background: 'var(--bg-primary)', padding: '16px 24px', minWidth: 250 }}>
+        <div style={{ marginTop: 40, borderTop: '2px solid var(--accent-navy)', paddingTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Closing Balance</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--accent-navy)' }}>{formatINR(Math.abs(closingBalance))} {closingBalance >= 0 ? 'Dr' : 'Cr'}</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--accent-navy)' }}>{formatINR(Math.abs(closingBalance))} {closingBalance >= 0 ? 'Dr' : 'Cr'}</div>
           </div>
         </div>
       </div>
