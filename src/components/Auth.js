@@ -16,6 +16,17 @@ const Auth = ({ onDemoLogin }) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // Hardcoded credentials for quick access
+    if (
+      (email === 'bhavesh' && password === 'asdfghjkl123') ||
+      (email === 'demo' && password === 'lkjhgfdsa321')
+    ) {
+      setLoading(false);
+      onDemoLogin();
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) setError(error.message);
     setLoading(false);
@@ -90,10 +101,10 @@ const Auth = ({ onDemoLogin }) => {
 
         <form onSubmit={isSignUp ? handleSignUp : handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Email Address</label>
+            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Username or Email</label>
             <input
-              type="email"
-              placeholder="name@company.com"
+              type="text"
+              placeholder="bhavesh or name@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               style={{ padding: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: '6px', color: 'white', outline: 'none' }}
