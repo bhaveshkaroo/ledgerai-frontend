@@ -90,7 +90,7 @@ function CashFlowStatement({ period }) {
           </div>
 
           <div className="stmt-section">
-            <div className="stmt-row" style={{ borderTop: '2px solid var(--accent-navy)', marginTop: 24 }}>
+            <div className="stmt-row" style={{ borderTop: '2px solid #000000', marginTop: 24 }}>
               <span className="stmt-label bold">Net Increase / (Decrease) in Cash</span>
               <span className="stmt-amount {data.netChange < 0 ? 'negative' : 'positive'}">₹{formatINR(data.netChange)}</span>
             </div>

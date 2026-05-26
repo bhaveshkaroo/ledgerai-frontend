@@ -18,7 +18,6 @@ const Sparkline = ({ data, color = 'var(--accent-emerald)' }) => (
       strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ filter: 'drop-shadow(0 0 4px oklch(70% 0.17 160 / 0.2))' }}
     />
   </svg>
 );
@@ -72,7 +71,7 @@ function Dashboard({ period, setPeriod }) {
     const bs = LedgerEngine.calcBalanceSheet(period);
     return [
       { name: 'Assets', value: bs.totalAssets, fill: 'var(--accent-emerald)' },
-      { name: 'Liabilities', value: bs.totalLiabilities, fill: 'rgba(255,255,255,0.1)' }
+      { name: 'Liabilities', value: bs.totalLiabilities, fill: '#e8e8ed' }
     ];
   }, [period]);
 
@@ -145,10 +144,10 @@ function Dashboard({ period, setPeriod }) {
           </div>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+            <div style={{ padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border)' }}>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>GST Compliance Score</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
+                <div style={{ flex: 1, height: '4px', background: '#e8e8ed', borderRadius: '2px' }}>
                   <div style={{ width: '92%', height: '100%', background: 'var(--accent-emerald)', borderRadius: '2px' }}></div>
                 </div>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600 }}>92%</span>
@@ -169,7 +168,7 @@ function Dashboard({ period, setPeriod }) {
               { label: 'Journal', time: '4h ago', desc: 'New transaction entry: #TX-4092' }
             ].map((item, i) => (
               <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: i === 0 ? 'var(--accent-emerald)' : 'rgba(255,255,255,0.2)', marginTop: '4px' }}></div>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: i === 0 ? 'var(--accent-emerald)' : '#e5e5e7', marginTop: '4px' }}></div>
                 <div>
                   <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>{item.label}</div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{item.desc} • {item.time}</div>

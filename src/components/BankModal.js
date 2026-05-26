@@ -87,17 +87,17 @@ function BankModal({ isOpen, onClose, onAdd }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 3000 }}>
-      <div className="modal-content card" onClick={e => e.stopPropagation()} style={{ padding: 0, overflow: 'hidden', maxWidth: 600, width: '90%' }}>
-        <button className="modal-close" onClick={onClose} style={{ position: 'absolute', top: 20, right: 20, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={24} /></button>
+    <div className="modal-overlay" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.3)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000 }}>
+      <div className="modal-content card" onClick={e => e.stopPropagation()} style={{ background: '#ffffff', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: '0 20px 50px rgba(0,0,0,0.08)', position: 'relative', overflow: 'hidden', maxWidth: 600, width: '90%' }}>
+        <button className="modal-close" onClick={onClose} style={{ position: 'absolute', top: 20, right: 20, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
         
         {step === 'form' && (
           <div style={{ padding: 40 }}>
             <div style={{ textAlign: 'center', marginBottom: 32 }}>
-              <div style={{ width: 56, height: 56, background: 'var(--bg-primary)', color: 'var(--accent-navy)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <CreditCard size={28} />
+              <div style={{ width: 56, height: 56, background: '#f5f5f7', color: '#000000', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <CreditCard size={24} />
               </div>
-              <h2 className="heading-serif" style={{ fontSize: 24, fontWeight: 700, margin: '0 0 8px 0' }}>Connect Bank Account</h2>
+              <h2 className="heading-serif" style={{ fontSize: 24, fontWeight: 600, margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Connect Bank Account</h2>
               <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Securely link your business accounts via RBI AA framework</p>
             </div>
 
@@ -110,12 +110,12 @@ function BankModal({ isOpen, onClose, onAdd }) {
                     type="text" placeholder="Search for your bank..." value={bankSearch} 
                     onChange={(e) => { setBankSearch(e.target.value); setShowDropdown(true); }} 
                     onFocus={() => setShowDropdown(true)} 
-                    style={{ width: '100%', padding: '12px 16px 12px 40px', borderRadius: 8, border: '1px solid var(--border-light)', fontSize: 14 }}
+                    style={{ width: '100%', padding: '12px 16px 12px 40px', borderRadius: 8, border: '1px solid var(--border)', background: '#ffffff', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
                   />
                   {showDropdown && bankSearch && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid var(--border-light)', borderRadius: 8, marginTop: 4, zIndex: 100, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#ffffff', border: '1px solid var(--border)', borderRadius: 8, marginTop: 4, zIndex: 100, boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }}>
                       {filteredBanks.map(b => (
-                        <div key={b} onClick={() => { setFormData({...formData, bankName: b}); setBankSearch(b); setShowDropdown(false); }} style={{ padding: '12px 16px', cursor: 'pointer', fontSize: 14 }}>{b}</div>
+                        <div key={b} onClick={() => { setFormData({...formData, bankName: b}); setBankSearch(b); setShowDropdown(false); }} style={{ padding: '12px 16px', cursor: 'pointer', fontSize: 14, color: 'var(--text-primary)' }}>{b}</div>
                       ))}
                     </div>
                   )}
@@ -125,22 +125,22 @@ function BankModal({ isOpen, onClose, onAdd }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Account Type</label>
-                  <select value={formData.accountType} onChange={(e) => setFormData({...formData, accountType: e.target.value})} style={{ padding: '12px', borderRadius: 8, border: '1px solid var(--border-light)', fontSize: 14 }}>
+                  <select value={formData.accountType} onChange={(e) => setFormData({...formData, accountType: e.target.value})} style={{ padding: '12px', borderRadius: 8, border: '1px solid var(--border)', background: '#ffffff', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}>
                     <option>Current Account</option><option>Savings Account</option><option>Loan Account</option>
                   </select>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Account Number</label>
-                  <input type="text" placeholder="Enter number" value={formData.accountNumber} onChange={(e) => setFormData({...formData, accountNumber: e.target.value.replace(/\D/g, '')})} style={{ padding: '12px', borderRadius: 8, border: '1px solid var(--border-light)', fontSize: 14 }} />
+                  <input type="text" placeholder="Enter number" value={formData.accountNumber} onChange={(e) => setFormData({...formData, accountNumber: e.target.value.replace(/\D/g, '')})} style={{ padding: '12px', borderRadius: 8, border: '1px solid var(--border)', background: '#ffffff', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }} />
                 </div>
               </div>
 
-              <div style={{ background: 'var(--bg-primary)', padding: 20, borderRadius: 12, border: `1px solid ${formData.aaConsent ? 'var(--accent-teal)' : 'var(--border-light)'}` }}>
+              <div style={{ background: '#f5f5f7', padding: 20, borderRadius: 12, border: `1px solid var(--border)` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <strong style={{ fontSize: 13 }}>Enable RBI AA Integration</strong>
-                      <span style={{ fontSize: 10, fontWeight: 800, background: 'var(--accent-navy)', color: '#fff', padding: '2px 6px', borderRadius: 4 }}>NBFC-AA</span>
+                      <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>Enable RBI AA Integration</strong>
+                      <span style={{ fontSize: 10, fontWeight: 800, background: '#000000', color: '#ffffff', padding: '2px 6px', borderRadius: 4 }}>NBFC-AA</span>
                     </div>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Secure regulated data sharing framework</span>
                   </div>
@@ -149,8 +149,8 @@ function BankModal({ isOpen, onClose, onAdd }) {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16, marginTop: 12 }}>
-                <button onClick={onClose} style={{ padding: '14px', background: 'transparent', border: '1px solid var(--border-light)', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-                <button onClick={handleConnect} style={{ padding: '14px', background: 'var(--accent-navy)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }}>Connect Bank Account</button>
+                <button onClick={onClose} style={{ padding: '14px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                <button onClick={handleConnect} style={{ padding: '14px', background: '#000000', color: '#ffffff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>Connect Bank Account</button>
               </div>
             </div>
           </div>
@@ -158,8 +158,8 @@ function BankModal({ isOpen, onClose, onAdd }) {
 
         {(step === 'loading' || step === 'success') && (
           <div style={{ padding: '80px 40px', textAlign: 'center' }}>
-            {step === 'loading' ? <Loader2 size={48} className="animate-spin" style={{ margin: '0 auto 24px', color: 'var(--accent-navy)' }} /> : <CheckCircle size={60} style={{ margin: '0 auto 24px', color: 'var(--accent-teal)' }} />}
-            <h3 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 8px 0' }}>{step === 'loading' ? `Connecting to ${formData.bankName}...` : 'Account Connected!'}</h3>
+            {step === 'loading' ? <Loader2 size={48} className="animate-spin" style={{ margin: '0 auto 24px', color: '#000000' }} /> : <CheckCircle size={60} style={{ margin: '0 auto 24px', color: '#34c759' }} />}
+            <h3 style={{ fontSize: 20, fontWeight: 600, margin: '0 0 8px 0', color: 'var(--text-primary)' }}>{step === 'loading' ? `Connecting to ${formData.bankName}...` : 'Account Connected!'}</h3>
             <p style={{ color: 'var(--text-muted)' }}>{step === 'loading' ? 'Authenticating via secure gateway' : 'Your data is being synchronized.'}</p>
           </div>
         )}

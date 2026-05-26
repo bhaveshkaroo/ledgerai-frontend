@@ -51,7 +51,7 @@ function TransactionList({ period }) {
               placeholder="Filter transactions..." 
               value={searchTerm} 
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '13px', outline: 'none', width: '100%' }}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', width: '100%' }}
             />
           </div>
           <button className="sidebar-btn" style={{ width: 'auto' }} onClick={() => {
@@ -68,7 +68,7 @@ function TransactionList({ period }) {
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
+            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
               <th style={{ padding: '12px 24px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Date</th>
               <th style={{ padding: '12px 24px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Description</th>
               <th style={{ padding: '12px 24px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Category</th>
@@ -88,12 +88,12 @@ function TransactionList({ period }) {
                 </td>
                 <td style={{ padding: '16px 24px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className={`status-dot ${t.type === 'Credit' ? 'emerald' : ''}`} style={{ background: t.type === 'Credit' ? 'var(--accent-emerald)' : 'rgba(255,255,255,0.2)' }}></div>
+                    <div className={`status-dot ${t.type === 'Credit' ? 'emerald' : ''}`} style={{ background: t.type === 'Credit' ? '#34c759' : '#e5e5e7' }}></div>
                     <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{t.category}</span>
                   </div>
                 </td>
                 <td style={{ padding: '16px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600 }}>
-                  <span style={{ color: t.type === 'Credit' ? 'var(--accent-emerald)' : 'var(--text-primary)' }}>
+                  <span style={{ color: t.type === 'Credit' ? '#34c759' : 'var(--text-primary)' }}>
                     {t.type === 'Credit' ? '+' : ''}{formatINR(t.amount)}
                   </span>
                 </td>
@@ -106,7 +106,7 @@ function TransactionList({ period }) {
         </table>
 
         {/* Pagination */}
-        <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)' }}>
+        <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
             Showing {paginatedTxs.length} of {filteredTransactions.length} transactions
           </span>

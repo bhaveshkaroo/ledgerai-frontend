@@ -88,7 +88,7 @@ function Statements({ period, initialTab }) {
             onClick={handleDownload}
             style={{ 
               display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', 
-              borderRadius: 8, background: 'var(--accent-navy)', color: '#fff',
+              borderRadius: 8, background: '#1d1d1f', color: '#fff',
               border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer'
             }}
           >

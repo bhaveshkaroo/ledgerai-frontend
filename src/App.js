@@ -9,11 +9,12 @@ import CompliancePanel from './components/CompliancePanel';
 import BankModal from './components/BankModal';
 import Auth from './components/Auth';
 import Settings from './components/Settings';
+import CAWorkflow from './components/CAWorkflow';
 import { supabase } from './supabaseClient';
 import { 
-  LayoutGrid, ArrowRightLeft, FileText, Scale, Droplets, BookOpen, 
+  LayoutGrid, ArrowRightLeft, BookOpen, 
   Sparkles, Search, Settings as SettingsIcon, LogOut, Bell, Plus, Download, 
-  RefreshCw, Zap, ChevronRight, User, ShieldCheck, HelpCircle, MessageCircle
+  RefreshCw, Zap, ChevronRight, HelpCircle, MessageCircle, FileText, Scale, Droplets, Users
 } from 'lucide-react';
 import { ASValidationEngine } from './utils/ASComplianceEngine';
 import { LedgerEngine } from './utils/LedgerEngine';
@@ -30,6 +31,7 @@ function App() {
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [complianceStats, setComplianceStats] = useState({ errors: 0, warnings: 0 });
   const [accountOpen, setAccountOpen] = useState(true);
+  const [currency, setCurrency] = useState('INR');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -91,6 +93,7 @@ function App() {
   const navSections = [
     { id: 'Dashboard', name: 'Dashboard', icon: <LayoutGrid size={18} />, category: 'Navigation' },
     { id: 'Transactions', name: 'Transactions', icon: <ArrowRightLeft size={18} />, category: 'Navigation' },
+    { id: 'CAWorkflow', name: 'CA Collaboration', icon: <Users size={18} />, category: 'Navigation' },
     { id: 'IncomeStatement', name: 'Income Statement', icon: <FileText size={18} />, category: 'Reports' },
     { id: 'BalanceSheet', name: 'Balance Sheet', icon: <Scale size={18} />, category: 'Reports' },
     { id: 'CashFlow', name: 'Cash Flow', icon: <Droplets size={18} />, category: 'Reports' },
@@ -157,31 +160,31 @@ function App() {
             <ChevronRight size={14} className="chevron" />
           </button>
 
-          {/* Account Section */}
-          <button className="sidebar-btn" onClick={() => setAccountOpen(!accountOpen)} style={{ marginTop: '8px' }}>
-            <span style={{ fontWeight: 600, fontSize: '13px' }}>Reports</span>
-            <ChevronRight size={14} className="chevron" style={{ transform: accountOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+          {/* Reports Section */}
+          <div style={{ marginTop: '20px', padding: '0 12px 6px', fontSize: '11px', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Reports</div>
+          <button className={`sidebar-btn sub-item ${activeTab === 'IncomeStatement' ? 'active' : ''}`} onClick={() => setActiveTab('IncomeStatement')}>
+            Income Statement
+          </button>
+          <button className={`sidebar-btn sub-item ${activeTab === 'BalanceSheet' ? 'active' : ''}`} onClick={() => setActiveTab('BalanceSheet')}>
+            Balance Sheet
+          </button>
+          <button className={`sidebar-btn sub-item ${activeTab === 'CashFlow' ? 'active' : ''}`} onClick={() => setActiveTab('CashFlow')}>
+            Cash Flow Statement
           </button>
 
-          {accountOpen && (
-            <>
-              <button className={`sidebar-btn sub-item ${activeTab === 'IncomeStatement' ? 'active' : ''}`} onClick={() => setActiveTab('IncomeStatement')}>
-                <FileText size={16} /> Income Statement
-              </button>
-              <button className={`sidebar-btn sub-item ${activeTab === 'BalanceSheet' ? 'active' : ''}`} onClick={() => setActiveTab('BalanceSheet')}>
-                <Scale size={16} /> Balance Sheet
-              </button>
-              <button className={`sidebar-btn sub-item ${activeTab === 'CashFlow' ? 'active' : ''}`} onClick={() => setActiveTab('CashFlow')}>
-                <Droplets size={16} /> Cash Flow
-              </button>
-              <button className={`sidebar-btn sub-item ${activeTab === 'LedgerBook' ? 'active' : ''}`} onClick={() => setActiveTab('LedgerBook')}>
-                <BookOpen size={16} /> Ledger Book
-              </button>
-            </>
-          )}
+          {/* Books Section */}
+          <div style={{ marginTop: '20px', padding: '0 12px 6px', fontSize: '11px', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Books</div>
+          <button className={`sidebar-btn ${activeTab === 'LedgerBook' ? 'active' : ''}`} onClick={() => setActiveTab('LedgerBook')}>
+            <BookOpen size={18} /> Ledger Book
+            <ChevronRight size={14} className="chevron" />
+          </button>
+          <button className={`sidebar-btn ${activeTab === 'CAWorkflow' ? 'active' : ''}`} onClick={() => setActiveTab('CAWorkflow')}>
+            <Users size={18} /> CA Collaboration
+            <ChevronRight size={14} className="chevron" />
+          </button>
 
           {/* Other top-level items */}
-          <button className={`sidebar-btn ${activeTab === 'AISummary' ? 'active' : ''}`} onClick={() => setActiveTab('AISummary')} style={{ marginTop: '4px' }}>
+          <button className={`sidebar-btn ${activeTab === 'AISummary' ? 'active' : ''}`} onClick={() => setActiveTab('AISummary')} style={{ marginTop: '20px' }}>
             <Sparkles size={18} /> AI Insights
             <ChevronRight size={14} className="chevron" />
           </button>
@@ -209,7 +212,7 @@ function App() {
       <main className="main-content">
         <header className="dash-header">
           <div className="dash-title-container">
-            <h1>{activeTab === 'Settings' ? 'Preferences' : activeTab}</h1>
+            <h1>{activeTab === 'Settings' ? 'Preferences' : activeTab === 'AISummary' ? 'AI Insights' : activeTab === 'LedgerBook' ? 'Ledger Book' : activeTab === 'IncomeStatement' ? 'Income Statement' : activeTab === 'BalanceSheet' ? 'Balance Sheet' : activeTab === 'CashFlow' ? 'Cash Flow' : activeTab}</h1>
           </div>
           
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -227,26 +230,27 @@ function App() {
         </header>
 
         <div className="tab-content">
-          {activeTab === 'Dashboard' && <Dashboard period={period} setPeriod={setPeriod} />}
-          {activeTab === 'Transactions' && <TransactionList period={period} />}
-          {['IncomeStatement', 'BalanceSheet', 'CashFlow', 'TrialBalance'].includes(activeTab) && <Statements period={period} initialTab={activeTab} />}
-          {activeTab === 'LedgerBook' && <Ledger period={period} />}
+          {activeTab === 'Dashboard' && <Dashboard period={period} setPeriod={setPeriod} currency={currency} />}
+          {activeTab === 'Transactions' && <TransactionList period={period} currency={currency} />}
+          {activeTab === 'CAWorkflow' && <CAWorkflow currency={currency} />}
+          {['IncomeStatement', 'BalanceSheet', 'CashFlow', 'TrialBalance'].includes(activeTab) && <Statements period={period} initialTab={activeTab} currency={currency} />}
+          {activeTab === 'LedgerBook' && <Ledger period={period} currency={currency} />}
           {activeTab === 'AISummary' && <ReportCard />}
-          {activeTab === 'Settings' && <Settings />}
+          {activeTab === 'Settings' && <Settings currency={currency} onCurrencyChange={setCurrency} />}
         </div>
       </main>
 
       {/* ─── Command Menu ─── */}
       {isCommandMenuOpen && (
         <div onClick={() => setIsCommandMenuOpen(false)} style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', 
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', 
           display: 'flex', alignItems: 'flex-start', justifyContent: 'center', 
           paddingTop: '15vh', zIndex: 2000, backdropFilter: 'blur(8px)'
         }}>
           <div onClick={e => e.stopPropagation()} style={{
             width: '100%', maxWidth: '560px', background: 'var(--bg-card)', 
             border: '1px solid var(--border-bright)', borderRadius: '12px',
-            boxShadow: '0 20px 70px rgba(0,0,0,0.5)', overflow: 'hidden'
+            boxShadow: '0 20px 70px rgba(0,0,0,0.15)', overflow: 'hidden'
           }}>
             <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Search size={16} color="var(--text-muted)" />
@@ -255,12 +259,12 @@ function App() {
                 placeholder="Search actions..." 
                 value={commandSearch}
                 onChange={e => setCommandSearch(e.target.value)}
-                style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '15px', outline: 'none', width: '100%', fontFamily: 'var(--font-sans)' }}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '15px', outline: 'none', width: '100%', fontFamily: 'var(--font-sans)' }}
               />
             </div>
             <div style={{ padding: '6px', maxHeight: '360px', overflowY: 'auto' }}>
               {commandItems.length > 0 ? (
-                commandItems.map((item) => (
+                commandItems.map((item, idx) => (
                   <div 
                     key={item.id} 
                     className="command-item" 
@@ -268,7 +272,10 @@ function App() {
                     style={{ 
                       padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', 
                       display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-secondary)',
-                      transition: 'background 0.12s'
+                      transition: 'background 160ms var(--ease-out), transform 160ms var(--ease-out)',
+                      animation: 'fade-in 200ms var(--ease-out) forwards',
+                      animationDelay: `${idx * 30}ms`,
+                      opacity: 0,
                     }}
                   >
                     <div style={{ opacity: 0.5 }}>{item.icon}</div>

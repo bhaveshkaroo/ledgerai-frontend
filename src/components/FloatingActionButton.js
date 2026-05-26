@@ -33,7 +33,7 @@ const FloatingActionButton = ({ onAction }) => {
             <span style={{ 
               backgroundColor: '#fff', padding: '4px 12px', borderRadius: 4, 
               fontSize: 12, fontWeight: 700, boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              color: 'var(--accent-navy)'
+              color: '#000000'
             }}>
               {action.label}
             </span>

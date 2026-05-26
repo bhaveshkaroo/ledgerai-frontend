@@ -70,7 +70,7 @@ function IncomeStatement({ period }) {
           </div>
 
           <div className="stmt-section">
-            <div className="stmt-subtotal" style={{ borderTop: '2px solid var(--accent-navy)', marginTop: 24 }}>
+            <div className="stmt-subtotal" style={{ borderTop: '2px solid #000000', marginTop: 24 }}>
               <span className="stmt-label bold">PROFIT BEFORE TAX</span>
               <span className="stmt-amount">₹{formatINR(data.profitBeforeTax)}</span>
             </div>

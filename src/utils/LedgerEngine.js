@@ -37,6 +37,21 @@ export const formatINR = (amount) => {
   });
 };
 
+const EXCHANGE_RATES = { INR: 1, USD: 83, EUR: 90 };
+const CURRENCY_SYMBOLS = { INR: '₹', USD: '$', EUR: '€' };
+const CURRENCY_LOCALES = { INR: 'en-IN', USD: 'en-US', EUR: 'de-DE' };
+
+export const formatCurrency = (amount, currency = 'INR') => {
+  const rate = EXCHANGE_RATES[currency] || 1;
+  const converted = amount / rate;
+  const symbol = CURRENCY_SYMBOLS[currency] || '₹';
+  const locale = CURRENCY_LOCALES[currency] || 'en-IN';
+  return symbol + Number(converted).toLocaleString(locale, {
+    maximumFractionDigits: currency === 'INR' ? 0 : 2,
+    minimumFractionDigits: 0
+  });
+};
+
 const generateTransactions = () => {
   const txs = [];
   const customers = ["Rajan Fabrics", "Mehta Garments", "Suresh Traders", "Patel Exports", "Kumar Textiles", "Bhopal Synthetics", "Nagpur Weavers", "Jaipur Silks"];

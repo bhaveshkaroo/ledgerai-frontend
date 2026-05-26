@@ -62,7 +62,7 @@ function ReportCard() {
             </div>
           </section>
 
-          <div className="card" style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-bright)' }}>
+          <div className="card" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-bright)' }}>
              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: 'var(--space-3)' }}>
               <ShieldCheck size={20} color="var(--accent-emerald)" />
               <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Compliance Strategy</h3>

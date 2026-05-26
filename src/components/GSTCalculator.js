@@ -33,7 +33,7 @@ function GSTCalculator() {
     <div className="gst-wrap">
       <div className="gst-card">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
-          <Calculator size={20} color="var(--accent-navy)" />
+          <Calculator size={20} color="#000000" />
           <h3 style={{ fontSize: 18, fontWeight: 700 }}>GST Computation Tool</h3>
         </div>
         
@@ -77,7 +77,7 @@ function GSTCalculator() {
               <span className="stmt-label">Total GST Collected</span>
               <span className="stmt-amount">₹{formatINR(calc.total_gst)}</span>
             </div>
-            <div className="stmt-total" style={{ marginTop: 16, borderTop: '2px solid var(--accent-navy)' }}>
+            <div className="stmt-total" style={{ marginTop: 16, borderTop: '2px solid #000000' }}>
               <span className="stmt-label">INVOICE TOTAL</span>
               <span className="stmt-amount">₹{formatINR(calc.total_amount)}</span>
             </div>
@@ -93,15 +93,15 @@ function GSTCalculator() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
           <div>
-            <div className="gst-label" style={{ color: 'rgba(255,255,255,0.6)' }}>Output GST (Sales)</div>
-            <div style={{ fontSize: 32, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>₹{formatINR(summary.gst_collected)}</div>
+            <div className="gst-label" style={{ color: 'var(--text-secondary)' }}>Output GST (Sales)</div>
+            <div style={{ fontSize: 32, fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>₹{formatINR(summary.gst_collected)}</div>
           </div>
           <div>
-            <div className="gst-label" style={{ color: 'rgba(255,255,255,0.6)' }}>Input Tax Credit (ITC)</div>
-            <div style={{ fontSize: 32, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>₹{formatINR(summary.gst_paid)}</div>
+            <div className="gst-label" style={{ color: 'var(--text-secondary)' }}>Input Tax Credit (ITC)</div>
+            <div style={{ fontSize: 32, fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>₹{formatINR(summary.gst_paid)}</div>
           </div>
           
-          <div style={{ background: 'rgba(255,255,255,0.05)', padding: 32, borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ background: 'var(--bg-surface)', padding: 32, borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
               <ShieldCheck size={18} color="var(--accent-gold)" />
               <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-gold)', letterSpacing: '0.05em' }}>Net GST Payable</span>
@@ -109,7 +109,7 @@ function GSTCalculator() {
             <div style={{ fontSize: 40, fontWeight: 800, color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)' }}>
               ₹{formatINR(summary.net_liability)}
             </div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 16 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 16 }}>
               Next filing (GSTR-3B) due by 20th May 2026
             </div>
           </div>

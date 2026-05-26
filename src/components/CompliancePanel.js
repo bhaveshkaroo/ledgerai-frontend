@@ -115,10 +115,10 @@ function CompliancePanel({ isOpen, onClose, onRefresh }) {
     <div className="compliance-sidepanel">
       <div className="panel-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Shield size={24} style={{ color: stats.errors > 0 ? 'var(--accent-red)' : 'var(--accent-gold)' }} />
+          <Shield size={24} style={{ color: stats.errors > 0 ? '#ff3b30' : '#ff9500' }} />
           <div>
-            <h2 className="heading-serif" style={{ fontSize: 20, color: '#fff' }}>Compliance Center</h2>
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>LedgerAI AI-Powered Auditing</p>
+            <h2 className="heading-serif" style={{ fontSize: 20, color: 'var(--text-primary)' }}>Compliance Center</h2>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>LedgerAI AI-Powered Auditing</p>
           </div>
         </div>
         <button className="btn-close" onClick={onClose}><X size={20}/></button>
@@ -152,7 +152,7 @@ function CompliancePanel({ isOpen, onClose, onRefresh }) {
 
             <div className="findings-list">
               {findings.filter(f => f.status === 'Unresolved').map((f, i) => (
-                <div key={i} className="finding-card" style={{ borderLeft: `4px solid ${f.severity === 'ERROR' ? 'var(--accent-red)' : 'var(--accent-gold)'}` }}>
+                <div key={i} className="finding-card" style={{ borderLeft: `4px solid ${f.severity === 'ERROR' ? '#ff3b30' : '#ff9500'}` }}>
                   <div className="finding-header">
                     <span className="finding-id">{f.id}</span>
                     <span className={`finding-severity ${f.severity.toLowerCase()}`}>{f.severity}</span>
@@ -168,8 +168,8 @@ function CompliancePanel({ isOpen, onClose, onRefresh }) {
                 </div>
               ))}
               {findings.filter(f => f.status === 'Unresolved').length === 0 && (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.3)' }}>
-                  <CheckCircle size={40} style={{ marginBottom: 12, opacity: 0.5 }} />
+                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+                  <CheckCircle size={40} style={{ marginBottom: 12, opacity: 0.5, color: '#34c759' }} />
                   <p>All clear! No pending compliance issues.</p>
                 </div>
               )}
@@ -221,49 +221,49 @@ function CompliancePanel({ isOpen, onClose, onRefresh }) {
       </div>
 
       <style jsx>{`
-        .compliance-sidepanel { position: fixed; top: 0; right: 0; width: 480px; height: 100vh; background: #0B1426; z-index: 2000; display: flex; flex-direction: column; animation: slideIn 0.3s ease-out; box-shadow: -20px 0 50px rgba(0,0,0,0.5); }
+        .compliance-sidepanel { position: fixed; top: 0; right: 0; width: 480px; height: 100vh; background: #ffffff; z-index: 2000; display: flex; flex-direction: column; animation: slideIn 0.3s ease-out; box-shadow: -20px 0 50px rgba(0,0,0,0.05); border-left: 1px solid var(--border); color: var(--text-primary); }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-        .panel-header { padding: 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .btn-close { background: transparent; border: none; color: rgba(255,255,255,0.5); cursor: pointer; }
+        .panel-header { padding: 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+        .btn-close { background: transparent; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; }
         .panel-content { padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; }
-        .panel-tabs { display: flex; padding: 0 24px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .panel-tab { flex: 1; padding: 16px; border: none; background: transparent; color: rgba(255,255,255,0.4); font-size: 13px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; }
-        .panel-tab.active { color: var(--accent-gold); border-bottom-color: var(--accent-gold); }
+        .panel-tabs { display: flex; padding: 0 24px; border-bottom: 1px solid var(--border); }
+        .panel-tab { flex: 1; padding: 16px; border: none; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; }
+        .panel-tab.active { color: #000000; border-bottom-color: #000000; }
         
-        .mode-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-        .mode-btn.active { background: var(--accent-gold); color: #0B1426; border-color: var(--accent-gold); }
+        .mode-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .mode-btn.active { background: #000000; color: #ffffff; border-color: #000000; }
         
-        .finding-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; marginBottom: 16px; }
+        .finding-card { background: #f5f5f7; border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
         .finding-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-        .finding-id { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.4); }
+        .finding-id { font-size: 10px; font-weight: 700; color: var(--text-muted); }
         .finding-severity { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; }
-        .finding-severity.error { background: var(--accent-red); color: #fff; }
-        .finding-severity.warning { background: var(--accent-gold); color: #0B1426; }
-        .finding-msg { font-size: 13px; color: #fff; line-height: 1.5; margin-bottom: 12px; }
-        .finding-suggestion { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 6px; font-size: 12px; color: rgba(255,255,255,0.7); border: 1px dashed rgba(255,255,255,0.1); }
+        .finding-severity.error { background: #ff3b30; color: #fff; }
+        .finding-severity.warning { background: #ff9500; color: #ffffff; }
+        .finding-msg { font-size: 13px; color: var(--text-primary); line-height: 1.5; margin-bottom: 12px; }
+        .finding-suggestion { background: #ffffff; padding: 12px; border-radius: 6px; font-size: 12px; color: var(--text-secondary); border: 1px dashed var(--border); }
         .finding-footer { margin-top: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .finding-std { font-size: 11px; color: rgba(255,255,255,0.3); }
-        .btn-dismiss { background: transparent; border: none; color: var(--accent-gold); font-weight: 700; font-size: 11px; cursor: pointer; }
+        .finding-std { font-size: 11px; color: var(--text-muted); }
+        .btn-dismiss { background: transparent; border: none; color: #0071e3; font-weight: 700; font-size: 11px; cursor: pointer; }
 
         .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .chat-history { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-bottom: 20px; padding-right: 4px; }
-        .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 14px; font-size: 13px; line-height: 1.5; position: relative; }
-        .chat-bubble.user { align-self: flex-end; background: var(--accent-navy); color: #fff; border-bottom-right-radius: 2px; border: 1px solid rgba(255,255,255,0.1); }
-        .chat-bubble.assistant { align-self: flex-start; background: rgba(255,255,255,0.05); color: #fff; border-bottom-left-radius: 2px; border: 1px solid rgba(255,255,255,0.1); }
-        .bubble-tag { font-size: 9px; font-weight: 800; text-transform: uppercase; margin-top: 6px; opacity: 0.6; color: var(--accent-gold); }
+        .chat-bubble { max-width: 85%; padding: 10px 16px; border-radius: 16px; font-size: 13px; line-height: 1.5; position: relative; }
+        .chat-bubble.user { align-self: flex-end; background: #0071e3; color: #ffffff; border-bottom-right-radius: 4px; }
+        .chat-bubble.assistant { align-self: flex-start; background: #e8e8ed; color: #1d1d1f; border-bottom-left-radius: 4px; }
+        .bubble-tag { font-size: 9px; font-weight: 800; text-transform: uppercase; margin-top: 6px; opacity: 0.6; color: var(--text-muted); }
         
-        .chat-footer { padding-top: 16px; background: #0B1426; border-top: 1px solid rgba(255,255,255,0.05); }
+        .chat-footer { padding-top: 16px; background: #ffffff; border-top: 1px solid var(--border); }
         .suggested-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-        .suggestion-chip { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); padding: 6px 12px; border-radius: 16px; font-size: 11px; cursor: pointer; transition: all 0.2s; }
-        .suggestion-chip:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .suggestion-chip { background: #f5f5f7; border: 1px solid var(--border); color: var(--text-secondary); padding: 6px 12px; border-radius: 16px; font-size: 11px; cursor: pointer; transition: all 0.2s; }
+        .suggestion-chip:hover { background: #e8e8ed; color: var(--text-primary); }
         
-        .chat-input-wrap { display: flex; gap: 10px; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.1); }
-        .chat-input { flex: 1; background: transparent; border: none; color: #fff; font-size: 14px; outline: none; }
-        .btn-send { background: var(--accent-gold); color: #0B1426; border: none; padding: 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .chat-input-wrap { display: flex; gap: 10px; background: #f5f5f7; border-radius: 12px; padding: 8px 12px; border: 1px solid var(--border); }
+        .chat-input { flex: 1; background: transparent; border: none; color: var(--text-primary); font-size: 14px; outline: none; }
+        .btn-send { background: #000000; color: #ffffff; border: none; padding: 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .typing-indicator { display: flex; gap: 4px; padding: 4px 0; }
-        .typing-indicator span { width: 6px; height: 6px; background: rgba(255,255,255,0.4); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
+        .typing-indicator span { width: 6px; height: 6px; background: rgba(0,0,0,0.25); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
         .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
         .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
         @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }

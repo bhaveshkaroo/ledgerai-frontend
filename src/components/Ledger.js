@@ -94,10 +94,10 @@ function Ledger({ period }) {
           </tbody>
         </table>
 
-        <div style={{ marginTop: 40, borderTop: '2px solid var(--accent-navy)', paddingTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ marginTop: 40, borderTop: '2px solid #000000', paddingTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Closing Balance</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--accent-navy)' }}>{formatINR(Math.abs(closingBalance))} {closingBalance >= 0 ? 'Dr' : 'Cr'}</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#000000' }}>{formatINR(Math.abs(closingBalance))} {closingBalance >= 0 ? 'Dr' : 'Cr'}</div>
           </div>
         </div>
       </div>
