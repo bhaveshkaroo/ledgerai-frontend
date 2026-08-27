@@ -219,7 +219,7 @@ export const LedgerEngine = {
 
   calcCashFlow(period) {
     const is = this.calcIncomeStatement();
-    const pbt = is.find(r => r.name.includes("Profit Before Tax")).value;
+    const pbt = is.find(r => r.name.toLowerCase().includes("profit before tax")).value;
     const dep = this.getAccountBalance('Depreciation Expense');
     const finCost = this.getAccountBalance('Finance Cost');
     const tax = this.getAccountBalance('Tax Expense');
