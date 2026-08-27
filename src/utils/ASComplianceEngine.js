@@ -1,4 +1,4 @@
-import { formatINR } from './LedgerEngine';
+import { formatINR } from './LedgerEngine.js';
 
 export const COMPLIANCE_MODES = {
   AS_SME: 'AS (SME/Non-Corporate)',

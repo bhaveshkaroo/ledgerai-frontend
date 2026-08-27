@@ -1,4 +1,4 @@
-import { ASValidationEngine } from './ASComplianceEngine';
+import { ASValidationEngine } from './ASComplianceEngine.js';
 
 export const CHART_OF_ACCOUNTS = [
   { name: "Sales Revenue", type: "Revenue", classification: "P&L", section: "Revenue from Operations" },

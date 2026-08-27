@@ -5,18 +5,20 @@ const CashFlowStatement = ({ period }) => {
   const data = LedgerEngine.calcCashFlow(period);
 
   return (
-    <div className="statement-container">
-      <div style={{ marginBottom: 'var(--space-6)', textAlign: 'center' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Statement of Cash Flows</h2>
-        <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>For the period ended {period === 'Full Year' ? 'Mar 31, 2026' : period}</div>
+    <div className="animate-fade" style={{ maxWidth: '900px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div>
+          <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Statement of Cash Flows</h2>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>For the period ended {period === 'Full Year' ? 'Mar 31, 2026' : period}</p>
+        </div>
       </div>
 
-      <div className="table-responsive">
-        <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr>
-              <th style={{ textAlign: 'left', padding: '12px', borderBottom: '1px solid var(--border)', width: '70%' }}>Particulars</th>
-              <th style={{ textAlign: 'right', padding: '12px', borderBottom: '1px solid var(--border)', width: '30%' }}>Amount (INR)</th>
+            <tr style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}>
+              <th style={{ padding: '14px 24px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', width: '70%' }}>Particulars</th>
+              <th style={{ padding: '14px 24px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', width: '30%' }}>Amount (INR)</th>
             </tr>
           </thead>
           <tbody>
@@ -24,20 +26,21 @@ const CashFlowStatement = ({ period }) => {
               <tr key={idx} style={{ 
                 borderBottom: row.isTotal ? '2px solid var(--border)' : '1px solid var(--border-light)',
                 backgroundColor: row.level === 0 && !row.isTotal ? 'var(--bg-surface)' : 'transparent'
-              }}>
+              }} className={!row.isSummary ? "table-row-hover" : ""}>
                 <td style={{ 
-                  padding: `12px 12px 12px ${12 + (row.level * 24)}px`,
-                  fontWeight: row.isSummary || row.isTotal ? 600 : 400,
-                  color: row.level === 0 ? 'var(--text-primary)' : (row.isSummary ? 'var(--text-primary)' : 'var(--text-secondary)')
+                  padding: `14px 24px 14px ${24 + (row.level * 24)}px`,
+                  fontWeight: row.isSummary || row.isTotal ? 600 : 500,
+                  color: row.level === 0 ? 'var(--text-primary)' : (row.isSummary ? 'var(--text-primary)' : 'var(--text-secondary)'),
+                  fontSize: '13px'
                 }}>
                   {row.name}
                 </td>
                 <td style={{ 
-                  padding: '12px',
+                  padding: '14px 24px',
                   textAlign: 'right',
                   fontFamily: 'var(--font-mono)',
-                  fontWeight: row.isSummary || row.isTotal ? 600 : 400,
-                  borderTop: row.isTotal ? '1px solid var(--text-primary)' : 'none',
+                  fontWeight: row.isSummary || row.isTotal ? 700 : 500,
+                  fontSize: row.isTotal ? '14px' : '13px',
                   color: row.value < 0 ? '#ef4444' : 'inherit'
                 }}>
                   {row.value !== null && row.value !== undefined ? (row.value < 0 ? `(${formatINR(Math.abs(row.value))})` : formatINR(row.value)) : ''}

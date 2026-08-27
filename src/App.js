@@ -4,7 +4,7 @@ import Dashboard from './components/Dashboard';
 import TransactionList from './components/TransactionList';
 import Statements from './components/Statements';
 import CompliancePanel from './components/CompliancePanel';
-import TrialBalance from './components/TrialBalance';
+import GSTCompliance from './components/GSTCompliance';
 import { supabase } from './supabaseClient';
 import { LayoutDashboard, Receipt, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale } from 'lucide-react';
 import Auth from './components/Auth';
@@ -36,7 +36,7 @@ function App() {
       case 'dashboard': return <Dashboard />;
       case 'transactions': return <TransactionList period="Full Year" />;
       case 'reports': return <Statements period="Full Year" />;
-      case 'trial-balance': return <TrialBalance period="Full Year" />;
+      case 'gst-compliance': return <GSTCompliance period="Full Year" />;
       default: return <Dashboard />;
     }
   };
@@ -69,8 +69,8 @@ function App() {
           <div className={`sidebar-item ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}>
             <FileBarChart className="icon" size={16} /> Final Accounts
           </div>
-          <div className={`sidebar-item ${activeTab === 'trial-balance' ? 'active' : ''}`} onClick={() => setActiveTab('trial-balance')}>
-            <Scale className="icon" size={16} /> Trial Balance
+          <div className={`sidebar-item ${activeTab === 'gst-compliance' ? 'active' : ''}`} onClick={() => setActiveTab('gst-compliance')}>
+            <Scale className="icon" size={16} /> GST Compliance
           </div>
           <div className="sidebar-item" onClick={() => setIsBotOpen(true)}>
             <Bot className="icon" size={16} /> AI Audit Assistant

@@ -2,21 +2,20 @@ import React, { useState } from 'react';
 import IncomeStatement from './IncomeStatement';
 import BalanceSheet from './BalanceSheet';
 import CashFlowStatement from './CashFlowStatement';
-import Ledger from './Ledger';
 import TrialBalance from './TrialBalance';
 import { Download, FileText } from 'lucide-react';
 import { exportToPDF } from '../utils/exportUtils';
 import { LedgerEngine } from '../utils/LedgerEngine';
 
 function Statements({ period, currency }) {
-  const [activeTab, setActiveTab] = useState('Income Statement');
-  const tabs = ['Income Statement', 'Balance Sheet', 'Cash Flow', 'Trial Balance', 'Ledger'];
+  const [activeTab, setActiveTab] = useState('Profit & Loss');
+  const tabs = ['Trading A/c', 'Profit & Loss', 'Balance Sheet', 'Cash Flow', 'Trial Balance', 'Notes to Accounts', 'Schedules'];
 
   const handleExport = () => {
     let data = [];
     let title = '';
     
-    if (activeTab === 'Income Statement') {
+    if (activeTab === 'Profit & Loss') {
       data = LedgerEngine.calcIncomeStatement(period);
       title = `Statement of Profit and Loss - ${period}`;
     } else if (activeTab === 'Balance Sheet') {
@@ -30,7 +29,7 @@ function Statements({ period, currency }) {
       return;
     }
 
-    exportToPDF(title, data, `${activeTab.replace(' ', '_')}_${period}.pdf`);
+    exportToPDF(title, data, `${activeTab.replace(/ /g, '_')}_${period}.pdf`);
   };
 
   return (
@@ -72,12 +71,23 @@ function Statements({ period, currency }) {
         ))}
       </div>
 
-      <div className="statement-body card" style={{ padding: 'var(--space-8)' }}>
-        {activeTab === 'Income Statement' && <IncomeStatement period={period} currency={currency} />}
+      <div className="statement-body">
+        {activeTab === 'Trading A/c' && (
+          <div className="card" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <FileText size={32} style={{ opacity: 0.3, margin: '0 auto 12px' }} />
+            <div style={{ fontSize: '14px', fontWeight: 500 }}>Trading Account generation is pending itemized inventory mapping.</div>
+          </div>
+        )}
+        {activeTab === 'Profit & Loss' && <IncomeStatement period={period} currency={currency} />}
         {activeTab === 'Balance Sheet' && <BalanceSheet period={period} currency={currency} />}
         {activeTab === 'Cash Flow' && <CashFlowStatement period={period} currency={currency} />}
         {activeTab === 'Trial Balance' && <TrialBalance period={period} currency={currency} />}
-        {activeTab === 'Ledger' && <Ledger period={period} currency={currency} />}
+        {(activeTab === 'Notes to Accounts' || activeTab === 'Schedules') && (
+          <div className="card" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <FileText size={32} style={{ opacity: 0.3, margin: '0 auto 12px' }} />
+            <div style={{ fontSize: '14px', fontWeight: 500 }}>Detailed {activeTab.toLowerCase()} will be attached upon year-end finalization.</div>
+          </div>
+        )}
       </div>
     </div>
   );

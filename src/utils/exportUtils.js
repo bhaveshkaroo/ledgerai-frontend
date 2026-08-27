@@ -7,7 +7,7 @@ export const exportToPDF = (title, data, filename = 'report.pdf') => {
   // Header
   doc.setFontSize(20);
   doc.setTextColor(11, 20, 38); // Navy
-  doc.text('LedgerAI', 14, 20);
+  doc.text('Meso', 14, 20);
   
   doc.setFontSize(10);
   doc.setTextColor(136, 153, 170); // Muted
