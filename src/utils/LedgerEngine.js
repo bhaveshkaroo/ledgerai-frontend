@@ -115,7 +115,6 @@ export const LedgerEngine = {
   },
 
   calcIncomeStatement(period) {
-    // For simplicity, ignores period filtering and calculates full ledger P&L
     const rev = this.getAccountBalance('Sales Revenue');
     const otherInc = this.getAccountBalance('Other Income');
     const totalRev = rev + otherInc;
@@ -132,25 +131,33 @@ export const LedgerEngine = {
     const pat = pbt - tax;
 
     return [
-      { name: "I. Revenue from Operations", value: rev, level: 0, isSummary: true },
-      { name: "II. Other Income", value: otherInc, level: 0, isSummary: true },
+      { name: "I. Revenue from operations", value: rev, level: 0, isSummary: true },
+      { name: "II. Other income", value: otherInc, level: 0, isSummary: true },
       { name: "III. Total Revenue (I + II)", value: totalRev, level: 0, isSummary: true, isTotal: true },
       { name: "IV. Expenses", value: null, level: 0, isSummary: true },
-      { name: "Cost of Materials Consumed", value: cogs, level: 1 },
-      { name: "Employee Benefit Expense", value: salaries, level: 1 },
-      { name: "Finance Costs", value: finCost, level: 1 },
-      { name: "Depreciation and Amortisation", value: dep, level: 1 },
-      { name: "Other Expenses", value: rent, level: 1 },
-      { name: "Total Expenses", value: totalExp, level: 0, isSummary: true, isTotal: true },
-      { name: "V. Profit Before Tax (III - IV)", value: pbt, level: 0, isSummary: true, isTotal: true },
-      { name: "VI. Tax Expense", value: tax, level: 0, isSummary: true },
-      { name: "VII. Profit After Tax (V - VI)", value: pat, level: 0, isSummary: true, isTotal: true },
+      { name: "Cost of materials consumed", value: cogs, level: 1 },
+      { name: "Purchases of Stock-in-Trade", value: 0, level: 1 },
+      { name: "Changes in inventories", value: 0, level: 1 },
+      { name: "Employee benefits expense", value: salaries, level: 1 },
+      { name: "Finance costs", value: finCost, level: 1 },
+      { name: "Depreciation and amortization expense", value: dep, level: 1 },
+      { name: "Other expenses", value: rent, level: 1 },
+      { name: "IV. Total expenses", value: totalExp, level: 0, isSummary: true, isTotal: true },
+      { name: "V. Profit before exceptional and extraordinary items and tax (III-IV)", value: pbt, level: 0, isSummary: true, isTotal: true },
+      { name: "VI. Exceptional items", value: 0, level: 0, isSummary: true },
+      { name: "VII. Profit before extraordinary items and tax (V-VI)", value: pbt, level: 0, isSummary: true, isTotal: true },
+      { name: "VIII. Extraordinary items", value: 0, level: 0, isSummary: true },
+      { name: "IX. Profit before tax (VII-VIII)", value: pbt, level: 0, isSummary: true, isTotal: true },
+      { name: "X. Tax expense:", value: null, level: 0, isSummary: true },
+      { name: "(1) Current tax", value: tax, level: 1 },
+      { name: "(2) Deferred tax", value: 0, level: 1 },
+      { name: "XI. Profit (Loss) for the period from continuing operations (IX-X)", value: pat, level: 0, isSummary: true, isTotal: true },
     ];
   },
 
   calcBalanceSheet(period) {
     const sc = this.getAccountBalance('Share Capital');
-    const pat = this.calcIncomeStatement().find(r => r.name.includes("Profit After Tax")).value;
+    const pat = this.calcIncomeStatement().find(r => r.name.includes("Profit (Loss) for the period")).value;
     const re = this.getAccountBalance('Retained Earnings') + pat; // Roll up net profit
     
     const loan = this.getAccountBalance('Bank Loan');
@@ -170,24 +177,42 @@ export const LedgerEngine = {
     const totalAssets = faNet + inv + ar + cash;
     
     return [
-      { name: "EQUITY AND LIABILITIES", value: null, level: 0, isSummary: true },
-      { name: "1. Shareholders' Funds", value: null, level: 1, isSummary: true },
-      { name: "Share Capital", value: sc, level: 2 },
-      { name: "Reserves and Surplus", value: re, level: 2 },
-      { name: "2. Non-Current Liabilities", value: null, level: 1, isSummary: true },
-      { name: "Long-Term Borrowings", value: loan, level: 2 },
-      { name: "3. Current Liabilities", value: null, level: 1, isSummary: true },
-      { name: "Trade Payables", value: ap, level: 2 },
-      { name: "Short-Term Provisions", value: taxPay, level: 2 },
-      { name: "TOTAL EQUITY & LIABILITIES", value: totalEqLiab, level: 0, isSummary: true, isTotal: true },
+      { name: "I. EQUITY AND LIABILITIES", value: null, level: 0, isSummary: true },
+      { name: "1. Shareholders' funds", value: null, level: 1, isSummary: true },
+      { name: "(a) Share capital", value: sc, level: 2 },
+      { name: "(b) Reserves and surplus", value: re, level: 2 },
+      { name: "(c) Money received against share warrants", value: 0, level: 2 },
+      { name: "2. Share application money pending allotment", value: 0, level: 1, isSummary: true },
+      { name: "3. Non-current liabilities", value: null, level: 1, isSummary: true },
+      { name: "(a) Long-term borrowings", value: loan, level: 2 },
+      { name: "(b) Deferred tax liabilities (Net)", value: 0, level: 2 },
+      { name: "(c) Other Long term liabilities", value: 0, level: 2 },
+      { name: "(d) Long-term provisions", value: 0, level: 2 },
+      { name: "4. Current liabilities", value: null, level: 1, isSummary: true },
+      { name: "(a) Short-term borrowings", value: 0, level: 2 },
+      { name: "(b) Trade payables", value: ap, level: 2 },
+      { name: "(c) Other current liabilities", value: 0, level: 2 },
+      { name: "(d) Short-term provisions", value: taxPay, level: 2 },
+      { name: "TOTAL EQUITY AND LIABILITIES", value: totalEqLiab, level: 0, isSummary: true, isTotal: true },
       
-      { name: "ASSETS", value: null, level: 0, isSummary: true },
-      { name: "1. Non-Current Assets", value: null, level: 1, isSummary: true },
-      { name: "Property, Plant and Equipment", value: faNet, level: 2 },
-      { name: "2. Current Assets", value: null, level: 1, isSummary: true },
-      { name: "Inventories", value: inv, level: 2 },
-      { name: "Trade Receivables", value: ar, level: 2 },
-      { name: "Cash and Cash Equivalents", value: cash, level: 2 },
+      { name: "II. ASSETS", value: null, level: 0, isSummary: true },
+      { name: "1. Non-current assets", value: null, level: 1, isSummary: true },
+      { name: "(a) Property, Plant and Equipment and Intangible assets", value: null, level: 2, isSummary: true },
+      { name: "(i) Property, Plant and Equipment", value: faNet, level: 3 },
+      { name: "(ii) Intangible assets", value: 0, level: 3 },
+      { name: "(iii) Capital work-in-progress", value: 0, level: 3 },
+      { name: "(iv) Intangible assets under development", value: 0, level: 3 },
+      { name: "(b) Non-current investments", value: 0, level: 2 },
+      { name: "(c) Deferred tax assets (net)", value: 0, level: 2 },
+      { name: "(d) Long-term loans and advances", value: 0, level: 2 },
+      { name: "(e) Other non-current assets", value: 0, level: 2 },
+      { name: "2. Current assets", value: null, level: 1, isSummary: true },
+      { name: "(a) Current investments", value: 0, level: 2 },
+      { name: "(b) Inventories", value: inv, level: 2 },
+      { name: "(c) Trade receivables", value: ar, level: 2 },
+      { name: "(d) Cash and cash equivalents", value: cash, level: 2 },
+      { name: "(e) Short-term loans and advances", value: 0, level: 2 },
+      { name: "(f) Other current assets", value: 0, level: 2 },
       { name: "TOTAL ASSETS", value: totalAssets, level: 0, isSummary: true, isTotal: true },
     ];
   },
