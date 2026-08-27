@@ -1,306 +1,113 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import Dashboard from './components/Dashboard';
 import TransactionList from './components/TransactionList';
-import ReportCard from './components/ReportCard';
-import Ledger from './components/Ledger';
 import Statements from './components/Statements';
 import CompliancePanel from './components/CompliancePanel';
-import BankModal from './components/BankModal';
-import Auth from './components/Auth';
-import Settings from './components/Settings';
-import CAWorkflow from './components/CAWorkflow';
 import { supabase } from './supabaseClient';
-import { 
-  LayoutGrid, ArrowRightLeft, BookOpen, 
-  Sparkles, Search, Settings as SettingsIcon, LogOut, Bell, Plus, Download, 
-  RefreshCw, Zap, ChevronRight, HelpCircle, MessageCircle, FileText, Scale, Droplets, Users
-} from 'lucide-react';
-import { ASValidationEngine } from './utils/ASComplianceEngine';
-import { LedgerEngine } from './utils/LedgerEngine';
+import { LayoutDashboard, Receipt, FileBarChart, Bot, Settings, LogOut, ChevronRight } from 'lucide-react';
+import Auth from './components/Auth';
 
 function App() {
   const [session, setSession] = useState(null);
-  const [isGuest, setIsGuest] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('Dashboard');
-  const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
-  const [commandSearch, setCommandSearch] = useState('');
-  const [period, setPeriod] = useState('Full Year');
-  const [isComplianceOpen, setIsComplianceOpen] = useState(false);
-  const [isBankModalOpen, setIsBankModalOpen] = useState(false);
-  const [complianceStats, setComplianceStats] = useState({ errors: 0, warnings: 0 });
-  const [accountOpen, setAccountOpen] = useState(true);
-  const [currency, setCurrency] = useState('INR');
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [isBotOpen, setIsBotOpen] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setAuthLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 
-    const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsCommandMenuOpen(prev => !prev);
-        setCommandSearch('');
-      }
-      if (e.key === 'Escape') {
-        setIsCommandMenuOpen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      subscription.unsubscribe();
-      window.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (session || isGuest) {
-      runInitialValidation();
-    }
-  }, [session, isGuest]);
-
-  const runInitialValidation = () => {
-    const txs = LedgerEngine.transactions;
-    const is = LedgerEngine.calcIncomeStatement('Full Year');
-    const cf = LedgerEngine.calcCashFlow('Full Year');
-    const bs = LedgerEngine.calcBalanceSheet('Full Year');
-    const findings = ASValidationEngine.runFullValidation(txs, is, cf, bs);
-    updateStats(findings);
-  };
-
-  const updateStats = (findings) => {
-    const errors = findings.filter(f => f.severity === 'ERROR' && f.status === 'Unresolved').length;
-    const warnings = findings.filter(f => f.severity === 'WARNING' && f.status === 'Unresolved').length;
-    setComplianceStats({ errors, warnings });
-  };
-
-  const handleSignOut = async () => {
-    if (isGuest) {
-      setIsGuest(false);
-    } else {
-      await supabase.auth.signOut();
-    }
-  };
-
-  const navSections = [
-    { id: 'Dashboard', name: 'Dashboard', icon: <LayoutGrid size={18} />, category: 'Navigation' },
-    { id: 'Transactions', name: 'Transactions', icon: <ArrowRightLeft size={18} />, category: 'Navigation' },
-    { id: 'CAWorkflow', name: 'CA Collaboration', icon: <Users size={18} />, category: 'Navigation' },
-    { id: 'IncomeStatement', name: 'Income Statement', icon: <FileText size={18} />, category: 'Reports' },
-    { id: 'BalanceSheet', name: 'Balance Sheet', icon: <Scale size={18} />, category: 'Reports' },
-    { id: 'CashFlow', name: 'Cash Flow', icon: <Droplets size={18} />, category: 'Reports' },
-    { id: 'LedgerBook', name: 'Ledger Book', icon: <BookOpen size={18} />, category: 'Navigation' },
-    { id: 'AISummary', name: 'AI Insights', icon: <Sparkles size={18} />, category: 'AI' },
-  ];
-
-  const actions = [
-    { id: 'add-tx', name: 'Add Transaction', icon: <Plus size={18} />, category: 'Actions', shortcut: 'A' },
-    { id: 'sync-bank', name: 'Sync Bank Account', icon: <RefreshCw size={18} />, category: 'Actions', shortcut: 'S' },
-    { id: 'export-audit', name: 'Export Audit Report', icon: <Download size={18} />, category: 'Actions', shortcut: 'E' },
-    { id: 'run-ai', name: 'Run AI Analysis', icon: <Zap size={18} />, category: 'AI', shortcut: 'R' },
-  ];
-
-  const commandItems = useMemo(() => {
-    const all = [...navSections, ...actions];
-    if (!commandSearch) return all;
-    return all.filter(i => i.name.toLowerCase().includes(commandSearch.toLowerCase()) || i.category.toLowerCase().includes(commandSearch.toLowerCase()));
-  }, [commandSearch]);
-
-  const handleCommandAction = (item) => {
-    if (item.category === 'Navigation' || item.category === 'Reports' || item.id === 'AISummary') {
-      setActiveTab(item.id);
-    } else if (item.id === 'sync-bank') {
-      setIsBankModalOpen(true);
-    } else if (item.id === 'export-audit') {
-      runInitialValidation();
-    }
-    setIsCommandMenuOpen(false);
-    setCommandSearch('');
-  };
-
-  if (authLoading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg-page)' }}>
-        <div className="sidebar-logo" style={{ width: 48, height: 48, fontSize: 24, animation: 'fade-in 1s infinite alternate' }}>L</div>
-      </div>
-    );
+  if (!session && !demoMode) {
+    return <Auth onDemoLogin={() => setDemoMode(true)} />;
   }
 
-  if (!session && !isGuest) {
-    return <Auth onDemoLogin={() => setIsGuest(true)} />;
-  }
+  const renderContent = () => {
+    switch(activeTab) {
+      case 'dashboard': return <Dashboard />;
+      case 'transactions': return <TransactionList period="Full Year" />;
+      case 'reports': return <Statements period="Full Year" />;
+      default: return <Dashboard />;
+    }
+  };
 
   return (
     <div className="app-container">
-
-      {/* ─── Linear Sidebar ─── */}
-      <nav className="sidebar">
-        <div className="sidebar-header">
-          <div className="sidebar-logo">L</div>
-          <span className="sidebar-brand">LedgerAI</span>
-          <Search size={16} className="sidebar-search-icon" onClick={() => setIsCommandMenuOpen(true)} />
+      {/* Sidebar - Rafion AI Aesthetic */}
+      <aside className="sidebar">
+        <div className="sidebar-logo">RAFION AI</div>
+        
+        <div className="sidebar-section-title">
+          Data <span className="dim">Records</span>
         </div>
 
-        <div className="sidebar-nav">
-          {/* Main Navigation */}
-          <button className={`sidebar-btn ${activeTab === 'Dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('Dashboard')}>
-            <LayoutGrid size={18} /> Dashboard
-            <ChevronRight size={14} className="chevron" />
-          </button>
-          <button className={`sidebar-btn ${activeTab === 'Transactions' ? 'active' : ''}`} onClick={() => setActiveTab('Transactions')}>
-            <ArrowRightLeft size={18} /> Transactions
-            <ChevronRight size={14} className="chevron" />
-          </button>
-
-          {/* Reports Section */}
-          <div style={{ marginTop: '20px', padding: '0 12px 6px', fontSize: '11px', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Reports</div>
-          <button className={`sidebar-btn sub-item ${activeTab === 'IncomeStatement' ? 'active' : ''}`} onClick={() => setActiveTab('IncomeStatement')}>
-            Income Statement
-          </button>
-          <button className={`sidebar-btn sub-item ${activeTab === 'BalanceSheet' ? 'active' : ''}`} onClick={() => setActiveTab('BalanceSheet')}>
-            Balance Sheet
-          </button>
-          <button className={`sidebar-btn sub-item ${activeTab === 'CashFlow' ? 'active' : ''}`} onClick={() => setActiveTab('CashFlow')}>
-            Cash Flow Statement
-          </button>
-
-          {/* Books Section */}
-          <div style={{ marginTop: '20px', padding: '0 12px 6px', fontSize: '11px', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Books</div>
-          <button className={`sidebar-btn ${activeTab === 'LedgerBook' ? 'active' : ''}`} onClick={() => setActiveTab('LedgerBook')}>
-            <BookOpen size={18} /> Ledger Book
-            <ChevronRight size={14} className="chevron" />
-          </button>
-          <button className={`sidebar-btn ${activeTab === 'CAWorkflow' ? 'active' : ''}`} onClick={() => setActiveTab('CAWorkflow')}>
-            <Users size={18} /> CA Collaboration
-            <ChevronRight size={14} className="chevron" />
-          </button>
-
-          {/* Other top-level items */}
-          <button className={`sidebar-btn ${activeTab === 'AISummary' ? 'active' : ''}`} onClick={() => setActiveTab('AISummary')} style={{ marginTop: '20px' }}>
-            <Sparkles size={18} /> AI Insights
-            <ChevronRight size={14} className="chevron" />
-          </button>
-          <button className={`sidebar-btn ${activeTab === 'Settings' ? 'active' : ''}`} onClick={() => setActiveTab('Settings')}>
-            <SettingsIcon size={18} /> Settings
-            <ChevronRight size={14} className="chevron" />
-          </button>
-        </div>
-
-        {/* Footer */}
-        <div className="sidebar-footer">
-          <button className="sidebar-btn">
-            <HelpCircle size={18} /> Documentation
-          </button>
-          <button className="sidebar-btn">
-            <MessageCircle size={18} /> Contact support
-          </button>
-          <button className="sidebar-btn" onClick={handleSignOut} style={{ color: '#ef4444' }}>
-            <LogOut size={18} /> Logout
-          </button>
-        </div>
-      </nav>
-
-      {/* ─── Main Content ─── */}
-      <main className="main-content">
-        <header className="dash-header">
-          <div className="dash-title-container">
-            <h1>{activeTab === 'Settings' ? 'Preferences' : activeTab === 'AISummary' ? 'AI Insights' : activeTab === 'LedgerBook' ? 'Ledger Book' : activeTab === 'IncomeStatement' ? 'Income Statement' : activeTab === 'BalanceSheet' ? 'Balance Sheet' : activeTab === 'CashFlow' ? 'Cash Flow' : activeTab}</h1>
+        <nav className="sidebar-nav">
+          <div className="sidebar-item" style={{ background: 'var(--bg-surface)', marginBottom: '16px', justifyContent: 'space-between' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+              <LayoutDashboard size={16} /> All Departments
+            </span>
+            <ChevronRight size={14} />
           </div>
-          
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <div className="command-bar-trigger" onClick={() => setIsCommandMenuOpen(true)}>
-              <Search size={14} />
-              <span>Search or command...</span>
-              <span className="shortcut-hint">⌘K</span>
+
+          <div className={`sidebar-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
+            <LayoutDashboard className="icon" size={16} /> Dashboard
+            {activeTab === 'dashboard' && <span className="badge">12/100</span>}
+          </div>
+          <div className={`sidebar-item ${activeTab === 'transactions' ? 'active' : ''}`} onClick={() => setActiveTab('transactions')}>
+            <Receipt className="icon" size={16} /> Transactions
+            <span className="badge">Balanced</span>
+          </div>
+          <div className={`sidebar-item ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}>
+            <FileBarChart className="icon" size={16} /> Financial Reports
+          </div>
+          <div className="sidebar-item" onClick={() => setIsBotOpen(true)}>
+            <Bot className="icon" size={16} /> AI Audit Assistant
+            <span className="badge">72/100</span>
+          </div>
+        </nav>
+
+        <div style={{ marginTop: 'auto' }}>
+          <div style={{ padding: '16px', background: 'var(--bg-surface)', borderRadius: '16px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <button className="btn-lime">Go Pro</button>
             </div>
-
-            <button className="sidebar-btn" style={{ width: 'auto', background: 'var(--bg-surface)', padding: '6px 10px', borderRadius: '6px' }} onClick={() => setIsComplianceOpen(true)}>
-              <Bell size={16} />
-              {complianceStats.errors > 0 && <span className="status-dot emerald" style={{ marginLeft: 0 }}></span>}
-            </button>
+            <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Rafion AI Free Trial - 30 Days</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>Get deeper AI accounting insights.</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+              <span className="digital-number" style={{ fontSize: '24px', fontWeight: 600 }}>30</span>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Days</span>
+            </div>
           </div>
-        </header>
 
-        <div className="tab-content">
-          {activeTab === 'Dashboard' && <Dashboard period={period} setPeriod={setPeriod} currency={currency} />}
-          {activeTab === 'Transactions' && <TransactionList period={period} currency={currency} />}
-          {activeTab === 'CAWorkflow' && <CAWorkflow currency={currency} />}
-          {['IncomeStatement', 'BalanceSheet', 'CashFlow', 'TrialBalance'].includes(activeTab) && <Statements period={period} initialTab={activeTab} currency={currency} />}
-          {activeTab === 'LedgerBook' && <Ledger period={period} currency={currency} />}
-          {activeTab === 'AISummary' && <ReportCard />}
-          {activeTab === 'Settings' && <Settings currency={currency} onCurrencyChange={setCurrency} />}
+          <div className="sidebar-nav">
+            <div className="sidebar-item" onClick={() => {}}>
+              <Settings className="icon" size={16} /> Settings
+            </div>
+            <div className="sidebar-item" onClick={async () => {
+              await supabase.auth.signOut();
+              setDemoMode(false);
+            }}>
+              <LogOut className="icon" size={16} /> Log Out
+            </div>
+          </div>
         </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="main-content">
+        {renderContent()}
       </main>
 
-      {/* ─── Command Menu ─── */}
-      {isCommandMenuOpen && (
-        <div onClick={() => setIsCommandMenuOpen(false)} style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', 
-          display: 'flex', alignItems: 'flex-start', justifyContent: 'center', 
-          paddingTop: '15vh', zIndex: 2000, backdropFilter: 'blur(8px)'
-        }}>
-          <div onClick={e => e.stopPropagation()} style={{
-            width: '100%', maxWidth: '560px', background: 'var(--bg-card)', 
-            border: '1px solid var(--border-bright)', borderRadius: '12px',
-            boxShadow: '0 20px 70px rgba(0,0,0,0.15)', overflow: 'hidden'
-          }}>
-            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Search size={16} color="var(--text-muted)" />
-              <input 
-                autoFocus 
-                placeholder="Search actions..." 
-                value={commandSearch}
-                onChange={e => setCommandSearch(e.target.value)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '15px', outline: 'none', width: '100%', fontFamily: 'var(--font-sans)' }}
-              />
-            </div>
-            <div style={{ padding: '6px', maxHeight: '360px', overflowY: 'auto' }}>
-              {commandItems.length > 0 ? (
-                commandItems.map((item, idx) => (
-                  <div 
-                    key={item.id} 
-                    className="command-item" 
-                    onClick={() => handleCommandAction(item)}
-                    style={{ 
-                      padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', 
-                      display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-secondary)',
-                      transition: 'background 160ms var(--ease-out), transform 160ms var(--ease-out)',
-                      animation: 'fade-in 200ms var(--ease-out) forwards',
-                      animationDelay: `${idx * 30}ms`,
-                      opacity: 0,
-                    }}
-                  >
-                    <div style={{ opacity: 0.5 }}>{item.icon}</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{item.name}</div>
-                    </div>
-                    {item.shortcut && <span className="shortcut-hint">{item.shortcut}</span>}
-                  </div>
-                ))
-              ) : (
-                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                  No results for "{commandSearch}"
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <CompliancePanel 
-        isOpen={isComplianceOpen} 
-        onClose={() => setIsComplianceOpen(false)} 
-        onRefresh={runInitialValidation}
-      />
-      <BankModal isOpen={isBankModalOpen} onClose={() => setIsBankModalOpen(false)} onAdd={() => {}} />
+      {/* Compliance / AI Bot Panel */}
+      <CompliancePanel isOpen={isBotOpen} onClose={() => setIsBotOpen(false)} />
     </div>
   );
 }

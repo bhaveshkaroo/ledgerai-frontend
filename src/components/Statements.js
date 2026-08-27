@@ -1,107 +1,83 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import IncomeStatement from './IncomeStatement';
-import CashFlowStatement from './CashFlowStatement';
 import BalanceSheet from './BalanceSheet';
+import CashFlowStatement from './CashFlowStatement';
 import Ledger from './Ledger';
-import { Download, Printer } from 'lucide-react';
+import TrialBalance from './TrialBalance';
+import { Download, FileText } from 'lucide-react';
 import { exportToPDF } from '../utils/exportUtils';
 import { LedgerEngine } from '../utils/LedgerEngine';
 
-function Statements({ period, initialTab }) {
-  const [activeSubTab, setActiveSubTab] = useState('Income Statement');
+function Statements({ period, currency }) {
+  const [activeTab, setActiveTab] = useState('Income Statement');
+  const tabs = ['Income Statement', 'Balance Sheet', 'Cash Flow', 'Trial Balance', 'Ledger'];
 
-  useEffect(() => {
-    if (initialTab) {
-      const tabMap = {
-        'IncomeStatement': 'Income Statement',
-        'BalanceSheet': 'Balance Sheet',
-        'CashFlow': 'Cash Flow Statement',
-        'TrialBalance': 'Trial Balance',
-        'LedgerBook': 'Ledger Book'
-      };
-      if (tabMap[initialTab]) setActiveSubTab(tabMap[initialTab]);
-    }
-  }, [initialTab]);
-
-  const tabs = ['Income Statement', 'Cash Flow Statement', 'Balance Sheet', 'Ledger Book'];
-
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const handleDownload = () => {
-    let title = activeSubTab;
-    let headers = [];
+  const handleExport = () => {
     let data = [];
-
-    if (activeSubTab === 'Income Statement') {
-      const stmt = LedgerEngine.calcIncomeStatement(period);
-      headers = ['Category', 'Amount (₹)'];
-      data = [
-        ['Total Revenue', stmt.totalRevenue.toLocaleString()],
-        ['Total Expenses', stmt.totalExpenses.toLocaleString()],
-        ['Net Profit', stmt.netProfit.toLocaleString()]
-      ];
-    } else if (activeSubTab === 'Balance Sheet') {
-      const stmt = LedgerEngine.calcBalanceSheet(period);
-      headers = ['Category', 'Amount (₹)'];
-      data = [
-        ['Total Assets', stmt.totalAssets.toLocaleString()],
-        ['Total Liabilities', stmt.totalLiabilities.toLocaleString()],
-        ['Equity', stmt.equity.toLocaleString()]
-      ];
+    let title = '';
+    
+    if (activeTab === 'Income Statement') {
+      data = LedgerEngine.calcIncomeStatement(period);
+      title = `Statement of Profit and Loss - ${period}`;
+    } else if (activeTab === 'Balance Sheet') {
+      data = LedgerEngine.calcBalanceSheet(period);
+      title = `Balance Sheet - ${period}`;
+    } else if (activeTab === 'Cash Flow') {
+      data = LedgerEngine.calcCashFlow(period);
+      title = `Statement of Cash Flows - ${period}`;
     } else {
-      // Generic export for others
-      headers = ['Report', 'Date', 'Status'];
-      data = [[activeSubTab, period, 'Generated']];
+      alert("PDF export is currently only supported for main financial statements.");
+      return;
     }
 
-    exportToPDF(title, headers, data, `${title.replace(/ /g, '_')}_${period}.pdf`);
+    exportToPDF(title, data, `${activeTab.replace(' ', '_')}_${period}.pdf`);
   };
 
   return (
-    <div className="statements-container" style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div className="stmt-tab-bar">
-          {tabs.map(tab => (
-            <button
-              key={tab}
-              className={`stmt-tab ${activeSubTab === tab ? 'active' : ''}`}
-              onClick={() => setActiveSubTab(tab)}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-        <div className="no-print" style={{ display: 'flex', gap: 12 }}>
-          <button 
-            onClick={handlePrint}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', 
-              borderRadius: 8, border: '1px solid #E2E8F0', background: '#fff',
-              fontSize: 13, fontWeight: 600, cursor: 'pointer'
-            }}
-          >
-            <Printer size={16} /> Print Document
-          </button>
-          <button 
-            onClick={handleDownload}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', 
-              borderRadius: 8, background: '#1d1d1f', color: '#fff',
-              border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer'
-            }}
-          >
-            <Download size={16} /> Download PDF
-          </button>
-        </div>
+    <div className="tab-content" style={{ animation: 'fade-in 0.3s ease-out' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Financial Statements</h2>
+        
+        <button 
+          onClick={handleExport}
+          className="action-btn"
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', 
+            padding: '8px 16px', background: 'var(--text-primary)', color: 'var(--bg-card)',
+            borderRadius: '6px', fontSize: '13px', fontWeight: 500, border: 'none', cursor: 'pointer'
+          }}
+        >
+          <Download size={16} />
+          Export PDF
+        </button>
       </div>
 
-      <div className="statement-render-area">
-        {activeSubTab === 'Income Statement' && <IncomeStatement period={period} />}
-        {activeSubTab === 'Cash Flow Statement' && <CashFlowStatement period={period} />}
-        {activeSubTab === 'Balance Sheet' && <BalanceSheet period={period} />}
-        {activeSubTab === 'Ledger Book' && <Ledger period={period} />}
+      <div className="statements-nav" style={{ 
+        display: 'flex', gap: '24px', borderBottom: '1px solid var(--border)', marginBottom: 'var(--space-8)',
+        overflowX: 'auto', paddingBottom: '2px'
+      }}>
+        {tabs.map(tab => (
+          <div 
+            key={tab} 
+            onClick={() => setActiveTab(tab)}
+            style={{ 
+              paddingBottom: '12px', fontSize: '14px', fontWeight: 500, cursor: 'pointer',
+              color: activeTab === tab ? 'var(--text-primary)' : 'var(--text-secondary)',
+              borderBottom: activeTab === tab ? '2px solid var(--text-primary)' : '2px solid transparent',
+              transition: 'all 0.2s', whiteSpace: 'nowrap'
+            }}
+          >
+            {tab}
+          </div>
+        ))}
+      </div>
+
+      <div className="statement-body card" style={{ padding: 'var(--space-8)' }}>
+        {activeTab === 'Income Statement' && <IncomeStatement period={period} currency={currency} />}
+        {activeTab === 'Balance Sheet' && <BalanceSheet period={period} currency={currency} />}
+        {activeTab === 'Cash Flow' && <CashFlowStatement period={period} currency={currency} />}
+        {activeTab === 'Trial Balance' && <TrialBalance period={period} currency={currency} />}
+        {activeTab === 'Ledger' && <Ledger period={period} currency={currency} />}
       </div>
     </div>
   );

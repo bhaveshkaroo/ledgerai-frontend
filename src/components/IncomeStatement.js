@@ -1,101 +1,53 @@
 import React from 'react';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
 
-function IncomeStatement({ period }) {
+const IncomeStatement = ({ period }) => {
   const data = LedgerEngine.calcIncomeStatement(period);
 
-  const Row = ({ label, value, isTotal, isGrandTotal, indent }) => (
-    <tr>
-      <td className={indent ? 'indent-1' : ''} style={{ fontSize: isGrandTotal ? 16 : 14, fontWeight: (isTotal || isGrandTotal) ? 700 : 400 }}>
-        {label}
-      </td>
-      <td className={`align-right mono ${value < 0 ? 'negative-amount' : ''} ${(isTotal || isGrandTotal) ? (isGrandTotal ? 'grand-total' : 'section-total') : ''}`} style={{ fontSize: isGrandTotal ? 16 : 14 }}>
-        {value === "" ? "" : (value < 0 ? `(₹${formatINR(Math.abs(value))})` : `₹${formatINR(value)}`)}
-      </td>
-    </tr>
-  );
-
   return (
-    <div className="statement-wrap">
-      <div className="statement-doc">
-        <div className="statement-header">
-          <div className="statement-company">Sharma Textiles Pvt Ltd</div>
-          <div className="statement-name">Income Statement (Profit & Loss)</div>
-          <div className="statement-period">Registration: MSME-MH-2024-001 | Period Ended: {period}</div>
-        </div>
+    <div className="statement-container">
+      <div style={{ marginBottom: 'var(--space-6)', textAlign: 'center' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Statement of Profit and Loss</h2>
+        <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>For the period ended {period === 'Full Year' ? 'Mar 31, 2026' : period}</div>
+      </div>
 
-        <div className="statement-body">
-          <div className="stmt-section">
-            <div className="stmt-section-title">Revenue</div>
-            <div className="stmt-row">
-              <span className="stmt-label">Revenue from Operations</span>
-              <span className="stmt-amount positive">₹{formatINR(data.revenueFromOperations)}</span>
-            </div>
-            <div className="stmt-row">
-              <span className="stmt-label">Other Income</span>
-              <span className="stmt-amount positive">₹{formatINR(data.otherIncome)}</span>
-            </div>
-            <div className="stmt-subtotal">
-              <span className="stmt-label">Total Revenue</span>
-              <span className="stmt-amount">₹{formatINR(data.totalRevenue)}</span>
-            </div>
-          </div>
-
-          <div className="stmt-section">
-            <div className="stmt-section-title">Expenses</div>
-            <div className="stmt-row indent">
-              <span className="stmt-label">Cost of Materials Consumed</span>
-              <span className="stmt-amount negative">₹{formatINR(data.costOfMaterialsConsumed)}</span>
-            </div>
-            <div className="stmt-row indent">
-              <span className="stmt-label">Employee Benefit Expense</span>
-              <span className="stmt-amount negative">₹{formatINR(data.employeeBenefitExpense)}</span>
-            </div>
-            <div className="stmt-row indent">
-              <span className="stmt-label">Finance Costs</span>
-              <span className="stmt-amount negative">₹{formatINR(data.financeCosts)}</span>
-            </div>
-            <div className="stmt-row indent">
-              <span className="stmt-label">Depreciation and Amortisation</span>
-              <span className="stmt-amount negative">₹{formatINR(data.depreciationAndAmortisation)}</span>
-            </div>
-            <div className="stmt-row indent">
-              <span className="stmt-label">Other Expenses</span>
-              <span className="stmt-amount negative">₹{formatINR(data.otherExpenses)}</span>
-            </div>
-            <div className="stmt-subtotal">
-              <span className="stmt-label">Total Expenses</span>
-              <span className="stmt-amount">₹{formatINR(data.totalExpenses)}</span>
-            </div>
-          </div>
-
-          <div className="stmt-section">
-            <div className="stmt-subtotal" style={{ borderTop: '2px solid #000000', marginTop: 24 }}>
-              <span className="stmt-label bold">PROFIT BEFORE TAX</span>
-              <span className="stmt-amount">₹{formatINR(data.profitBeforeTax)}</span>
-            </div>
-            <div className="stmt-row">
-              <span className="stmt-label">Current Tax</span>
-              <span className="stmt-amount negative">₹{formatINR(data.taxExpenseCurrent)}</span>
-            </div>
-            <div className="stmt-row">
-              <span className="stmt-label">Deferred Tax</span>
-              <span className="stmt-amount negative">₹{formatINR(data.taxExpenseDeferred)}</span>
-            </div>
-            <div className="stmt-total">
-              <span className="stmt-label">PROFIT AFTER TAX</span>
-              <span className="stmt-amount">₹{formatINR(data.profitAfterTax)}</span>
-            </div>
-          </div>
-
-          <div style={{ marginTop: 60, display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            <div style={{ borderTop: '1px solid var(--border)', width: 160, textAlign: 'center', paddingTop: 12 }}>Director</div>
-            <div style={{ borderTop: '1px solid var(--border)', width: 160, textAlign: 'center', paddingTop: 12 }}>Chartered Accountant</div>
-          </div>
-        </div>
+      <div className="table-responsive">
+        <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: 'left', padding: '12px', borderBottom: '1px solid var(--border)', width: '70%' }}>Particulars</th>
+              <th style={{ textAlign: 'right', padding: '12px', borderBottom: '1px solid var(--border)', width: '30%' }}>Amount (INR)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row, idx) => (
+              <tr key={idx} style={{ 
+                borderBottom: row.isTotal ? '2px solid var(--border)' : '1px solid var(--border-light)',
+                backgroundColor: row.isSummary && !row.isTotal ? 'var(--bg-surface)' : 'transparent'
+              }}>
+                <td style={{ 
+                  padding: `12px 12px 12px ${12 + (row.level * 24)}px`,
+                  fontWeight: row.isSummary || row.isTotal ? 600 : 400,
+                  color: row.isSummary ? 'var(--text-primary)' : 'var(--text-secondary)'
+                }}>
+                  {row.name}
+                </td>
+                <td style={{ 
+                  padding: '12px',
+                  textAlign: 'right',
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: row.isSummary || row.isTotal ? 600 : 400,
+                  borderTop: row.isTotal ? '1px solid var(--text-primary)' : 'none'
+                }}>
+                  {row.value !== null && row.value !== undefined ? formatINR(row.value) : ''}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
-}
+};
 
 export default IncomeStatement;

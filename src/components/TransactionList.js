@@ -1,16 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
-import { Search, ChevronLeft, ChevronRight, Download, MoreHorizontal, Filter } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Download, MoreHorizontal, Filter, Plus } from 'lucide-react';
 import { exportToPDF } from '../utils/exportUtils';
+import ManualEntryModal from './ManualEntryModal';
 
 function TransactionList({ period }) {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
+  const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
+  const [localTransactions, setLocalTransactions] = useState(LedgerEngine.getFilteredTransactions('Full Year'));
   const pageSize = 12;
 
   const filteredTransactions = useMemo(() => {
-    let txs = LedgerEngine.getFilteredTransactions('Full Year');
+    let txs = localTransactions;
     
     if (activeFilter !== 'All') {
       txs = txs.filter(t => t.category === activeFilter || (activeFilter === 'Revenue' && t.type === 'Credit') || (activeFilter === 'Expenses' && t.type === 'Debit'));
@@ -21,10 +24,41 @@ function TransactionList({ period }) {
     }
 
     return txs;
-  }, [activeFilter, searchTerm]);
+  }, [activeFilter, searchTerm, localTransactions]);
 
   const totalPages = Math.ceil(filteredTransactions.length / pageSize);
   const paginatedTxs = filteredTransactions.slice((page - 1) * pageSize, page * pageSize);
+
+  const handleManualEntry = (entry) => {
+    // Add two legs for double entry
+    const newId = (localTransactions.length + 1000).toString();
+    const date = new Date().toISOString().split('T')[0];
+    
+    const debitLeg = {
+      id: newId + 'A',
+      date: date,
+      account: entry.debit,
+      amount: entry.amount,
+      type: 'Debit',
+      narration: entry.narration,
+      ref: `MANUAL-${newId}`,
+      category: entry.type
+    };
+    
+    const creditLeg = {
+      id: newId + 'B',
+      date: date,
+      account: entry.credit,
+      amount: entry.amount,
+      type: 'Credit',
+      narration: entry.narration,
+      ref: `MANUAL-${newId}`,
+      category: entry.type
+    };
+    
+    // Add to top of list
+    setLocalTransactions([debitLeg, creditLeg, ...localTransactions]);
+  };
 
   return (
     <div className="tab-content" style={{ maxWidth: '1100px', margin: '0 auto' }}>
@@ -54,10 +88,20 @@ function TransactionList({ period }) {
               style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', width: '100%' }}
             />
           </div>
+          
+          <button 
+            className="action-btn" 
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'var(--text-primary)', color: 'var(--bg-card)', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+            onClick={() => setIsEntryModalOpen(true)}
+          >
+            <Plus size={14} /> New Entry
+          </button>
+          
           <button className="sidebar-btn" style={{ width: 'auto' }} onClick={() => {
             const headers = ['Date', 'Description', 'Category', 'Type', 'Amount'];
             const data = paginatedTxs.map(t => [t.date, t.narration, t.category, t.type, t.amount.toString()]);
-            exportToPDF('Transaction List', headers, data, 'transactions.pdf');
+            // Flat export format requested before
+            exportToPDF('Transaction List', data, 'transactions.pdf');
           }}>
             <Download size={16} />
           </button>
@@ -73,7 +117,6 @@ function TransactionList({ period }) {
               <th style={{ padding: '12px 24px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Description</th>
               <th style={{ padding: '12px 24px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Category</th>
               <th style={{ padding: '12px 24px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right' }}>Amount</th>
-              <th style={{ padding: '12px 24px', width: '48px' }}></th>
             </tr>
           </thead>
           <tbody>
@@ -84,7 +127,7 @@ function TransactionList({ period }) {
                 </td>
                 <td style={{ padding: '16px 24px' }}>
                   <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{t.narration}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{t.ref}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{t.ref} • {t.account}</div>
                 </td>
                 <td style={{ padding: '16px 24px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -96,9 +139,6 @@ function TransactionList({ period }) {
                   <span style={{ color: t.type === 'Credit' ? '#34c759' : 'var(--text-primary)' }}>
                     {t.type === 'Credit' ? '+' : ''}{formatINR(t.amount)}
                   </span>
-                </td>
-                <td style={{ padding: '16px 24px', textAlign: 'center' }}>
-                  <MoreHorizontal size={16} color="var(--text-muted)" style={{ cursor: 'pointer' }} />
                 </td>
               </tr>
             ))}
@@ -130,6 +170,12 @@ function TransactionList({ period }) {
           </div>
         </div>
       </div>
+      
+      <ManualEntryModal 
+        isOpen={isEntryModalOpen} 
+        onClose={() => setIsEntryModalOpen(false)}
+        onConfirm={handleManualEntry}
+      />
     </div>
   );
 }
