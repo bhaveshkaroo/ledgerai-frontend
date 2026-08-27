@@ -1,95 +1,90 @@
-import React, { useState, useEffect } from 'react';
-import { formatINR } from '../utils/LedgerEngine';
+import React from 'react';
+import { LedgerEngine, formatINR, CHART_OF_ACCOUNTS } from '../utils/LedgerEngine';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const TrialBalance = ({ period }) => {
+  // Calculate balance for every account in the Chart of Accounts
+  const accounts = CHART_OF_ACCOUNTS.map(acc => {
+    const balance = LedgerEngine.getAccountBalance(acc.name);
+    const isDebitNormal = ['Asset', 'Expense'].includes(acc.type);
+    return {
+      ...acc,
+      balance,
+      debit: isDebitNormal ? balance : 0,
+      credit: !isDebitNormal ? balance : 0,
+    };
+  }).filter(a => a.balance !== 0); // Only show accounts with balances
 
-function TrialBalance() {
-  const [data, setData] = useState({
-    accounts: {
-      'Sales Revenue': { debit: 0, credit: 12000000 },
-      'Cost of Materials': { debit: 4500000, credit: 0 },
-      'Employee Expenses': { debit: 2800000, credit: 0 },
-      'Cash and Bank': { debit: 4500000, credit: 0 },
-      'Trade Payables': { debit: 0, credit: 600000 },
-      'Share Capital': { debit: 0, credit: 5000000 },
-      'Fixed Assets': { debit: 7500000, credit: 0 },
-      'Depreciation': { debit: 1000000, credit: 0 },
-      'Retained Earnings': { debit: 0, credit: 1700000 }
-    },
-    total_debits: 19300000,
-    total_credits: 19300000,
-    is_balanced: true
-  });
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    setLoading(true);
-    fetch(`${API}/reports/trial-balance`)
-      .then(r => r.json())
-      .then(d => { if(d.accounts) setData(d); })
-      .catch(e => console.log('Using mock data'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const Row = ({ label, debit, credit, isTotal }) => (
-    <tr>
-      <td style={{ padding: 12, fontSize: 14, fontWeight: isTotal ? 700 : 400 }}>{label}</td>
-      <td className={`align-right mono ${isTotal ? 'section-total' : ''}`} style={{ padding: 12, fontSize: 14 }}>
-        {debit > 0 ? `₹${formatINR(debit)}` : '—'}
-      </td>
-      <td className={`align-right mono ${isTotal ? 'section-total' : ''}`} style={{ padding: 12, fontSize: 14 }}>
-        {credit > 0 ? `₹${formatINR(credit)}` : '—'}
-      </td>
-    </tr>
-  );
-
-  if (loading) return <div className="animate-pulse" style={{ textAlign: 'center', padding: 100 }}>Loading Trial Balance...</div>;
+  const totalDebits = accounts.reduce((sum, a) => sum + a.debit, 0);
+  const totalCredits = accounts.reduce((sum, a) => sum + a.credit, 0);
+  const isBalanced = Math.abs(totalDebits - totalCredits) < 1;
 
   return (
-    <div className="statement-document animate-fade-in">
-      <div className="document-header">
-        <h1 className="company-name heading-serif">Sharma Textiles Pvt Ltd</h1>
-        <h2 className="statement-name">Trial Balance</h2>
-        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>
-          As at 31 March 2026 | Registration: MSME-MH-2024-001
+    <div className="animate-fade" style={{ maxWidth: '900px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div>
+          <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Trial Balance</h2>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>As at Mar 31, 2026</p>
+        </div>
+        <div style={{
+          padding: '6px 14px', borderRadius: 'var(--radius-pill)', fontSize: '12px', fontWeight: 600,
+          background: isBalanced ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+          color: isBalanced ? '#10b981' : '#ef4444'
+        }}>
+          {isBalanced ? '✓ Balanced' : '✗ Imbalanced'}
         </div>
       </div>
-      
-      <div className="double-line"></div>
-      
-      <table className="accounting-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: 32 }}>
-        <thead>
-          <tr style={{ borderBottom: '1px solid #000' }}>
-            <th style={{ textAlign: 'left', padding: 12, fontSize: 12, color: 'var(--text-muted)' }}>Particulars</th>
-            <th style={{ textAlign: 'right', padding: 12, fontSize: 12, color: 'var(--text-muted)' }}>Debit (₹)</th>
-            <th style={{ textAlign: 'right', padding: 12, fontSize: 12, color: 'var(--text-muted)' }}>Credit (₹)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.entries(data.accounts).map(([name, vals]) => (
-            <Row key={name} label={name} debit={vals.debit} credit={vals.credit} />
-          ))}
-          <tr style={{ height: 24 }}><td></td><td></td><td></td></tr>
-          <Row label="GRAND TOTAL" debit={data.total_debits} credit={data.total_credits} isTotal />
-        </tbody>
-      </table>
 
-      {data.is_balanced ? (
-        <div style={{ marginTop: 40, padding: '12px 24px', background: 'rgba(20, 184, 166, 0.1)', color: 'var(--accent-teal)', borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: 'center', border: '1px solid rgba(20, 184, 166, 0.2)' }}>
-          ✓ The Trial Balance is perfectly balanced.
-        </div>
-      ) : (
-        <div style={{ marginTop: 40, padding: '12px 24px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-red)', borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-          ⚠ Warning: The Trial Balance is currently out of balance.
-        </div>
-      )}
-
-      <div style={{ marginTop: 60, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-muted)' }}>
-        <div style={{ borderTop: '1px solid #000', width: 150, textAlign: 'center', paddingTop: 8 }}>Authorized Signatory</div>
-        <div style={{ borderTop: '1px solid #000', width: 150, textAlign: 'center', paddingTop: 8 }}>Date: 10/05/2026</div>
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}>
+              <th style={{ padding: '14px 24px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Account</th>
+              <th style={{ padding: '14px 24px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Type</th>
+              <th style={{ padding: '14px 24px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Debit (Dr.)</th>
+              <th style={{ padding: '14px 24px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Credit (Cr.)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {accounts.map((acc, i) => (
+              <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }} className="table-row-hover">
+                <td style={{ padding: '14px 24px', fontSize: '13px', fontWeight: 500 }}>{acc.name}</td>
+                <td style={{ padding: '14px 24px' }}>
+                  <span style={{
+                    fontSize: '11px', padding: '2px 8px', borderRadius: '4px',
+                    background: acc.type === 'Asset' ? 'rgba(59,130,246,0.08)' :
+                                acc.type === 'Liability' ? 'rgba(239,68,68,0.08)' :
+                                acc.type === 'Revenue' ? 'rgba(16,185,129,0.08)' :
+                                acc.type === 'Expense' ? 'rgba(249,115,22,0.08)' :
+                                acc.type === 'Equity' ? 'rgba(139,92,246,0.08)' : 'var(--bg-surface)',
+                    color: acc.type === 'Asset' ? '#3b82f6' :
+                           acc.type === 'Liability' ? '#ef4444' :
+                           acc.type === 'Revenue' ? '#10b981' :
+                           acc.type === 'Expense' ? '#f97316' :
+                           acc.type === 'Equity' ? '#8b5cf6' : 'var(--text-muted)'
+                  }}>
+                    {acc.type}
+                  </span>
+                </td>
+                <td style={{ padding: '14px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
+                  {acc.debit > 0 ? formatINR(acc.debit) : ''}
+                </td>
+                <td style={{ padding: '14px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
+                  {acc.credit > 0 ? formatINR(acc.credit) : ''}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr style={{ background: 'var(--bg-surface)', borderTop: '2px solid var(--border)' }}>
+              <td colSpan={2} style={{ padding: '14px 24px', fontWeight: 700, fontSize: '13px' }}>TOTAL</td>
+              <td style={{ padding: '14px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700 }}>{formatINR(totalDebits)}</td>
+              <td style={{ padding: '14px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700 }}>{formatINR(totalCredits)}</td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
     </div>
   );
-}
+};
 
 export default TrialBalance;

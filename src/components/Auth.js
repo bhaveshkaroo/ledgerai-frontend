@@ -1,31 +1,19 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 
-const Auth = ({ onDemoLogin }) => {
-  const [loading, setLoading] = useState(false);
+function Auth({ onDemoLogin }) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [companyName, setCompanyName] = useState('');
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
-    // Hardcoded credentials for quick access
-    if (
-      (email === 'bhavesh' && password === 'asdfghjkl123') ||
-      (email === 'demo' && password === 'lkjhgfdsa321')
-    ) {
-      setLoading(false);
-      onDemoLogin();
-      return;
-    }
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) setError(error.message);
@@ -34,108 +22,154 @@ const Auth = ({ onDemoLogin }) => {
 
   const handleSignUp = async (e) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          company_name: companyName,
-        },
-      },
-    });
+
+    const { error } = await supabase.auth.signUp({ email, password });
     if (error) setError(error.message);
-    else {
-      setError("Check your email for the confirmation link!");
-      setLoading(false);
-    }
+    else setError('Check your email for confirmation link.');
+    setLoading(false);
   };
 
   return (
-    <div className="auth-container" style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh',
-      background: 'var(--bg-page)'
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--bg-page)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px'
     }}>
-      <div className="auth-card" style={{
-        width: '100%', maxWidth: '400px', padding: 'var(--space-12)', background: 'var(--bg-card)',
-        borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-bright)', boxShadow: 'var(--shadow-linear)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-8)' }}>
-          <div className="sidebar-logo">L</div>
-        </div>
-        
-        <h1 style={{ fontSize: '24px', fontWeight: 600, textAlign: 'center', marginBottom: '8px', color: 'var(--text-primary)' }}>LedgerAI</h1>
-        <p style={{ fontSize: '14px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 'var(--space-12)' }}>
-          Intelligent accounting for modern business
-        </p>
-
-        {error && <div style={{ padding: '12px', background: 'rgba(255, 59, 48, 0.08)', border: '1px solid #ff3b30', borderRadius: '8px', color: '#ff3b30', fontSize: '13px', marginBottom: 'var(--space-6)' }}>{error}</div>}
-
-        <button 
-          onClick={onDemoLogin}
-          style={{
-            width: '100%', padding: '12px', background: 'var(--bg-surface)', border: '1px solid var(--border)',
-            borderRadius: '8px', color: 'var(--text-primary)', fontWeight: 600, fontSize: '14px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: 'var(--space-6)',
-            transition: 'all 0.2s'
-          }}
-          onMouseOver={e => e.currentTarget.style.background = 'var(--bg-surface-hover)'}
-          onMouseOut={e => e.currentTarget.style.background = 'var(--bg-surface)'}
-        >
-          <Sparkles size={18} />
-          Continue with Demo
-          <ArrowRight size={16} />
-        </button>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '24px 0', opacity: 0.8 }}>
-          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>OR SIGN IN</span>
-          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
+      <div style={{ width: '100%', maxWidth: '420px' }}>
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: '56px', height: '56px', borderRadius: '16px',
+            background: 'var(--text-primary)', color: 'var(--bg-card)',
+            fontSize: '24px', fontWeight: 700, marginBottom: '16px'
+          }}>
+            M
+          </div>
+          <h1 style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.5px', marginBottom: '8px' }}>Meso</h1>
+          <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>AI-Powered Books of Accounts</p>
         </div>
 
-        <form onSubmit={isSignUp ? handleSignUp : handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Username or Email</label>
-            <input
-              type="text"
-              placeholder="bhavesh or name@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{ padding: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', outline: 'none' }}
-            />
-          </div>
+        {/* Card */}
+        <div className="card" style={{ padding: '32px' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '4px' }}>
+            {isSignUp ? 'Create Account' : 'Welcome Back'}
+          </h2>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>
+            {isSignUp ? 'Start managing your books with AI' : 'Sign in to continue to your accounts'}
+          </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Password</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{ padding: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', outline: 'none' }}
-            />
-          </div>
+          {error && (
+            <div style={{
+              padding: '10px 14px', borderRadius: '10px', marginBottom: '16px',
+              background: error.includes('Check your email') ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
+              color: error.includes('Check your email') ? '#10b981' : '#ef4444',
+              fontSize: '13px'
+            }}>
+              {error}
+            </div>
+          )}
 
-          <button type="submit" style={{ padding: '12px', background: '#000000', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 600, marginTop: '8px', cursor: 'pointer', opacity: loading ? 0.7 : 1 }} disabled={loading}>
-            {loading ? "Processing..." : (isSignUp ? "Create Account" : "Sign In")}
+          <form onSubmit={isSignUp ? handleSignUp : handleLogin}>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '6px' }}>Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                required
+                style={{
+                  width: '100%', padding: '12px 14px', borderRadius: '10px',
+                  border: '1px solid var(--border)', fontSize: '14px',
+                  background: 'var(--bg-surface)', outline: 'none',
+                  transition: 'border 0.2s'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '6px' }}>Password</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  style={{
+                    width: '100%', padding: '12px 14px', paddingRight: '44px', borderRadius: '10px',
+                    border: '1px solid var(--border)', fontSize: '14px',
+                    background: 'var(--bg-surface)', outline: 'none'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', cursor: 'pointer', padding: '2px'
+                  }}
+                >
+                  {showPassword ? <EyeOff size={16} color="var(--text-muted)" /> : <Eye size={16} color="var(--text-muted)" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary"
+              style={{
+                width: '100%', padding: '14px', fontSize: '14px', fontWeight: 600,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                opacity: loading ? 0.7 : 1, borderRadius: '12px'
+              }}
+            >
+              {loading ? 'Please wait...' : (isSignUp ? 'Create Account' : 'Sign In')}
+              {!loading && <ArrowRight size={16} />}
+            </button>
+          </form>
+
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            <button
+              onClick={() => { setIsSignUp(!isSignUp); setError(null); }}
+              style={{
+                background: 'none', border: 'none', color: 'var(--text-muted)',
+                fontSize: '13px', cursor: 'pointer'
+              }}
+            >
+              {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+            </button>
+          </div>
+        </div>
+
+        {/* Demo Mode */}
+        <div style={{ textAlign: 'center', marginTop: '16px' }}>
+          <button
+            onClick={onDemoLogin}
+            style={{
+              background: 'none', border: '1px solid var(--border)',
+              padding: '12px 24px', borderRadius: 'var(--radius-pill)',
+              fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)',
+              cursor: 'pointer', transition: 'all 0.2s'
+            }}
+          >
+            Try Demo Mode (No Login Required)
           </button>
-        </form>
-
-        <div style={{ textAlign: 'center', marginTop: 'var(--space-8)', fontSize: '13px', color: 'var(--text-muted)' }}>
-          {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-          <span style={{ color: 'var(--text-primary)', cursor: 'pointer', textDecoration: 'underline', fontWeight: 500 }} onClick={() => setIsSignUp(!isSignUp)}>
-            {isSignUp ? "Sign In" : "Sign Up"}
-          </span>
         </div>
+
+        <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', marginTop: '24px' }}>
+          Powered by Meso AI &middot; Schedule III &amp; AS Compliant
+        </p>
       </div>
     </div>
   );
-};
+}
 
 export default Auth;

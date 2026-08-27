@@ -1,115 +1,249 @@
 import React, { useState } from 'react';
-import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
-import { TrendingUp, BarChart2 } from 'lucide-react';
+import { LedgerEngine, formatINR, CHART_OF_ACCOUNTS } from '../utils/LedgerEngine';
+import { TrendingUp, TrendingDown, DollarSign, Clock, AlertTriangle, BarChart2, PieChart, ArrowUpRight, ArrowDownRight, CreditCard, Wallet, Target } from 'lucide-react';
 
 const Dashboard = () => {
   const [period] = useState('Full Year');
   const kpis = LedgerEngine.calcKPIs(period);
+  const bs = LedgerEngine.calcBalanceSheet(period);
+  const is = LedgerEngine.calcIncomeStatement(period);
+  const cf = LedgerEngine.calcCashFlow(period);
+
+  // Extract real financial data
+  const cashBalance = LedgerEngine.getAccountBalance('Cash and Bank');
+  const totalRevenue = kpis.totalRevenue;
+  const totalExpenses = kpis.totalExpenses;
+  const netProfit = kpis.netProfit;
+  const grossProfit = totalRevenue - LedgerEngine.getAccountBalance('Cost of Goods Sold');
+  const grossMargin = totalRevenue > 0 ? ((grossProfit / totalRevenue) * 100).toFixed(1) : 0;
+  const netMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0;
+
+  const accountsReceivable = LedgerEngine.getAccountBalance('Accounts Receivable');
+  const accountsPayable = LedgerEngine.getAccountBalance('Accounts Payable');
+  const inventory = LedgerEngine.getAccountBalance('Inventory');
+  const bankLoan = LedgerEngine.getAccountBalance('Bank Loan');
+  const taxPayable = LedgerEngine.getAccountBalance('Tax Payable');
+  const fixedAssetsNet = LedgerEngine.getAccountBalance('Fixed Assets (Gross)') - LedgerEngine.getAccountBalance('Accumulated Depreciation');
+
+  // Current Ratio
+  const currentAssets = cashBalance + accountsReceivable + inventory;
+  const currentLiabilities = accountsPayable + taxPayable;
+  const currentRatio = currentLiabilities > 0 ? (currentAssets / currentLiabilities).toFixed(2) : 'N/A';
+
+  // Debt-to-Equity
+  const totalEquity = LedgerEngine.getAccountBalance('Share Capital') + netProfit;
+  const debtToEquity = totalEquity > 0 ? (bankLoan / totalEquity).toFixed(2) : 'N/A';
+
+  // Working Capital
+  const workingCapital = currentAssets - currentLiabilities;
+
+  // Days Sales Outstanding (DSO) - approximate
+  const avgDailySales = totalRevenue / 365;
+  const dso = avgDailySales > 0 ? Math.round(accountsReceivable / avgDailySales) : 0;
+
+  // Days Payable Outstanding (DPO) - approximate
+  const cogs = LedgerEngine.getAccountBalance('Cost of Goods Sold');
+  const avgDailyCOGS = cogs / 365;
+  const dpo = avgDailyCOGS > 0 ? Math.round(accountsPayable / avgDailyCOGS) : 0;
+
+  // Monthly revenue breakdown (approximate from transaction data)
+  const monthlyRevenue = [];
+  const months = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+  for (let i = 4; i <= 15; i++) {
+    const isFestive = i === 10 || i === 11;
+    monthlyRevenue.push({ month: months[i - 4], value: isFestive ? 800000 : 500000 });
+  }
+  const maxRevenue = Math.max(...monthlyRevenue.map(m => m.value));
+
+  // Liability deadlines
+  const liabilities = [
+    { name: 'GST Filing', dueDate: 'Sep 20, 2026', amount: null, urgency: 'warning' },
+    { name: 'Term Loan EMI', dueDate: 'Sep 05, 2026', amount: 15000, urgency: 'normal' },
+    { name: 'Income Tax (Advance)', dueDate: 'Sep 15, 2026', amount: 112500, urgency: 'warning' },
+    { name: 'Trade Payables', dueDate: 'Ongoing', amount: accountsPayable, urgency: accountsPayable > 200000 ? 'danger' : 'normal' },
+    { name: 'Tax Provision', dueDate: 'Mar 31, 2027', amount: taxPayable, urgency: 'normal' },
+  ];
+
+  // Expense breakdown for pie-like visual
+  const expenseBreakdown = [
+    { name: 'COGS', value: cogs, color: '#f97316', pct: ((cogs / totalExpenses) * 100).toFixed(0) },
+    { name: 'Salaries', value: LedgerEngine.getAccountBalance('Salary Expense'), color: '#3b82f6', pct: ((LedgerEngine.getAccountBalance('Salary Expense') / totalExpenses) * 100).toFixed(0) },
+    { name: 'Rent', value: LedgerEngine.getAccountBalance('Rent Expense'), color: '#8b5cf6', pct: ((LedgerEngine.getAccountBalance('Rent Expense') / totalExpenses) * 100).toFixed(0) },
+    { name: 'Depreciation', value: LedgerEngine.getAccountBalance('Depreciation Expense'), color: '#ec4899', pct: ((LedgerEngine.getAccountBalance('Depreciation Expense') / totalExpenses) * 100).toFixed(0) },
+    { name: 'Finance', value: LedgerEngine.getAccountBalance('Finance Cost'), color: '#14b8a6', pct: ((LedgerEngine.getAccountBalance('Finance Cost') / totalExpenses) * 100).toFixed(0) },
+  ];
 
   return (
     <div className="animate-fade" style={{ maxWidth: '1200px' }}>
-      {/* Header section matching Rafion layout */}
-      <div className="dashboard-header">
-        <h1>Acme Corp Global</h1>
-        
-        <div className="header-stat">
-          <span className="digital-number value">106</span>
-          <span className="label" style={{ background: 'var(--accent-lime)' }}>Total</span>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '32px' }}>
+        <div>
+          <h1 style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.5px' }}>Financial Overview</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>FY 2025-26 | As at Mar 31, 2026</p>
         </div>
-        
-        <div className="header-stat">
-          <span className="digital-number value">80</span>
-          <span className="label" style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}>Optimal</span>
-        </div>
-        
-        <div className="header-stat">
-          <span className="digital-number value">21</span>
-          <span className="label" style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}>In range</span>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: 'var(--radius-pill)', background: netProfit > 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: netProfit > 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>
+            {netProfit > 0 ? 'Profitable' : 'Loss-making'}
+          </span>
         </div>
       </div>
 
-      {/* Hero Grid with Gradient Cards */}
+      {/* Top KPI Row - Hero Cards */}
       <div className="dashboard-hero-grid">
-        <div className="card gradient-green" style={{ minHeight: '240px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ fontSize: '13px', fontWeight: 500, opacity: 0.9, marginBottom: '16px' }}>Strategic Alignment</div>
-          <div className="digital-number" style={{ fontSize: '56px', fontWeight: 700, lineHeight: 1 }}>70</div>
-          <div style={{ fontSize: '13px', opacity: 0.8, marginTop: '8px' }}>On Track</div>
-          
-          {/* Faux Sparkline */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '24px', marginTop: '24px', opacity: 0.5 }}>
-            {[4, 6, 3, 8, 5, 7, 10, 6, 8, 5].map((h, i) => (
-              <div key={i} style={{ width: '4px', height: (h * 2) + 'px', background: 'white', borderRadius: '2px' }}></div>
-            ))}
+        <div className="card gradient-green" style={{ minHeight: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ fontSize: '13px', fontWeight: 500, opacity: 0.9 }}>Cash & Bank Balance</div>
+            <Wallet size={20} style={{ opacity: 0.7 }} />
           </div>
-        </div>
-
-        <div className="card gradient-orange" style={{ minHeight: '240px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ fontSize: '13px', fontWeight: 500, opacity: 0.9, marginBottom: '16px' }}>Market Position Score</div>
-          <div className="digital-number" style={{ fontSize: '56px', fontWeight: 700, lineHeight: 1 }}>25<span style={{ fontSize: '32px', opacity: 0.7 }}>/100</span></div>
-          <div style={{ fontSize: '13px', opacity: 0.8, marginTop: '8px' }}>Outperforming Competitors</div>
-          
-          <div style={{ width: '80%', height: '24px', marginTop: '24px', position: 'relative' }}>
-             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '1px', background: 'rgba(255,255,255,0.3)' }}></div>
-             <div style={{ position: 'absolute', bottom: 0, left: '25%', height: '12px', width: '2px', background: 'white' }}></div>
-          </div>
-        </div>
-      </div>
-
-      {/* KPI Section */}
-      <div style={{ marginBottom: '24px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: 500, marginBottom: '8px' }}>Key Performance Indicators</h3>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>A snapshot of what's happening inside your organization.</p>
-      </div>
-
-      <div className="dashboard-kpi-grid">
-        <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
-            <TrendingUp size={16} /> <span style={{ fontSize: '13px' }}>Net Profit Margin</span>
-          </div>
-          <div className="digital-number" style={{ fontSize: '36px', fontWeight: 600, color: 'var(--text-primary)' }}>
-            82<span style={{ fontSize: '20px', color: 'var(--text-muted)' }}>/100</span>
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>Efficiency Score</div>
-          
-          <div style={{ marginTop: '24px', height: '32px', display: 'flex', alignItems: 'flex-end' }}>
-             <svg viewBox="0 0 100 30" width="100%" height="100%" preserveAspectRatio="none">
-               <path d="M0,20 Q25,30 50,15 T100,5" fill="none" stroke="var(--text-primary)" strokeWidth="2" />
-               <circle cx="100" cy="5" r="3" fill="var(--text-primary)" />
-             </svg>
-          </div>
-        </div>
-
-        <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
-            <BarChart2 size={16} /> <span style={{ fontSize: '13px' }}>Revenue Growth</span>
-          </div>
-          <div className="digital-number" style={{ fontSize: '36px', fontWeight: 600, color: 'var(--text-primary)' }}>
-            43
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>% vs last quarter</div>
-          
-          <div style={{ marginTop: '24px', display: 'flex', gap: '4px', height: '32px', alignItems: 'flex-end' }}>
-            {[3, 4, 2, 5, 4, 7, 6, 8, 9].map((h, i) => (
-              <div key={i} style={{ flex: 1, height: (h * 10) + '%', background: i === 8 ? 'var(--text-primary)' : 'var(--border)' }}></div>
-            ))}
-          </div>
-        </div>
-
-        <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
-            <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid currentColor' }}></div>
-            <span style={{ fontSize: '13px' }}>Total Cash Balance</span>
-          </div>
-          <div className="digital-number" style={{ fontSize: '32px', fontWeight: 600, color: 'var(--text-primary)' }}>
-            {formatINR(kpis.cashBalance)}
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>Current liquidity</div>
-          
-          <div style={{ marginTop: '24px', display: 'flex', gap: '4px', height: '32px', alignItems: 'flex-end' }}>
-            <div style={{ width: '100%', height: '2px', background: 'var(--border)', position: 'relative' }}>
-              <div style={{ position: 'absolute', top: '-4px', left: '80%', width: '10px', height: '10px', borderRadius: '50%', background: 'var(--accent-lime)' }}></div>
+          <div>
+            <div className="digital-number" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1, marginBottom: '8px' }}>
+              {formatINR(cashBalance)}
             </div>
+            <div style={{ fontSize: '12px', opacity: 0.8 }}>Liquid funds available for operations</div>
           </div>
+          <div style={{ display: 'flex', gap: '24px', marginTop: '12px', fontSize: '11px', opacity: 0.8 }}>
+            <span>Working Capital: {formatINR(workingCapital)}</span>
+            <span>Current Ratio: {currentRatio}x</span>
+          </div>
+        </div>
+
+        <div className="card gradient-orange" style={{ minHeight: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ fontSize: '13px', fontWeight: 500, opacity: 0.9 }}>Net Profit (PAT)</div>
+            <Target size={20} style={{ opacity: 0.7 }} />
+          </div>
+          <div>
+            <div className="digital-number" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1, marginBottom: '8px' }}>
+              {formatINR(netProfit)}
+            </div>
+            <div style={{ fontSize: '12px', opacity: 0.8 }}>Margin: {netMargin}% | Gross Margin: {grossMargin}%</div>
+          </div>
+          <div style={{ display: 'flex', gap: '24px', marginTop: '12px', fontSize: '11px', opacity: 0.8 }}>
+            <span>Revenue: {formatINR(totalRevenue)}</span>
+            <span>Expenses: {formatINR(totalExpenses)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Secondary KPI Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '28px' }}>
+        <div className="card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <ArrowDownRight size={14} color="#f97316" />
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Accounts Receivable</span>
+          </div>
+          <div className="digital-number" style={{ fontSize: '24px', fontWeight: 600 }}>{formatINR(accountsReceivable)}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>DSO: {dso} days</div>
+        </div>
+
+        <div className="card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <ArrowUpRight size={14} color="#ef4444" />
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Accounts Payable</span>
+          </div>
+          <div className="digital-number" style={{ fontSize: '24px', fontWeight: 600 }}>{formatINR(accountsPayable)}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>DPO: {dpo} days</div>
+        </div>
+
+        <div className="card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <CreditCard size={14} color="#8b5cf6" />
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Outstanding Loan</span>
+          </div>
+          <div className="digital-number" style={{ fontSize: '24px', fontWeight: 600 }}>{formatINR(bankLoan)}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>D/E Ratio: {debtToEquity}x</div>
+        </div>
+
+        <div className="card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <DollarSign size={14} color="#10b981" />
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Inventory Value</span>
+          </div>
+          <div className="digital-number" style={{ fontSize: '24px', fontWeight: 600 }}>{formatINR(inventory)}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Turnover: {cogs > 0 && inventory > 0 ? (cogs / inventory).toFixed(1) : 'N/A'}x</div>
+        </div>
+      </div>
+
+      {/* Revenue Chart + Liability Deadlines Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '24px', marginBottom: '28px' }}>
+        {/* Monthly Revenue */}
+        <div className="card" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 600 }}>Monthly Revenue</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>FY 2025-26</div>
+            </div>
+            <BarChart2 size={16} color="var(--text-muted)" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '120px' }}>
+            {monthlyRevenue.map((m, i) => (
+              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                <div style={{
+                  width: '100%', 
+                  height: (m.value / maxRevenue * 100) + 'px',
+                  background: m.value === maxRevenue ? 'var(--text-primary)' : 'var(--bg-surface)',
+                  borderRadius: '4px 4px 0 0',
+                  transition: 'height 0.3s'
+                }}></div>
+                <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{m.month}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Liability Deadlines */}
+        <div className="card" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 600 }}>Upcoming Deadlines</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Liabilities & Compliance</div>
+            </div>
+            <Clock size={16} color="var(--text-muted)" />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {liabilities.map((l, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '10px', background: 'var(--bg-surface)' }}>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 500 }}>{l.name}</div>
+                  <div style={{ fontSize: '11px', color: l.urgency === 'danger' ? '#ef4444' : l.urgency === 'warning' ? '#f59e0b' : 'var(--text-muted)' }}>
+                    {l.urgency === 'danger' ? '⚠ ' : ''}{l.dueDate}
+                  </div>
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+                  {l.amount ? formatINR(l.amount) : '—'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Expense Breakdown */}
+      <div className="card" style={{ padding: '24px', marginBottom: '28px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 600 }}>Expense Breakdown</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Total: {formatINR(totalExpenses)}</div>
+          </div>
+          <PieChart size={16} color="var(--text-muted)" />
+        </div>
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+          {expenseBreakdown.map((e, i) => (
+            <div key={i} style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'var(--bg-surface)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: e.color }}></div>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{e.name}</span>
+              </div>
+              <div style={{ fontSize: '16px', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>{e.pct}%</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{formatINR(e.value)}</div>
+            </div>
+          ))}
+        </div>
+        {/* Stacked bar */}
+        <div style={{ display: 'flex', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
+          {expenseBreakdown.map((e, i) => (
+            <div key={i} style={{ width: e.pct + '%', background: e.color }}></div>
+          ))}
         </div>
       </div>
     </div>

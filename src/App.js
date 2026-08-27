@@ -4,8 +4,9 @@ import Dashboard from './components/Dashboard';
 import TransactionList from './components/TransactionList';
 import Statements from './components/Statements';
 import CompliancePanel from './components/CompliancePanel';
+import TrialBalance from './components/TrialBalance';
 import { supabase } from './supabaseClient';
-import { LayoutDashboard, Receipt, FileBarChart, Bot, Settings, LogOut, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Receipt, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale } from 'lucide-react';
 import Auth from './components/Auth';
 
 function App() {
@@ -35,55 +36,55 @@ function App() {
       case 'dashboard': return <Dashboard />;
       case 'transactions': return <TransactionList period="Full Year" />;
       case 'reports': return <Statements period="Full Year" />;
+      case 'trial-balance': return <TrialBalance period="Full Year" />;
       default: return <Dashboard />;
     }
   };
 
   return (
     <div className="app-container">
-      {/* Sidebar - Rafion AI Aesthetic */}
+      {/* Sidebar */}
       <aside className="sidebar">
-        <div className="sidebar-logo">RAFION AI</div>
-        
-        <div className="sidebar-section-title">
-          Data <span className="dim">Records</span>
+        <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{
+            width: '32px', height: '32px', borderRadius: '8px',
+            background: 'var(--text-primary)', color: 'var(--bg-card)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '16px', fontWeight: 700
+          }}>M</div>
+          MESO
+        </div>
+
+        <div className="sidebar-section-title" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>
+          Books of Accounts
         </div>
 
         <nav className="sidebar-nav">
-          <div className="sidebar-item" style={{ background: 'var(--bg-surface)', marginBottom: '16px', justifyContent: 'space-between' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
-              <LayoutDashboard size={16} /> All Departments
-            </span>
-            <ChevronRight size={14} />
-          </div>
-
           <div className={`sidebar-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
             <LayoutDashboard className="icon" size={16} /> Dashboard
-            {activeTab === 'dashboard' && <span className="badge">12/100</span>}
           </div>
           <div className={`sidebar-item ${activeTab === 'transactions' ? 'active' : ''}`} onClick={() => setActiveTab('transactions')}>
-            <Receipt className="icon" size={16} /> Transactions
-            <span className="badge">Balanced</span>
+            <Receipt className="icon" size={16} /> Day Book / Journal
           </div>
           <div className={`sidebar-item ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}>
-            <FileBarChart className="icon" size={16} /> Financial Reports
+            <FileBarChart className="icon" size={16} /> Final Accounts
+          </div>
+          <div className={`sidebar-item ${activeTab === 'trial-balance' ? 'active' : ''}`} onClick={() => setActiveTab('trial-balance')}>
+            <Scale className="icon" size={16} /> Trial Balance
           </div>
           <div className="sidebar-item" onClick={() => setIsBotOpen(true)}>
             <Bot className="icon" size={16} /> AI Audit Assistant
-            <span className="badge">72/100</span>
+            <span className="badge" style={{ marginLeft: 'auto', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>Live</span>
           </div>
         </nav>
 
         <div style={{ marginTop: 'auto' }}>
           <div style={{ padding: '16px', background: 'var(--bg-surface)', borderRadius: '16px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <button className="btn-lime">Go Pro</button>
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Rafion AI Free Trial - 30 Days</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>Get deeper AI accounting insights.</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-              <span className="digital-number" style={{ fontSize: '24px', fontWeight: 600 }}>30</span>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Days</span>
+            <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Meso AI</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Schedule III &amp; AS Compliant</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }}></div>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Double-Entry Verified</span>
             </div>
           </div>
 
@@ -106,7 +107,7 @@ function App() {
         {renderContent()}
       </main>
 
-      {/* Compliance / AI Bot Panel */}
+      {/* AI Audit Bot Panel */}
       <CompliancePanel isOpen={isBotOpen} onClose={() => setIsBotOpen(false)} />
     </div>
   );
