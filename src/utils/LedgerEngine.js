@@ -271,9 +271,9 @@ export const LedgerEngine = {
   calcKPIs(period) {
     const cash = this.getAccountBalance('Cash and Bank');
     const is = this.calcIncomeStatement();
-    const rev = is.find(r => r.name.includes("Total Revenue"))?.value || 0;
-    const exp = is.find(r => r.name.includes("Total Expenses"))?.value || 0;
-    const pat = is.find(r => r.name.includes("Profit After Tax"))?.value || 0;
+    const rev = is.find(r => r.name.toLowerCase().includes("total revenue"))?.value || 0;
+    const exp = is.find(r => r.name.toLowerCase().includes("total expenses"))?.value || 0;
+    const pat = is.find(r => r.name.toLowerCase().includes("profit (loss) for the period"))?.value || 0;
     
     return {
       totalRevenue: rev,

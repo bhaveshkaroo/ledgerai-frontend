@@ -38,8 +38,8 @@ const CompliancePanel = ({ isOpen, onClose }) => {
 
     // Check balance sheet integrity
     const bs = LedgerEngine.calcBalanceSheet();
-    const totalEq = bs.find(r => r.name === 'TOTAL EQUITY & LIABILITIES')?.value || 0;
-    const totalAssets = bs.find(r => r.name === 'TOTAL ASSETS')?.value || 0;
+    const totalEq = bs.find(r => r.name.toLowerCase().includes('total equity and liabilities'))?.value || 0;
+    const totalAssets = bs.find(r => r.name.toLowerCase().includes('total assets'))?.value || 0;
     if (Math.abs(totalEq - totalAssets) > 1) {
       findings.push({ severity: 'error', title: 'Balance Sheet Imbalance', detail: `Assets (${formatINR(totalAssets)}) ≠ Equity+Liabilities (${formatINR(totalEq)}). Difference: ${formatINR(Math.abs(totalEq - totalAssets))}` });
     } else {
