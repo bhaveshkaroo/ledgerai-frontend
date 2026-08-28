@@ -9,15 +9,22 @@ export const CHART_OF_ACCOUNTS = [
   { name: "Depreciation Expense", type: "Expense", classification: "P&L", section: "Depreciation and Amortisation" },
   { name: "Finance Cost", type: "Expense", classification: "P&L", section: "Finance Costs" },
   { name: "Tax Expense", type: "Expense", classification: "P&L", section: "Tax Expense" },
+  { name: "Other Expenses", type: "Expense", classification: "P&L", section: "Other Expenses" },
   
   { name: "Share Capital", type: "Equity", classification: "BS", section: "Share Capital" },
   { name: "Retained Earnings", type: "Equity", classification: "BS", section: "Reserves and Surplus" },
   { name: "Bank Loan", type: "Liability", classification: "BS", section: "Long-Term Borrowings" },
+  { name: "Deferred Tax Liability", type: "Liability", classification: "BS", section: "Long-Term Provisions" },
+  { name: "Provision for Employee Benefits", type: "Liability", classification: "BS", section: "Long-Term Provisions" },
   { name: "Accounts Payable", type: "Liability", classification: "BS", section: "Trade Payables" },
   { name: "Tax Payable", type: "Liability", classification: "BS", section: "Short-Term Provisions" },
+  { name: "Short-Term Provisions", type: "Liability", classification: "BS", section: "Short-Term Provisions" },
   
   { name: "Fixed Assets (Gross)", type: "Asset", classification: "BS", section: "Tangible Assets" },
   { name: "Accumulated Depreciation", type: "Contra Asset", classification: "BS", section: "Tangible Assets" },
+  { name: "Intangible Assets (Gross)", type: "Asset", classification: "BS", section: "Intangible Assets" },
+  { name: "Accumulated Amortization", type: "Contra Asset", classification: "BS", section: "Intangible Assets" },
+  { name: "Deferred Tax Asset", type: "Asset", classification: "BS", section: "Non-current assets" },
   { name: "Inventory", type: "Asset", classification: "BS", section: "Inventories" },
   { name: "Accounts Receivable", type: "Asset", classification: "BS", section: "Trade Receivables" },
   { name: "Cash and Bank", type: "Asset", classification: "BS", section: "Cash and Cash Equivalents" },
@@ -82,8 +89,21 @@ const generateBalancedTransactions = () => {
     addEntry(`${year}-${m}-28`, 'Monthly Depreciation', 'Depreciation Expense', 'Accumulated Depreciation', 12500, 'Depreciation');
   }
 
-  // Year End Tax Provision (AS 22)
+  // Year End Adjustments
   addEntry('2026-03-31', 'Provision for Income Tax', 'Tax Expense', 'Tax Payable', 450000, 'Tax');
+  
+  // AS 22 Deferred Tax (Timing difference on depreciation)
+  addEntry('2026-03-31', 'Deferred Tax Asset Recognition', 'Deferred Tax Asset', 'Tax Expense', 15000, 'Tax');
+  
+  // AS 15 Employee Benefits (Gratuity Provision)
+  addEntry('2026-03-31', 'Provision for Gratuity', 'Salary Expense', 'Provision for Employee Benefits', 80000, 'Expense');
+  
+  // AS 29 Provisions (Warranty Provision)
+  addEntry('2026-03-31', 'Provision for Warranty', 'Other Expenses', 'Short-Term Provisions', 35000, 'Expense');
+  
+  // AS 26 Intangible Asset Purchase & Amortization
+  addEntry('2025-10-01', 'Purchase of Software License', 'Intangible Assets (Gross)', 'Cash and Bank', 300000, 'Investing');
+  addEntry('2026-03-31', 'Amortization of Software', 'Depreciation Expense', 'Accumulated Amortization', 50000, 'Depreciation');
 
   return txs.sort((a, b) => new Date(b.date) - new Date(a.date));
 };
@@ -122,13 +142,18 @@ export const LedgerEngine = {
     const cogs = this.getAccountBalance('Cost of Goods Sold');
     const salaries = this.getAccountBalance('Salary Expense');
     const rent = this.getAccountBalance('Rent Expense');
+    const otherExp = this.getAccountBalance('Other Expenses');
     const dep = this.getAccountBalance('Depreciation Expense');
     const finCost = this.getAccountBalance('Finance Cost');
     
-    const totalExp = cogs + salaries + rent + dep + finCost;
+    const totalExp = cogs + salaries + rent + otherExp + dep + finCost;
     const pbt = totalRev - totalExp;
-    const tax = this.getAccountBalance('Tax Expense');
-    const pat = pbt - tax;
+    const currentTax = this.getAccountBalance('Tax Payable'); // Actual provision for the year
+    const defTaxAsset = this.getAccountBalance('Deferred Tax Asset');
+    const defTaxLiab = this.getAccountBalance('Deferred Tax Liability');
+    const deferredTaxExpense = defTaxLiab - defTaxAsset; // Net deferred tax expense
+    const totalTax = currentTax + deferredTaxExpense;
+    const pat = pbt - totalTax;
 
     return [
       { name: "I. Revenue from operations", value: rev, level: 0, isSummary: true },
@@ -141,7 +166,7 @@ export const LedgerEngine = {
       { name: "Employee benefits expense", value: salaries, level: 1 },
       { name: "Finance costs", value: finCost, level: 1 },
       { name: "Depreciation and amortization expense", value: dep, level: 1 },
-      { name: "Other expenses", value: rent, level: 1 },
+      { name: "Other expenses", value: rent + otherExp, level: 1 },
       { name: "IV. Total expenses", value: totalExp, level: 0, isSummary: true, isTotal: true },
       { name: "V. Profit before exceptional and extraordinary items and tax (III-IV)", value: pbt, level: 0, isSummary: true, isTotal: true },
       { name: "VI. Exceptional items", value: 0, level: 0, isSummary: true },
@@ -149,8 +174,8 @@ export const LedgerEngine = {
       { name: "VIII. Extraordinary items", value: 0, level: 0, isSummary: true },
       { name: "IX. Profit before tax (VII-VIII)", value: pbt, level: 0, isSummary: true, isTotal: true },
       { name: "X. Tax expense:", value: null, level: 0, isSummary: true },
-      { name: "(1) Current tax", value: tax, level: 1 },
-      { name: "(2) Deferred tax", value: 0, level: 1 },
+      { name: "(1) Current tax", value: currentTax, level: 1 },
+      { name: "(2) Deferred tax", value: deferredTaxExpense, level: 1 },
       { name: "XI. Profit (Loss) for the period from continuing operations (IX-X)", value: pat, level: 0, isSummary: true, isTotal: true },
     ];
   },
@@ -161,20 +186,39 @@ export const LedgerEngine = {
     const re = this.getAccountBalance('Retained Earnings') + pat; // Roll up net profit
     
     const loan = this.getAccountBalance('Bank Loan');
+    const defTaxLiab = this.getAccountBalance('Deferred Tax Liability');
+    const provEmployee = this.getAccountBalance('Provision for Employee Benefits');
+    
     const ap = this.getAccountBalance('Accounts Payable');
     const taxPay = this.getAccountBalance('Tax Payable');
+    const stProv = this.getAccountBalance('Short-Term Provisions');
     
-    const totalEqLiab = sc + re + loan + ap + taxPay;
+    const totalEqLiab = sc + re + loan + defTaxLiab + provEmployee + ap + taxPay + stProv;
     
     const faGross = this.getAccountBalance('Fixed Assets (Gross)');
     const accDep = this.getAccountBalance('Accumulated Depreciation');
-    const faNet = faGross - accDep; // Contra asset reduction
+    const faNet = faGross - accDep; // Tangible Net
+    
+    const intGross = this.getAccountBalance('Intangible Assets (Gross)');
+    const accAmort = this.getAccountBalance('Accumulated Amortization');
+    const intNet = intGross - accAmort; // Intangible Net
+    
+    const defTaxAsset = this.getAccountBalance('Deferred Tax Asset');
+    
+    // AS 22 states Deferred Tax Asset/Liability should be presented net if legally enforceable
+    let netDTA = 0;
+    let netDTL = 0;
+    if (defTaxAsset > defTaxLiab) {
+        netDTA = defTaxAsset - defTaxLiab;
+    } else {
+        netDTL = defTaxLiab - defTaxAsset;
+    }
     
     const inv = this.getAccountBalance('Inventory');
     const ar = this.getAccountBalance('Accounts Receivable');
     const cash = this.getAccountBalance('Cash and Bank');
     
-    const totalAssets = faNet + inv + ar + cash;
+    const totalAssets = faNet + intNet + netDTA + inv + ar + cash;
     
     return [
       { name: "I. EQUITY AND LIABILITIES", value: null, level: 0, isSummary: true },
@@ -185,25 +229,25 @@ export const LedgerEngine = {
       { name: "2. Share application money pending allotment", value: 0, level: 1, isSummary: true },
       { name: "3. Non-current liabilities", value: null, level: 1, isSummary: true },
       { name: "(a) Long-term borrowings", value: loan, level: 2 },
-      { name: "(b) Deferred tax liabilities (Net)", value: 0, level: 2 },
+      { name: "(b) Deferred tax liabilities (Net)", value: netDTL, level: 2 },
       { name: "(c) Other Long term liabilities", value: 0, level: 2 },
-      { name: "(d) Long-term provisions", value: 0, level: 2 },
+      { name: "(d) Long-term provisions", value: provEmployee, level: 2 },
       { name: "4. Current liabilities", value: null, level: 1, isSummary: true },
       { name: "(a) Short-term borrowings", value: 0, level: 2 },
       { name: "(b) Trade payables", value: ap, level: 2 },
       { name: "(c) Other current liabilities", value: 0, level: 2 },
-      { name: "(d) Short-term provisions", value: taxPay, level: 2 },
+      { name: "(d) Short-term provisions", value: taxPay + stProv, level: 2 },
       { name: "TOTAL EQUITY AND LIABILITIES", value: totalEqLiab, level: 0, isSummary: true, isTotal: true },
       
       { name: "II. ASSETS", value: null, level: 0, isSummary: true },
       { name: "1. Non-current assets", value: null, level: 1, isSummary: true },
       { name: "(a) Property, Plant and Equipment and Intangible assets", value: null, level: 2, isSummary: true },
       { name: "(i) Property, Plant and Equipment", value: faNet, level: 3 },
-      { name: "(ii) Intangible assets", value: 0, level: 3 },
+      { name: "(ii) Intangible assets", value: intNet, level: 3 },
       { name: "(iii) Capital work-in-progress", value: 0, level: 3 },
       { name: "(iv) Intangible assets under development", value: 0, level: 3 },
       { name: "(b) Non-current investments", value: 0, level: 2 },
-      { name: "(c) Deferred tax assets (net)", value: 0, level: 2 },
+      { name: "(c) Deferred tax assets (net)", value: netDTA, level: 2 },
       { name: "(d) Long-term loans and advances", value: 0, level: 2 },
       { name: "(e) Other non-current assets", value: 0, level: 2 },
       { name: "2. Current assets", value: null, level: 1, isSummary: true },
@@ -222,19 +266,29 @@ export const LedgerEngine = {
     const pbt = is.find(r => r.name.toLowerCase().includes("profit before tax")).value;
     const dep = this.getAccountBalance('Depreciation Expense');
     const finCost = this.getAccountBalance('Finance Cost');
-    const tax = this.getAccountBalance('Tax Expense');
-    const taxPay = this.getAccountBalance('Tax Payable');
-    const actualTaxPaid = tax - taxPay;
+    const taxPayable = this.getAccountBalance('Tax Payable');
+    const currentTax = this.getAccountBalance('Tax Payable'); // from P&L logic
+    // Add back non-cash provisions
+    const provEmployee = this.getAccountBalance('Provision for Employee Benefits');
+    const stProv = this.getAccountBalance('Short-Term Provisions');
+    
+    // In a real system, actual tax paid = Opening Tax Payable + Current Tax Provision - Closing Tax Payable.
+    // For this mock, assume half is paid, half is payable, or just use difference
+    const actualTaxPaid = currentTax - taxPayable; // Since it's year 1, this will be 0 for now.
     
     // AS 3 Indirect Method - Working Capital Changes
-    const incAR = this.getAccountBalance('Accounts Receivable'); // since year 1
+    // For Year 1, change is equal to ending balance.
+    const incAR = this.getAccountBalance('Accounts Receivable');
     const incInv = this.getAccountBalance('Inventory');
     const incAP = this.getAccountBalance('Accounts Payable');
     
-    const opCF = pbt + dep + finCost - incAR - incInv + incAP - actualTaxPaid;
+    // Add provisions to operating cash flow before WC changes
+    const opCFBeforeWC = pbt + dep + finCost + provEmployee + stProv;
+    const opCF = opCFBeforeWC - incAR - incInv + incAP - actualTaxPaid;
     
     const faPurchase = -this.getAccountBalance('Fixed Assets (Gross)');
-    const invCF = faPurchase;
+    const intPurchase = -this.getAccountBalance('Intangible Assets (Gross)');
+    const invCF = faPurchase + intPurchase;
     
     const eqIssuance = this.getAccountBalance('Share Capital');
     const loanIssuance = this.getAccountBalance('Bank Loan');
@@ -245,9 +299,10 @@ export const LedgerEngine = {
     return [
       { name: "A. Cash Flow from Operating Activities", value: null, level: 0, isSummary: true },
       { name: "Net Profit Before Tax", value: pbt, level: 1 },
-      { name: "Add: Depreciation", value: dep, level: 1 },
+      { name: "Add: Depreciation & Amortization", value: dep, level: 1 },
       { name: "Add: Finance Costs", value: finCost, level: 1 },
-      { name: "Operating Profit Before WC Changes", value: pbt + dep + finCost, level: 1, isSummary: true },
+      { name: "Add: Provisions (Non-Cash)", value: provEmployee + stProv, level: 1 },
+      { name: "Operating Profit Before WC Changes", value: opCFBeforeWC, level: 1, isSummary: true },
       { name: "Less: Increase in Trade Receivables", value: -incAR, level: 1 },
       { name: "Less: Increase in Inventories", value: -incInv, level: 1 },
       { name: "Add: Increase in Trade Payables", value: incAP, level: 1 },
@@ -255,7 +310,7 @@ export const LedgerEngine = {
       { name: "Net Cash from Operating Activities", value: opCF, level: 0, isSummary: true, isTotal: true },
       
       { name: "B. Cash Flow from Investing Activities", value: null, level: 0, isSummary: true },
-      { name: "Purchase of Fixed Assets", value: faPurchase, level: 1 },
+      { name: "Purchase of Fixed & Intangible Assets", value: invCF, level: 1 },
       { name: "Net Cash from Investing Activities", value: invCF, level: 0, isSummary: true, isTotal: true },
       
       { name: "C. Cash Flow from Financing Activities", value: null, level: 0, isSummary: true },
