@@ -3,13 +3,14 @@ import './App.css';
 import Dashboard from './components/Dashboard';
 import TransactionList from './components/TransactionList';
 import Invoicing from './components/Invoicing';
+import Inventory from './components/Inventory';
 import Statements from './components/Statements';
 import CompliancePanel from './components/CompliancePanel';
 import GSTCompliance from './components/GSTCompliance';
 import { InvoiceEngine } from './utils/InvoiceEngine';
 import { InventoryEngine } from './utils/InventoryEngine';
 import { supabase } from './supabaseClient';
-import { LayoutDashboard, Receipt, FileText, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale } from 'lucide-react';
+import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale } from 'lucide-react';
 import Auth from './components/Auth';
 
 function App() {
@@ -45,6 +46,7 @@ function App() {
       case 'dashboard': return <Dashboard />;
       case 'transactions': return <TransactionList period="Full Year" />;
       case 'invoicing': return <Invoicing />;
+      case 'inventory': return <Inventory />;
       case 'reports': return <Statements period="Full Year" />;
       case 'gst-compliance': return <GSTCompliance period="Full Year" />;
       default: return <Dashboard />;
@@ -78,6 +80,9 @@ function App() {
           </div>
           <div className={`sidebar-item ${activeTab === 'invoicing' ? 'active' : ''}`} onClick={() => setActiveTab('invoicing')}>
             <FileText className="icon" size={16} /> Invoicing
+          </div>
+          <div className={`sidebar-item ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')}>
+            <Package className="icon" size={16} /> Inventory
           </div>
           <div className={`sidebar-item ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}>
             <FileBarChart className="icon" size={16} /> Final Accounts
