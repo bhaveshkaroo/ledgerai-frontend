@@ -7,10 +7,11 @@ import Inventory from './components/Inventory';
 import Statements from './components/Statements';
 import CompliancePanel from './components/CompliancePanel';
 import GSTCompliance from './components/GSTCompliance';
+import BankReconciliation from './components/BankReconciliation';
 import { InvoiceEngine } from './utils/InvoiceEngine';
 import { InventoryEngine } from './utils/InventoryEngine';
 import { supabase } from './supabaseClient';
-import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale } from 'lucide-react';
+import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale, Landmark } from 'lucide-react';
 import Auth from './components/Auth';
 
 function App() {
@@ -49,6 +50,7 @@ function App() {
       case 'inventory': return <Inventory />;
       case 'reports': return <Statements period="Full Year" />;
       case 'gst-compliance': return <GSTCompliance period="Full Year" />;
+      case 'brs': return <BankReconciliation />;
       default: return <Dashboard />;
     }
   };
@@ -89,6 +91,9 @@ function App() {
           </div>
           <div className={`sidebar-item ${activeTab === 'gst-compliance' ? 'active' : ''}`} onClick={() => setActiveTab('gst-compliance')}>
             <Scale className="icon" size={16} /> GST Compliance
+          </div>
+          <div className={`sidebar-item ${activeTab === 'brs' ? 'active' : ''}`} onClick={() => setActiveTab('brs')}>
+            <Landmark className="icon" size={16} /> Bank Reconciliation
           </div>
           <div className="sidebar-item" onClick={() => setIsBotOpen(true)}>
             <Bot className="icon" size={16} /> AI Audit Assistant

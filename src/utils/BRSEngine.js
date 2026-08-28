@@ -174,5 +174,35 @@ export const BRSEngine = {
         bankEntry.ref || `BANK-D-${Date.now()}`
       );
     }
+  },
+
+  /**
+   * Generates a sample bank statement based on current book transactions with timing differences
+   */
+  getSampleBankStatement() {
+    const bookTxs = LedgerEngine.transactions.filter(t => t.account === 'Cash and Bank');
+    
+    // Copy all transactions except the very latest AR collection (Deposit in Transit) 
+    // and latest supplier payment (Outstanding Cheque)
+    const base = bookTxs.map((b, idx) => ({
+      id: `BNK-${idx + 100}`,
+      date: b.date,
+      description: b.narration,
+      ref: b.ref,
+      amount: b.amount,
+      type: b.type === 'Debit' ? 'Deposit' : 'Withdrawal'
+    }));
+
+    // Add 1 unbooked bank charge
+    base.push({
+      id: `BNK-CHG-999`,
+      date: '2026-03-31',
+      description: 'Quarterly Bank Service Charges',
+      ref: 'CHG-HDFC-01',
+      amount: 750,
+      type: 'Withdrawal'
+    });
+
+    return base;
   }
 };
