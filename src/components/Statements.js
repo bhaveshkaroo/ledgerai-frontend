@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import TradingAccount from './TradingAccount';
 import IncomeStatement from './IncomeStatement';
 import BalanceSheet from './BalanceSheet';
 import CashFlowStatement from './CashFlowStatement';
@@ -14,8 +15,10 @@ function Statements({ period, currency }) {
   const handleExport = () => {
     let data = [];
     let title = '';
-    
-    if (activeTab === 'Profit & Loss') {
+    if (activeTab === 'Trading A/c') {
+      data = LedgerEngine.calcTradingAccount(period);
+      title = `Trading Account - ${period}`;
+    } else if (activeTab === 'Profit & Loss') {
       data = LedgerEngine.calcIncomeStatement(period);
       title = `Statement of Profit and Loss - ${period}`;
     } else if (activeTab === 'Balance Sheet') {
@@ -72,12 +75,7 @@ function Statements({ period, currency }) {
       </div>
 
       <div className="statement-body">
-        {activeTab === 'Trading A/c' && (
-          <div className="card" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
-            <FileText size={32} style={{ opacity: 0.3, margin: '0 auto 12px' }} />
-            <div style={{ fontSize: '14px', fontWeight: 500 }}>Trading Account generation is pending itemized inventory mapping.</div>
-          </div>
-        )}
+        {activeTab === 'Trading A/c' && <TradingAccount period={period} currency={currency} />}
         {activeTab === 'Profit & Loss' && <IncomeStatement period={period} currency={currency} />}
         {activeTab === 'Balance Sheet' && <BalanceSheet period={period} currency={currency} />}
         {activeTab === 'Cash Flow' && <CashFlowStatement period={period} currency={currency} />}

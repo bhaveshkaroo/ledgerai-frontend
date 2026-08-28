@@ -6,6 +6,7 @@ import Statements from './components/Statements';
 import CompliancePanel from './components/CompliancePanel';
 import GSTCompliance from './components/GSTCompliance';
 import { InvoiceEngine } from './utils/InvoiceEngine';
+import { InventoryEngine } from './utils/InventoryEngine';
 import { supabase } from './supabaseClient';
 import { LayoutDashboard, Receipt, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale } from 'lucide-react';
 import Auth from './components/Auth';
@@ -27,6 +28,7 @@ function App() {
 
     // Ensure invoices are seeded (idempotent if handled, but we run once here)
     if (InvoiceEngine.invoices.length === 0) {
+      InventoryEngine.seedPurchases();
       InvoiceEngine.seedInvoices();
     }
 

@@ -1,4 +1,5 @@
 import { LedgerEngine } from './LedgerEngine.js';
+import { InventoryEngine } from './InventoryEngine.js';
 
 // HSN/SAC to GST Rate Master Data (Simulating what would back a real system)
 export const HSN_MASTER = {
@@ -21,7 +22,7 @@ export const InvoiceEngine = {
     let igstTotal = 0;
 
     const enrichedLineItems = lineItems.map(item => {
-      const master = HSN_MASTER[item.hsnSac] || { rate: 18 }; // Default 18% if unknown
+      const master = HSN_MASTER[item.hsnSac] || { rate: 18, type: 'services' }; // Default 18% if unknown
       const itemSubtotal = item.qty * item.rate;
       const itemTax = itemSubtotal * (master.rate / 100);
       
@@ -41,6 +42,7 @@ export const InvoiceEngine = {
 
       return {
         ...item,
+        type: master.type,
         gstRate: master.rate,
         subtotal: itemSubtotal,
         cgst,
@@ -80,6 +82,15 @@ export const InvoiceEngine = {
     if (!invoice) throw new Error("Invoice not found");
     if (invoice.status === 'Finalized') throw new Error("Invoice is already finalized");
     if (invoice.status === 'Void') throw new Error("Cannot finalize a voided invoice");
+
+    // Pre-check inventory if there are goods
+    invoice.lineItems.forEach(item => {
+      if (item.type === 'goods') {
+        // We do a dry run check here ideally, but since issueGoods throws on fail, it's fine.
+        // If it throws, the invoice fails to finalize and ledger isn't updated.
+        InventoryEngine.issueGoods(invoice.date, item.description, item.qty);
+      }
+    });
 
     // Post to Ledger
     // 1. Dr. Accounts Receivable (Total)
@@ -161,7 +172,7 @@ export const InvoiceEngine = {
       // but let's use actual item rates.
       // 50 * 10,000 = 500,000
       const inv = this.createInvoice(`${year}-${m}-15`, 'Acme Corp', [
-        { description: 'Consulting Services', hsnSac: '9983', qty: qty, rate: 10000 }
+        { description: 'Computers', hsnSac: '8471', qty: qty, rate: 10000 }
       ], 'LOCAL');
       
       this.finalizeInvoice(inv.invoiceNumber);

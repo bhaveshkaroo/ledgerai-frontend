@@ -79,12 +79,9 @@ const generateBalancedTransactions = () => {
     // Cash collection for AR (simulated 90% of old sales volume to keep cash flow realistic)
     addEntry(`${year}-${m}-20`, 'Cash Collection from AR', 'Cash and Bank', 'Accounts Receivable', salesVol * 0.9, 'Receipts');
     
-    // COGS & Purchases (Accrual AS 2)
-    const cogsVol = salesVol * 0.4;
-    const inventoryPurchase = cogsVol * 1.1; // Buy slightly more than sold
-    addEntry(`${year}-${m}-05`, 'Purchase of Raw Materials', 'Inventory', 'Accounts Payable', inventoryPurchase, 'Purchases');
-    addEntry(`${year}-${m}-28`, 'Cost of Goods Sold', 'Cost of Goods Sold', 'Inventory', cogsVol, 'COGS');
-    addEntry(`${year}-${m}-25`, 'Payment to Suppliers', 'Accounts Payable', 'Cash and Bank', inventoryPurchase * 0.85, 'Payments');
+    // Payment to Suppliers (Simulated 85% of standard volume to keep cash flow realistic)
+    const simulatedPurchaseVol = salesVol * 0.4 * 1.1;
+    addEntry(`${year}-${m}-25`, 'Payment to Suppliers', 'Accounts Payable', 'Cash and Bank', simulatedPurchaseVol * 0.85, 'Payments');
     
     // Expenses
     addEntry(`${year}-${m}-01`, 'Monthly Rent', 'Rent Expense', 'Cash and Bank', 40000, 'Expense');
@@ -151,19 +148,47 @@ export const LedgerEngine = {
     return balance;
   },
 
+  calcTradingAccount(period) {
+    const rev = this.getAccountBalance('Sales Revenue');
+    
+    // Purchases and Inventory
+    const cogs = this.getAccountBalance('Cost of Goods Sold');
+    const closingInventory = this.getAccountBalance('Inventory');
+    const purchasesOfStock = cogs + closingInventory; // Under AS 2, purchases = consumed + closing
+    const openingInventory = 0; // Simplified for Year 1
+    
+    const grossProfit = rev - (openingInventory + purchasesOfStock - closingInventory);
+    
+    return [
+      { name: "Particulars", value: null, level: 0, isSummary: true, isHeader: true },
+      { name: "Opening Stock", value: openingInventory, level: 1 },
+      { name: "Add: Purchases", value: purchasesOfStock, level: 1 },
+      { name: "Less: Closing Stock", value: -closingInventory, level: 1 },
+      { name: "Cost of Goods Sold", value: openingInventory + purchasesOfStock - closingInventory, level: 0, isSummary: true, isTotal: true },
+      { name: "Sales Revenue", value: rev, level: 1 },
+      { name: "Gross Profit / (Loss) carried to P&L", value: grossProfit, level: 0, isSummary: true, isTotal: true }
+    ];
+  },
+
   calcIncomeStatement(period) {
     const rev = this.getAccountBalance('Sales Revenue');
     const otherInc = this.getAccountBalance('Other Income');
     const totalRev = rev + otherInc;
     
     const cogs = this.getAccountBalance('Cost of Goods Sold');
+    
+    // For presentation per Schedule III
+    const closingInventory = this.getAccountBalance('Inventory');
+    const purchasesOfStock = cogs + closingInventory; // Since opening is 0 in year 1
+    const changesInInventory = -closingInventory; // Increase in inventory is a negative expense
+
     const salaries = this.getAccountBalance('Salary Expense');
     const rent = this.getAccountBalance('Rent Expense');
     const otherExp = this.getAccountBalance('Other Expenses');
     const dep = this.getAccountBalance('Depreciation Expense');
     const finCost = this.getAccountBalance('Finance Cost');
     
-    const totalExp = cogs + salaries + rent + otherExp + dep + finCost;
+    const totalExp = purchasesOfStock + changesInInventory + salaries + rent + otherExp + dep + finCost;
     const pbt = totalRev - totalExp;
     const currentTax = this.getAccountBalance('Tax Payable'); // Actual provision for the year
     const defTaxAsset = this.getAccountBalance('Deferred Tax Asset');
@@ -177,9 +202,9 @@ export const LedgerEngine = {
       { name: "II. Other income", value: otherInc, level: 0, isSummary: true },
       { name: "III. Total Revenue (I + II)", value: totalRev, level: 0, isSummary: true, isTotal: true },
       { name: "IV. Expenses", value: null, level: 0, isSummary: true },
-      { name: "Cost of materials consumed", value: cogs, level: 1 },
-      { name: "Purchases of Stock-in-Trade", value: 0, level: 1 },
-      { name: "Changes in inventories", value: 0, level: 1 },
+      { name: "Cost of materials consumed", value: 0, level: 1 },
+      { name: "Purchases of Stock-in-Trade", value: purchasesOfStock, level: 1 },
+      { name: "Changes in inventories", value: changesInInventory, level: 1 },
       { name: "Employee benefits expense", value: salaries, level: 1 },
       { name: "Finance costs", value: finCost, level: 1 },
       { name: "Depreciation and amortization expense", value: dep, level: 1 },
