@@ -5,6 +5,7 @@ import TransactionList from './components/TransactionList';
 import Statements from './components/Statements';
 import CompliancePanel from './components/CompliancePanel';
 import GSTCompliance from './components/GSTCompliance';
+import { InvoiceEngine } from './utils/InvoiceEngine';
 import { supabase } from './supabaseClient';
 import { LayoutDashboard, Receipt, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale } from 'lucide-react';
 import Auth from './components/Auth';
@@ -23,6 +24,11 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
+
+    // Ensure invoices are seeded (idempotent if handled, but we run once here)
+    if (InvoiceEngine.invoices.length === 0) {
+      InvoiceEngine.seedInvoices();
+    }
 
     return () => subscription.unsubscribe();
   }, []);

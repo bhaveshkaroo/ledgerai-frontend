@@ -19,6 +19,12 @@ export const CHART_OF_ACCOUNTS = [
   { name: "Accounts Payable", type: "Liability", classification: "BS", section: "Trade Payables" },
   { name: "Tax Payable", type: "Liability", classification: "BS", section: "Short-Term Provisions" },
   { name: "Short-Term Provisions", type: "Liability", classification: "BS", section: "Short-Term Provisions" },
+  { name: "Output CGST", type: "Liability", classification: "BS", section: "Short-Term Provisions" },
+  { name: "Output SGST", type: "Liability", classification: "BS", section: "Short-Term Provisions" },
+  { name: "Output IGST", type: "Liability", classification: "BS", section: "Short-Term Provisions" },
+  { name: "Input CGST", type: "Asset", classification: "BS", section: "Other current assets" },
+  { name: "Input SGST", type: "Asset", classification: "BS", section: "Other current assets" },
+  { name: "Input IGST", type: "Asset", classification: "BS", section: "Other current assets" },
   
   { name: "Fixed Assets (Gross)", type: "Asset", classification: "BS", section: "Tangible Assets" },
   { name: "Accumulated Depreciation", type: "Contra Asset", classification: "BS", section: "Tangible Assets" },
@@ -69,8 +75,8 @@ const generateBalancedTransactions = () => {
     const isFestive = month === 10 || month === 11; // Oct, Nov
     const salesVol = isFestive ? 800000 : 500000;
     
-    // Sales
-    addEntry(`${year}-${m}-15`, 'Sales to Customers', 'Accounts Receivable', 'Sales Revenue', salesVol, 'Sales');
+    // Sales are now handled by InvoiceEngine.seedInvoices()
+    // Cash collection for AR (simulated 90% of old sales volume to keep cash flow realistic)
     addEntry(`${year}-${m}-20`, 'Cash Collection from AR', 'Cash and Bank', 'Accounts Receivable', salesVol * 0.9, 'Receipts');
     
     // COGS & Purchases (Accrual AS 2)
@@ -110,6 +116,17 @@ const generateBalancedTransactions = () => {
 
 export const LedgerEngine = {
   transactions: generateBalancedTransactions(),
+  
+  postTransaction(date, narration, debitAccount, creditAccount, amount, category, ref = null) {
+    const idNum = this.transactions.length > 0 ? parseInt(this.transactions[0].id) + 1 : 1000;
+    const txRef = ref || `MNL-${idNum}`;
+    
+    this.transactions.push({ id: idNum + 'A', date, account: debitAccount, amount, type: 'Debit', narration, ref: txRef, category });
+    this.transactions.push({ id: idNum + 'B', date, account: creditAccount, amount, type: 'Credit', narration, ref: txRef, category });
+    
+    // Maintain descending sort
+    this.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+  },
   
   getFilteredTransactions(period, filters = {}) {
     return this.transactions; // Stubbed for brevity
@@ -193,7 +210,12 @@ export const LedgerEngine = {
     const taxPay = this.getAccountBalance('Tax Payable');
     const stProv = this.getAccountBalance('Short-Term Provisions');
     
-    const totalEqLiab = sc + re + loan + defTaxLiab + provEmployee + ap + taxPay + stProv;
+    const outCGST = this.getAccountBalance('Output CGST');
+    const outSGST = this.getAccountBalance('Output SGST');
+    const outIGST = this.getAccountBalance('Output IGST');
+    const totalCurrentLiabProv = taxPay + stProv + outCGST + outSGST + outIGST;
+    
+    const totalEqLiab = sc + re + loan + defTaxLiab + provEmployee + ap + totalCurrentLiabProv;
     
     const faGross = this.getAccountBalance('Fixed Assets (Gross)');
     const accDep = this.getAccountBalance('Accumulated Depreciation');
@@ -218,7 +240,12 @@ export const LedgerEngine = {
     const ar = this.getAccountBalance('Accounts Receivable');
     const cash = this.getAccountBalance('Cash and Bank');
     
-    const totalAssets = faNet + intNet + netDTA + inv + ar + cash;
+    const inCGST = this.getAccountBalance('Input CGST');
+    const inSGST = this.getAccountBalance('Input SGST');
+    const inIGST = this.getAccountBalance('Input IGST');
+    const otherCurrentAssets = inCGST + inSGST + inIGST;
+    
+    const totalAssets = faNet + intNet + netDTA + inv + ar + cash + otherCurrentAssets;
     
     return [
       { name: "I. EQUITY AND LIABILITIES", value: null, level: 0, isSummary: true },
@@ -236,7 +263,7 @@ export const LedgerEngine = {
       { name: "(a) Short-term borrowings", value: 0, level: 2 },
       { name: "(b) Trade payables", value: ap, level: 2 },
       { name: "(c) Other current liabilities", value: 0, level: 2 },
-      { name: "(d) Short-term provisions", value: taxPay + stProv, level: 2 },
+      { name: "(d) Short-term provisions (incl GST)", value: totalCurrentLiabProv, level: 2 },
       { name: "TOTAL EQUITY AND LIABILITIES", value: totalEqLiab, level: 0, isSummary: true, isTotal: true },
       
       { name: "II. ASSETS", value: null, level: 0, isSummary: true },
@@ -256,7 +283,7 @@ export const LedgerEngine = {
       { name: "(c) Trade receivables", value: ar, level: 2 },
       { name: "(d) Cash and cash equivalents", value: cash, level: 2 },
       { name: "(e) Short-term loans and advances", value: 0, level: 2 },
-      { name: "(f) Other current assets", value: 0, level: 2 },
+      { name: "(f) Other current assets (incl ITC)", value: otherCurrentAssets, level: 2 },
       { name: "TOTAL ASSETS", value: totalAssets, level: 0, isSummary: true, isTotal: true },
     ];
   },
