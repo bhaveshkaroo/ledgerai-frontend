@@ -10,6 +10,7 @@ export const CHART_OF_ACCOUNTS = [
   { name: "Finance Cost", type: "Expense", classification: "P&L", section: "Finance Costs" },
   { name: "Tax Expense", type: "Expense", classification: "P&L", section: "Tax Expense" },
   { name: "Other Expenses", type: "Expense", classification: "P&L", section: "Other Expenses" },
+  { name: "Bank Charges", type: "Expense", classification: "P&L", section: "Other Expenses" },
   
   { name: "Share Capital", type: "Equity", classification: "BS", section: "Share Capital" },
   { name: "Retained Earnings", type: "Equity", classification: "BS", section: "Reserves and Surplus" },
@@ -185,10 +186,11 @@ export const LedgerEngine = {
     const salaries = this.getAccountBalance('Salary Expense');
     const rent = this.getAccountBalance('Rent Expense');
     const otherExp = this.getAccountBalance('Other Expenses');
+    const bankChg = this.getAccountBalance('Bank Charges');
     const dep = this.getAccountBalance('Depreciation Expense');
     const finCost = this.getAccountBalance('Finance Cost');
     
-    const totalExp = purchasesOfStock + changesInInventory + salaries + rent + otherExp + dep + finCost;
+    const totalExp = purchasesOfStock + changesInInventory + salaries + rent + otherExp + bankChg + dep + finCost;
     const pbt = totalRev - totalExp;
     const currentTax = this.getAccountBalance('Tax Payable'); // Actual provision for the year
     const defTaxAsset = this.getAccountBalance('Deferred Tax Asset');
@@ -208,7 +210,7 @@ export const LedgerEngine = {
       { name: "Employee benefits expense", value: salaries, level: 1 },
       { name: "Finance costs", value: finCost, level: 1 },
       { name: "Depreciation and amortization expense", value: dep, level: 1 },
-      { name: "Other expenses", value: rent + otherExp, level: 1 },
+      { name: "Other expenses", value: rent + otherExp + bankChg, level: 1 },
       { name: "IV. Total expenses", value: totalExp, level: 0, isSummary: true, isTotal: true },
       { name: "V. Profit before exceptional and extraordinary items and tax (III-IV)", value: pbt, level: 0, isSummary: true, isTotal: true },
       { name: "VI. Exceptional items", value: 0, level: 0, isSummary: true },
