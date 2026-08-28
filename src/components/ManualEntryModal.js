@@ -5,6 +5,7 @@ const ManualEntryModal = ({ isOpen, onClose, onConfirm }) => {
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [suggestion, setSuggestion] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Editable fields for override
   const [editDebit, setEditDebit] = useState('');
@@ -17,42 +18,49 @@ const ManualEntryModal = ({ isOpen, onClose, onConfirm }) => {
   const handleSuggest = async () => {
     if (!description.trim()) return;
     setLoading(true);
+    setErrorMsg('');
     
     try {
-      // For standalone demo, we mock the API response if backend isn't running
       const res = await fetch('http://localhost:8000/api/ai/suggest-entry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description })
-      }).catch(() => null);
+      });
 
-      let data;
-      if (res && res.ok) {
-        data = await res.json();
-      } else {
-        // Fallback mock if backend is down
-        const amtMatch = description.match(/\d+(?:,\d+)*(?:\.\d+)?/);
-        const amount = amtMatch ? parseFloat(amtMatch[0].replace(',', '')) : 0;
-        
-        const isReceipt = description.toLowerCase().includes('received');
-        data = {
-          transaction_type: isReceipt ? 'Receipt' : 'Payment',
-          debit_account: isReceipt ? 'Cash and Bank' : 'Miscellaneous Expense',
-          credit_account: isReceipt ? 'Accounts Receivable' : 'Cash and Bank',
-          amount: amount,
-          narration: description,
-          confidence: 0.85
-        };
+      if (!res.ok) {
+        let errDetail = 'AI classification unavailable — please enter manually.';
+        try {
+          const errJson = await res.json();
+          if (errJson && errJson.detail) errDetail = errJson.detail;
+        } catch (_) {}
+        throw new Error(errDetail);
       }
 
+      const data = await res.json();
       setSuggestion(data);
-      setEditDebit(data.debit_account);
-      setEditCredit(data.credit_account);
-      setEditAmount(data.amount.toString());
-      setEditNarration(data.narration);
+      setEditDebit(data.debit_account || '');
+      setEditCredit(data.credit_account || '');
+      setEditAmount(data.amount ? data.amount.toString() : '');
+      setEditNarration(data.narration || description);
       
     } catch (err) {
       console.error(err);
+      setErrorMsg(err.message || 'AI classification unavailable — please enter manually.');
+      // Graceful fallback to manual entry mode with empty fields
+      setSuggestion({
+        transaction_type: 'Journal',
+        debit_account: '',
+        credit_account: '',
+        amount: 0,
+        narration: description,
+        confidence: 0,
+        is_ambiguous: true,
+        clarification_needed: 'Manual entry fallback'
+      });
+      setEditDebit('');
+      setEditCredit('');
+      setEditAmount('');
+      setEditNarration(description);
     } finally {
       setLoading(false);
     }
@@ -90,8 +98,13 @@ const ManualEntryModal = ({ isOpen, onClose, onConfirm }) => {
         {!suggestion ? (
           <div>
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-              Describe the transaction in plain English. LedgerAI will determine the correct double-entry posting.
+              Describe the transaction in plain English. Meso AI will determine the correct double-entry posting.
             </p>
+            {errorMsg && (
+              <div style={{ padding: '8px 12px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '6px', fontSize: '12px', marginBottom: '12px' }}>
+                {errorMsg}
+              </div>
+            )}
             <textarea 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -118,9 +131,19 @@ const ManualEntryModal = ({ isOpen, onClose, onConfirm }) => {
           </div>
         ) : (
           <div>
-            <div style={{ padding: '12px', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--accent-emerald)', fontWeight: 600, marginBottom: '8px' }}>
-                SUGGESTED POSTING ({Math.round(suggestion.confidence * 100)}% Confidence)
+            {errorMsg && (
+              <div style={{ padding: '8px 12px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '6px', fontSize: '12px', marginBottom: '12px' }}>
+                {errorMsg}
+              </div>
+            )}
+            <div style={{ padding: '12px', backgroundColor: suggestion.is_ambiguous ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '12px', color: suggestion.is_ambiguous ? '#f59e0b' : 'var(--accent-emerald)', fontWeight: 600, marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>
+                  {suggestion.is_ambiguous ? 'AMBIGUOUS INPUT (Review Carefully)' : `SUGGESTED POSTING (${Math.round(suggestion.confidence * 100)}% Confidence)`}
+                </span>
+                {suggestion.clarification_needed && (
+                  <span style={{ fontSize: '11px', fontWeight: 400 }}>{suggestion.clarification_needed}</span>
+                )}
               </div>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
