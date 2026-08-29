@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Bot, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
+import { InventoryEngine } from '../utils/InventoryEngine';
+import { InvoiceEngine } from '../utils/InvoiceEngine';
 
 const CompliancePanel = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState('chat');
@@ -15,6 +17,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // --- Static audit findings (unchanged, runs client-side) ---
   const getAuditFindings = () => {
     const txs = LedgerEngine.transactions;
     const findings = [];
@@ -61,40 +64,93 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     return findings;
   };
 
-  const handleMockResponse = (userMsg) => {
-    const msg = userMsg.toLowerCase();
+  // --- Build financial context snapshot to send with every query ---
+  const buildFinancialContext = () => {
     const kpis = LedgerEngine.calcKPIs();
+    const bs = LedgerEngine.calcBalanceSheet();
+    const totalEq = bs.find(r => r.name.toLowerCase().includes('total equity and liabilities'))?.value || 0;
+    const totalAssets = bs.find(r => r.name.toLowerCase().includes('total assets'))?.value || 0;
+    const txs = LedgerEngine.transactions;
 
-    if (msg.includes('cash') && (msg.includes('drop') || msg.includes('decrease') || msg.includes('low'))) {
-      return `Your current cash balance is ${formatINR(kpis.cashBalance)}. The main cash outflows are:\n• Monthly rent: ₹40,000/month\n• Salaries: ₹1,20,000/month\n• Supplier payments (85% of purchases)\n• Loan interest: ₹15,000/month\n\nCash collections from customers cover only 90% of sales (10% remains as receivables). Consider tightening collection cycles.`;
-    }
-    if (msg.includes('profit') || msg.includes('loss') || msg.includes('revenue')) {
-      return `Your P&L summary:\n• Total Revenue: ${formatINR(kpis.totalRevenue)}\n• Total Expenses: ${formatINR(kpis.totalExpenses)}\n• Net Profit: ${formatINR(kpis.netProfit)}\n\nThe largest expense category is Cost of Goods Sold (40% of revenue), followed by salaries.`;
-    }
-    if (msg.includes('anomal') || msg.includes('flag') || msg.includes('issue')) {
-      const findings = getAuditFindings();
-      const issues = findings.filter(f => f.severity !== 'ok');
-      if (issues.length === 0) return 'No anomalies detected. All entries are balanced and compliant.';
-      return `I found ${issues.length} issue(s):\n${issues.map(f => `• [${f.severity.toUpperCase()}] ${f.title}: ${f.detail}`).join('\n')}`;
-    }
-    if (msg.includes('correct') || msg.includes('fix') || msg.includes('journal entry')) {
-      return "I can suggest a corrective journal entry. Please describe the issue (e.g., 'reverse the duplicate salary entry for March') and I'll prepare the entry for your confirmation.";
-    }
-    return `I analyzed your ledger. Here's a quick summary:\n• Revenue: ${formatINR(kpis.totalRevenue)}\n• Cash: ${formatINR(kpis.cashBalance)}\n• Net Profit: ${formatINR(kpis.netProfit)}\n\nAsk me about specific anomalies, cash flow trends, or compliance issues.`;
+    let totalDebits = 0, totalCredits = 0;
+    txs.forEach(t => {
+      if (t.type === 'Debit') totalDebits += t.amount;
+      else totalCredits += t.amount;
+    });
+
+    // Recent 10 transactions as readable text
+    const recent = [...txs].slice(-10).map(t =>
+      `${t.date} | ${t.type} | ${t.account} | ₹${t.amount.toLocaleString('en-IN')} | ${t.narration || 'No narration'}`
+    ).join('\n');
+
+    // Inventory summary
+    let inventoryValue = 0;
+    try {
+      const items = InventoryEngine.getItemSummary ? InventoryEngine.getItemSummary() : [];
+      inventoryValue = items.reduce((s, i) => s + i.totalValue, 0);
+    } catch (_) {}
+
+    // Invoice count
+    let invoiceCount = 0;
+    try { invoiceCount = InvoiceEngine.invoices.length; } catch (_) {}
+
+    return {
+      cashBalance: kpis.cashBalance,
+      totalRevenue: kpis.totalRevenue,
+      totalExpenses: kpis.totalExpenses,
+      netProfit: kpis.netProfit,
+      accountsReceivable: kpis.accountsReceivable || 0,
+      accountsPayable: kpis.accountsPayable || 0,
+      totalAssets,
+      totalEquityAndLiabilities: totalEq,
+      bsBalanced: Math.abs(totalEq - totalAssets) <= 1,
+      totalDebits,
+      totalCredits,
+      transactionCount: txs.length,
+      inventoryValue,
+      invoiceCount,
+      recentTransactions: recent
+    };
   };
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  // --- Real Gemini API call via backend ---
+  const handleSend = async () => {
+    if (!input.trim() || isTyping) return;
     const userMsg = input.trim();
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInput('');
     setIsTyping(true);
 
-    setTimeout(() => {
-      const response = handleMockResponse(userMsg);
-      setMessages(prev => [...prev, { role: 'bot', text: response }]);
+    try {
+      const res = await fetch('http://localhost:8000/api/ai/audit-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: userMsg,
+          financial_context: buildFinancialContext()
+        })
+      });
+
+      if (!res.ok) {
+        let errDetail = 'AI Audit Assistant unavailable — please try again.';
+        try {
+          const errJson = await res.json();
+          if (errJson && errJson.detail) errDetail = errJson.detail;
+        } catch (_) {}
+        throw new Error(errDetail);
+      }
+
+      const data = await res.json();
+      setMessages(prev => [...prev, { role: 'bot', text: data.answer }]);
+
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        role: 'bot',
+        text: `⚠️ ${err.message || 'AI Audit Assistant unavailable — please try again.'}`
+      }]);
+    } finally {
       setIsTyping(false);
-    }, 800);
+    }
   };
 
   const findings = getAuditFindings();
@@ -106,6 +162,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Bot size={20} />
           <span style={{ fontWeight: 600, fontSize: '15px' }}>AI Audit Assistant</span>
+          <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(16,185,129,0.12)', color: '#10b981', fontWeight: 600 }}>Live</span>
         </div>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
           <X size={18} color="var(--text-muted)" />
@@ -135,7 +192,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
               </div>
             ))}
             {isTyping && (
-              <div className="chat-bubble bot" style={{ opacity: 0.6 }}>Analyzing...</div>
+              <div className="chat-bubble bot" style={{ opacity: 0.6 }}>Analyzing your books...</div>
             )}
             <div ref={chatEndRef} />
           </div>
@@ -148,13 +205,20 @@ const CompliancePanel = ({ isOpen, onClose }) => {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Ask about your statements..."
+              disabled={isTyping}
               style={{
                 flex: 1, padding: '10px 14px', borderRadius: 'var(--radius-pill)',
                 border: '1px solid var(--border)', fontSize: '13px', outline: 'none',
-                background: 'var(--bg-surface)'
+                background: 'var(--bg-surface)',
+                opacity: isTyping ? 0.7 : 1
               }}
             />
-            <button onClick={handleSend} className="btn-primary" style={{ padding: '10px 14px', borderRadius: 'var(--radius-pill)' }}>
+            <button
+              onClick={handleSend}
+              disabled={isTyping || !input.trim()}
+              className="btn-primary"
+              style={{ padding: '10px 14px', borderRadius: 'var(--radius-pill)', opacity: isTyping || !input.trim() ? 0.5 : 1 }}
+            >
               <Send size={16} />
             </button>
           </div>
