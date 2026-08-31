@@ -1,64 +1,128 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot, AlertTriangle, CheckCircle2, Info, Key, Check } from 'lucide-react';
-import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
+import { X, Send, Bot, AlertTriangle, CheckCircle2, Info, Key, Check, Paperclip, Image as ImageIcon, FileText, CheckCheck } from 'lucide-react';
+import { LedgerEngine, formatINR, CHART_OF_ACCOUNTS } from '../utils/LedgerEngine';
 import { InventoryEngine } from '../utils/InventoryEngine';
 import { InvoiceEngine } from '../utils/InvoiceEngine';
+import { supabase } from '../supabaseClient';
 
 const getGeminiKey = () => localStorage.getItem('MESO_GEMINI_API_KEY') || process.env.REACT_APP_GEMINI_API_KEY || '';
-const GEMINI_MODEL = 'gemini-3.6-flash';
+const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash'];
 
-const SYSTEM_INSTRUCTION = `You are Meso AI Audit Assistant — an expert Indian Chartered Accountant and financial auditor embedded in an Indian MSME accounting platform called "Meso".
+const COA_NAMES = CHART_OF_ACCOUNTS.map(a => a.name).join(', ');
+
+const SYSTEM_INSTRUCTION = `You are Meso AI Audit & Accounting Assistant — an expert Indian Chartered Accountant embedded in the Indian MSME accounting software "Meso".
 
 Your capabilities:
-1. Ledger Review: Analyze ledger transactions for anomalies — duplicates, unusual amounts, missing narrations, or entries that look inconsistent with normal business operations.
-2. AS Compliance: Check whether the books reflect proper treatment under Indian Accounting Standards (AS 1 disclosure, AS 2 inventory valuation, AS 3 cash flow, AS 9 revenue recognition, AS 10 fixed assets, AS 15 employee benefits, AS 22 deferred tax, AS 26 intangibles, AS 29 provisions).
-3. Financial Q&A: Answer questions about the user's own financial statements — Balance Sheet, P&L, Cash Flow, Trial Balance, GST position — using the actual data provided in the context.
-4. Corrective Entries: When asked, suggest corrective journal entries in proper double-entry format. Always present these as SUGGESTIONS requiring user confirmation — NEVER state that an entry has been posted or will be auto-posted.
+1. Document & Photo OCR: When the user uploads an invoice, bill, receipt, or document image/PDF, analyze it, extract key details (Vendor/Customer, Date, Invoice No, GSTIN, Line items, Tax, Total Amount), and PROPOSE a complete double-entry journal entry.
+2. Natural Language Journal Entry: When the user asks to record or create any transaction (e.g. "Record rent payment of 25000", "Bought 5 chairs for 10000 with 18% GST on credit", "Received 50000 from client"), formulate the proper balanced Indian double-entry journal voucher.
+3. Ledger Review & Anomaly Detection: Review transactions for anomalies, duplicate postings, unrecorded expenses, or missing disclosures.
+4. AS Compliance & Financial Q&A: Answer questions regarding Balance Sheet, P&L, Cash Flow, AS 1-29 compliance, and ratios using the provided financial context.
 
-Formatting Rules:
-- NEVER use LaTeX math tags, delimiters, or expressions (e.g. do NOT use $$, \\frac, \\text, \\mathbf).
-- Format all equations, fractions, and ratios in clean, standard human-readable text. For example:
-  (Rs. 20,00,000 ÷ Rs. 42,17,000) = 0.47 : 1
-- Use Indian accounting terminology and INR formatting (Rs. or ₹).
-- Be concise, structured, and professional. Use bullet points and clean headers.
-- When suggesting corrective entries, format them clearly and always end with: "This is a suggestion — please review and confirm before posting."`;
+Chart of Accounts available in Meso:
+${COA_NAMES}
+
+IMPORTANT Journal Entry Proposal Format:
+Whenever you propose or create a journal entry (from an uploaded document, photo, or user command), ALWAYS include a JSON proposal block enclosed in [JOURNAL_ENTRY_PROPOSAL]...[/JOURNAL_ENTRY_PROPOSAL] like this:
+
+[JOURNAL_ENTRY_PROPOSAL]
+{
+  "date": "YYYY-MM-DD",
+  "narration": "Brief description of the transaction and party",
+  "category": "Expense" | "Revenue" | "Capital" | "Investing" | "Financing" | "Tax",
+  "legs": [
+    { "account": "Debit Account Name from COA", "type": "Debit", "amount": 10000 },
+    { "account": "Credit Account Name from COA", "type": "Credit", "amount": 10000 }
+  ]
+}
+[/JOURNAL_ENTRY_PROPOSAL]
+
+Rules for Journal Proposals:
+- Total Debits MUST equal Total Credits.
+- Use only valid accounts from the Chart of Accounts provided.
+- If GST applies, split into Input CGST & Input SGST (intra-state) or Input IGST (inter-state), and Output CGST & Output SGST or Output IGST for sales.
+- Outside the JSON block, explain your reasoning, tax calculations, and note that the user can click "Confirm & Post to Ledger" to record it.
+
+General Formatting Rules:
+- NEVER use LaTeX math delimiters ($$, $, \\frac, \\text, \\mathbf).
+- Format fractions and ratios in clean human text: (Rs. 20,000 ÷ Rs. 40,000) = 0.50 : 1.
+- Use Indian accounting terminology and INR formatting (Rs. or ₹).`;
 
 const cleanTextFormatting = (text) => {
   if (!text) return '';
   return text
-    // Replace \frac{a}{b} with (a / b)
     .replace(/\\frac\s*\{([^}]+)\}\s*\{([^}]+)\}/g, '($1 ÷ $2)')
-    // Replace \text{...} or \mathbf{...} or \textbf{...} with inner content
     .replace(/\\(text|mathbf|textbf|mathit|mathrm)\s*\{([^}]+)\}/g, '$2')
-    // Replace LaTeX symbols
     .replace(/\\times/g, '×')
     .replace(/\\div/g, '÷')
     .replace(/\\pm/g, '±')
     .replace(/\\approx/g, '≈')
-    // Remove $$ and $ math delimiters
     .replace(/\$\$([\s\S]*?)\$\$/g, '$1')
     .replace(/\$([^\$]+)\$/g, '$1')
-    // Clean up double spaces or residual backslashes
     .replace(/\\([a-zA-Z]+)/g, '$1');
+};
+
+const parseJournalProposals = (text) => {
+  if (!text) return { cleanText: text, proposals: [] };
+  const regex = /\[JOURNAL_ENTRY_PROPOSAL\]([\s\S]*?)\[\/JOURNAL_ENTRY_PROPOSAL\]/g;
+  const proposals = [];
+  let match;
+  let cleanText = text;
+
+  while ((match = regex.exec(text)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1].trim());
+      proposals.push(parsed);
+    } catch (e) {
+      console.warn('Could not parse journal proposal JSON', e);
+    }
+  }
+
+  cleanText = cleanText.replace(regex, '').trim();
+  return { cleanText, proposals };
 };
 
 const CompliancePanel = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState('chat');
   const [messages, setMessages] = useState([
-    { role: 'bot', text: "Hello! I'm your AI Audit Assistant. I can review your ledger entries, flag anomalies, answer questions about your statements, and suggest corrective journal entries. What would you like to know?" }
+    {
+      role: 'bot',
+      text: "Hello! I'm your AI Audit & Accounting Assistant.\n\n• 📸 **Upload bills or receipts** — I'll scan them and draft the journal voucher.\n• ✍️ **Type any transaction** — e.g. *\"Paid Rs. 15,000 for office stationery with 18% GST via bank\"*.\n• 📊 **Ask financial questions** about your Balance Sheet, P&L, and compliance.",
+      proposals: [],
+      postedState: {}
+    }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showKeyInput, setShowKeyInput] = useState(!getGeminiKey());
   const [apiKeyInput, setApiKeyInput] = useState(getGeminiKey());
   const [keySaved, setKeySaved] = useState(false);
+  const [attachment, setAttachment] = useState(null); // { name, type, base64, previewUrl }
+  const fileInputRef = useRef(null);
   const chatEndRef = useRef(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isTyping]);
 
-  // --- Static audit findings (unchanged, runs client-side) ---
+  // Handle file selection (Images & PDFs)
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64Data = reader.result.split(',')[1];
+      setAttachment({
+        name: file.name,
+        type: file.type,
+        base64: base64Data,
+        previewUrl: file.type.startsWith('image/') ? reader.result : null
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ''; // Reset
+  };
+
   const getAuditFindings = () => {
     const txs = LedgerEngine.transactions;
     const findings = [];
@@ -101,7 +165,6 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     return findings;
   };
 
-  // --- Build financial context snapshot ---
   const buildFinancialContext = () => {
     const kpis = LedgerEngine.calcKPIs();
     const bs = LedgerEngine.calcBalanceSheet();
@@ -145,22 +208,30 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     return parts.join('\n');
   };
 
-const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash'];
-
-  // --- Direct Gemini API call from browser with automatic fallback ---
-  const callGemini = async (userQuestion) => {
+  const callGemini = async (userQuestion, fileAttachment = null) => {
     const key = getGeminiKey();
     if (!key) {
       throw new Error('Please set your Gemini API Key first using the Key button above.');
     }
 
     const contextSection = buildFinancialContext();
-    const prompt = `User question: "${userQuestion}"\n\n--- CURRENT FINANCIAL DATA ---\n${contextSection}\n--- END FINANCIAL DATA ---`;
+    const promptText = userQuestion ? `User message: "${userQuestion}"\n\n--- CURRENT FINANCIAL DATA ---\n${contextSection}\n--- END FINANCIAL DATA ---` : `Please analyze this uploaded document/invoice, extract all relevant line items and taxes, and formulate the appropriate double-entry journal voucher in the specified JSON proposal format.\n\n--- CURRENT FINANCIAL DATA ---\n${contextSection}\n--- END FINANCIAL DATA ---`;
+
+    const parts = [];
+    if (fileAttachment && fileAttachment.base64) {
+      parts.push({
+        inlineData: {
+          mimeType: fileAttachment.type || 'image/jpeg',
+          data: fileAttachment.base64
+        }
+      });
+    }
+    parts.push({ text: promptText });
 
     const payload = {
-      contents: [{ parts: [{ text: prompt }] }],
+      contents: [{ parts }],
       systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
-      generationConfig: { temperature: 0.3 }
+      generationConfig: { temperature: 0.2 }
     };
 
     let lastError = null;
@@ -184,7 +255,6 @@ const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash
           const errData = await res.json().catch(() => ({}));
           const errMsg = errData?.error?.message || `Error ${res.status}`;
           lastError = errMsg;
-          // If auth error / invalid key, don't keep trying other models
           if (res.status === 400 && errMsg.toLowerCase().includes('key')) {
             throw new Error(errMsg);
           }
@@ -200,12 +270,19 @@ const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash
     throw new Error(lastError || 'High demand on Gemini models. Please retry in a few seconds.');
   };
 
-  // --- Handle send ---
   const handleSend = async () => {
-    if (!input.trim() || isTyping) return;
+    if ((!input.trim() && !attachment) || isTyping) return;
     const userMsg = input.trim();
-    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    const sentAttachment = attachment;
+    
+    setMessages(prev => [...prev, {
+      role: 'user',
+      text: userMsg || (sentAttachment ? `Uploaded: ${sentAttachment.name}` : ''),
+      attachment: sentAttachment
+    }]);
+    
     setInput('');
+    setAttachment(null);
     setIsTyping(true);
 
     const currentKey = getGeminiKey();
@@ -217,8 +294,15 @@ const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash
     }
 
     try {
-      const answer = await callGemini(userMsg);
-      setMessages(prev => [...prev, { role: 'bot', text: cleanTextFormatting(answer) }]);
+      const rawAnswer = await callGemini(userMsg, sentAttachment);
+      const { cleanText, proposals } = parseJournalProposals(rawAnswer);
+      
+      setMessages(prev => [...prev, {
+        role: 'bot',
+        text: cleanTextFormatting(cleanText),
+        proposals: proposals,
+        postedState: {}
+      }]);
     } catch (err) {
       if (err.message && err.message.toLowerCase().includes('key')) {
         setShowKeyInput(true);
@@ -232,16 +316,72 @@ const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash
     }
   };
 
+  // Post the proposed voucher to the Ledger
+  const handlePostProposal = async (msgIndex, propIndex, proposal) => {
+    const date = proposal.date || new Date().toISOString().split('T')[0];
+    const narration = proposal.narration || 'AI Posted Journal Entry';
+    const category = proposal.category || 'Expense';
+    const idNum = LedgerEngine.transactions.length > 0 ? parseInt(LedgerEngine.transactions[0].id) + 1 : 1000;
+    const ref = `AI-${idNum}`;
+
+    if (proposal.legs && Array.isArray(proposal.legs)) {
+      proposal.legs.forEach((leg, idx) => {
+        LedgerEngine.transactions.push({
+          id: `${idNum}${String.fromCharCode(65 + idx)}`,
+          date,
+          account: leg.account,
+          amount: Number(leg.amount),
+          type: leg.type,
+          narration,
+          ref,
+          category
+        });
+      });
+    } else if (proposal.debitAccount && proposal.creditAccount && proposal.amount) {
+      LedgerEngine.postTransaction(date, narration, proposal.debitAccount, proposal.creditAccount, Number(proposal.amount), category, ref);
+    }
+
+    LedgerEngine.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Optional Cloud Supabase record
+    try {
+      await supabase.from('transactions').insert([{
+        ref,
+        date,
+        narration,
+        category,
+        data: proposal
+      }]);
+    } catch (_) {}
+
+    // Dispatch global event so Dashboard, Statements, Day Book re-render
+    window.dispatchEvent(new Event('ledger-updated'));
+
+    // Update message card state to posted
+    setMessages(prev => {
+      const next = [...prev];
+      const targetMsg = { ...next[msgIndex] };
+      targetMsg.postedState = { ...targetMsg.postedState, [propIndex]: true };
+      next[msgIndex] = targetMsg;
+      return next;
+    });
+  };
+
   const findings = getAuditFindings();
 
   return (
     <div className={`chat-drawer ${isOpen ? 'open' : ''}`}>
       {/* Header */}
-      <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Bot size={20} />
-          <span style={{ fontWeight: 600, fontSize: '15px' }}>AI Audit Assistant</span>
-          <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(16,185,129,0.12)', color: '#10b981', fontWeight: 600 }}>Live</span>
+          <Bot size={20} color="#10b981" />
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>Meso AI Assistant</span>
+              <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(16,185,129,0.12)', color: '#10b981', fontWeight: 600 }}>OCR & Entry</span>
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Audit • Bill Scanner • Auto-Journal</div>
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <button 
@@ -252,7 +392,7 @@ const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash
               border: '1px solid var(--border)', 
               borderRadius: '6px', 
               cursor: 'pointer', 
-              padding: '5px 8px',
+              padding: '4px 8px',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
@@ -260,7 +400,7 @@ const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash
               color: 'var(--text-secondary)'
             }}
           >
-            <Key size={13} color="var(--text-muted)" />
+            <Key size={12} color="var(--text-muted)" />
             <span>Key</span>
           </button>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
@@ -319,11 +459,11 @@ const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
         {['chat', 'findings'].map(tab => (
           <div key={tab} onClick={() => setActiveTab(tab)} style={{
-            flex: 1, padding: '12px', textAlign: 'center', fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+            flex: 1, padding: '10px', textAlign: 'center', fontSize: '13px', fontWeight: 500, cursor: 'pointer',
             borderBottom: activeTab === tab ? '2px solid var(--text-primary)' : '2px solid transparent',
             color: activeTab === tab ? 'var(--text-primary)' : 'var(--text-muted)'
           }}>
-            {tab === 'chat' ? 'AI Advisor' : `Findings (${findings.length})`}
+            {tab === 'chat' ? 'Conversational Ledger' : `Audit Findings (${findings.length})`}
           </div>
         ))}
       </div>
@@ -331,26 +471,209 @@ const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash
       {activeTab === 'chat' ? (
         <>
           {/* Chat Messages */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column' }}>
-            {messages.map((msg, i) => (
-              <div key={i} className={`chat-bubble ${msg.role}`} style={{ whiteSpace: 'pre-line' }}>
-                {msg.text}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {messages.map((msg, msgIndex) => (
+              <div key={msgIndex} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                
+                {/* User Attachment Preview */}
+                {msg.attachment && (
+                  <div style={{
+                    marginBottom: '6px',
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border)',
+                    fontSize: '11px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    {msg.attachment.previewUrl ? (
+                      <img src={msg.attachment.previewUrl} alt="Upload preview" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                    ) : (
+                      <FileText size={16} color="#3b82f6" />
+                    )}
+                    <span>{msg.attachment.name}</span>
+                  </div>
+                )}
+
+                {/* Text Bubble */}
+                {msg.text && (
+                  <div className={`chat-bubble ${msg.role}`} style={{ whiteSpace: 'pre-line', maxWidth: '85%' }}>
+                    {msg.text}
+                  </div>
+                )}
+
+                {/* Proposed Journal Entry Cards */}
+                {msg.proposals && msg.proposals.map((prop, propIndex) => {
+                  const isPosted = msg.postedState && msg.postedState[propIndex];
+                  return (
+                    <div key={propIndex} style={{
+                      marginTop: '8px',
+                      padding: '14px',
+                      background: 'var(--bg-surface)',
+                      border: '1px solid #10b981',
+                      borderRadius: '10px',
+                      maxWidth: '92%',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <CheckCircle2 size={15} color="#10b981" />
+                          <span style={{ fontSize: '13px', fontWeight: 600 }}>Proposed Journal Voucher</span>
+                        </div>
+                        <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 600 }}>
+                          {prop.category || 'Journal Entry'}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                        Date: <strong>{prop.date || new Date().toISOString().split('T')[0]}</strong>
+                      </div>
+
+                      {/* Line Table */}
+                      <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse', marginBottom: '10px' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '10px', textAlign: 'left' }}>
+                            <th style={{ padding: '4px' }}>Account Head</th>
+                            <th style={{ padding: '4px', textAlign: 'right' }}>Type</th>
+                            <th style={{ padding: '4px', textAlign: 'right' }}>Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {prop.legs ? prop.legs.map((leg, li) => (
+                            <tr key={li} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                              <td style={{ padding: '4px', fontWeight: 500 }}>{leg.account}</td>
+                              <td style={{ padding: '4px', textAlign: 'right', color: leg.type === 'Debit' ? '#3b82f6' : '#8b5cf6', fontWeight: 600 }}>{leg.type}</td>
+                              <td style={{ padding: '4px', textAlign: 'right', fontWeight: 600 }}>₹{Number(leg.amount).toLocaleString('en-IN')}</td>
+                            </tr>
+                          )) : (
+                            <>
+                              <tr>
+                                <td style={{ padding: '4px', fontWeight: 500 }}>{prop.debitAccount}</td>
+                                <td style={{ padding: '4px', textAlign: 'right', color: '#3b82f6', fontWeight: 600 }}>Debit</td>
+                                <td style={{ padding: '4px', textAlign: 'right', fontWeight: 600 }}>₹{Number(prop.amount).toLocaleString('en-IN')}</td>
+                              </tr>
+                              <tr>
+                                <td style={{ padding: '4px', fontWeight: 500 }}>{prop.creditAccount}</td>
+                                <td style={{ padding: '4px', textAlign: 'right', color: '#8b5cf6', fontWeight: 600 }}>Credit</td>
+                                <td style={{ padding: '4px', textAlign: 'right', fontWeight: 600 }}>₹{Number(prop.amount).toLocaleString('en-IN')}</td>
+                              </tr>
+                            </>
+                          )}
+                        </tbody>
+                      </table>
+
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '10px', fontStyle: 'italic' }}>
+                        Narration: {prop.narration}
+                      </div>
+
+                      {/* Action Button */}
+                      {isPosted ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontSize: '12px', fontWeight: 600, padding: '6px' }}>
+                          <CheckCheck size={16} color="#10b981" />
+                          <span>Posted to Ledger & Books Updated ✅</span>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={() => handlePostProposal(msgIndex, propIndex, prop)}
+                            className="btn-primary"
+                            style={{
+                              flex: 1,
+                              padding: '7px 12px',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <Check size={14} />
+                            <span>Confirm & Post to Ledger</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ))}
             {isTyping && (
-              <div className="chat-bubble bot" style={{ opacity: 0.6 }}>Analyzing your books...</div>
+              <div className="chat-bubble bot" style={{ opacity: 0.6 }}>
+                Analyzing document & financial books...
+              </div>
             )}
             <div ref={chatEndRef} />
           </div>
 
-          {/* Input */}
-          <div style={{ padding: '16px', borderTop: '1px solid var(--border)', display: 'flex', gap: '8px' }}>
+          {/* Attachment Preview above input */}
+          {attachment && (
+            <div style={{
+              margin: '0 16px',
+              padding: '8px 12px',
+              background: 'rgba(59,130,246,0.08)',
+              border: '1px solid rgba(59,130,246,0.2)',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {attachment.previewUrl ? (
+                  <img src={attachment.previewUrl} alt="Preview" style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '4px' }} />
+                ) : (
+                  <FileText size={18} color="#3b82f6" />
+                )}
+                <div>
+                  <div style={{ fontWeight: 500 }}>{attachment.name}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Ready for OCR & Journal Entry</div>
+                </div>
+              </div>
+              <button onClick={() => setAttachment(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
+                <X size={15} color="var(--text-muted)" />
+              </button>
+            </div>
+          )}
+
+          {/* Hidden File Input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            accept="image/*,.pdf"
+            style={{ display: 'none' }}
+          />
+
+          {/* Input Bar */}
+          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              title="Upload Invoice / Receipt Photo or PDF"
+              style={{
+                background: attachment ? 'rgba(59,130,246,0.1)' : 'var(--bg-surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              <Paperclip size={16} color={attachment ? '#3b82f6' : 'var(--text-muted)'} />
+            </button>
+            
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Ask about your statements..."
+              placeholder={attachment ? "Add instructions or press send..." : "Type transaction or ask about your books..."}
               disabled={isTyping}
               style={{
                 flex: 1, padding: '10px 14px', borderRadius: 'var(--radius-pill)',
@@ -361,11 +684,19 @@ const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash
             />
             <button
               onClick={handleSend}
-              disabled={isTyping || !input.trim()}
+              disabled={isTyping || (!input.trim() && !attachment)}
               className="btn-primary"
-              style={{ padding: '10px 14px', borderRadius: 'var(--radius-pill)', opacity: isTyping || !input.trim() ? 0.5 : 1 }}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: isTyping || (!input.trim() && !attachment) ? 0.5 : 1
+              }}
             >
-              <Send size={16} />
+              <Send size={15} />
             </button>
           </div>
         </>
