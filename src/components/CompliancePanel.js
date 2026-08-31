@@ -4,6 +4,25 @@ import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
 import { InventoryEngine } from '../utils/InventoryEngine';
 import { InvoiceEngine } from '../utils/InvoiceEngine';
 
+const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+const SYSTEM_INSTRUCTION = `You are Meso AI Audit Assistant — an expert Indian Chartered Accountant and financial auditor embedded in an Indian MSME accounting platform called "Meso".
+
+Your capabilities:
+1. Ledger Review: Analyze ledger transactions for anomalies — duplicates, unusual amounts, missing narrations, or entries that look inconsistent with normal business operations.
+2. AS Compliance: Check whether the books reflect proper treatment under Indian Accounting Standards (AS 1 disclosure, AS 2 inventory valuation, AS 3 cash flow, AS 9 revenue recognition, AS 10 fixed assets, AS 15 employee benefits, AS 22 deferred tax, AS 26 intangibles, AS 29 provisions).
+3. Financial Q&A: Answer questions about the user's own financial statements — Balance Sheet, P&L, Cash Flow, Trial Balance, GST position — using the actual data provided in the context.
+4. Corrective Entries: When asked, suggest corrective journal entries in proper double-entry format. Always present these as SUGGESTIONS requiring user confirmation — NEVER state that an entry has been posted or will be auto-posted.
+
+Constraints:
+- Always ground your answers in the actual financial data provided in the context. If the context doesn't contain enough information to answer, say so explicitly rather than guessing.
+- If the user asks something outside your scope (weather, sports, general knowledge, coding, etc.), politely decline and redirect: "I'm your accounting audit assistant — I can help with ledger reviews, AS compliance checks, financial statement analysis, and corrective journal entries. How can I help with your books?"
+- Use Indian accounting terminology and INR formatting.
+- Be concise and professional. Use bullet points for lists.
+- When suggesting corrective entries, format them clearly and always end with: "This is a suggestion — please review and confirm before posting."`;
+
 const CompliancePanel = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState('chat');
   const [messages, setMessages] = useState([
@@ -22,7 +41,6 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     const txs = LedgerEngine.transactions;
     const findings = [];
 
-    // Check for duplicate refs
     const refCounts = {};
     txs.forEach(t => {
       refCounts[t.ref] = (refCounts[t.ref] || 0) + 1;
@@ -33,13 +51,11 @@ const CompliancePanel = ({ isOpen, onClose }) => {
       }
     });
 
-    // Check for missing narrations
     const missingNarration = txs.filter(t => !t.narration || t.narration.trim() === '');
     if (missingNarration.length > 0) {
       findings.push({ severity: 'error', title: 'Missing Narrations', detail: `${missingNarration.length} entries have no narration. AS 1 requires adequate disclosure.` });
     }
 
-    // Check balance sheet integrity
     const bs = LedgerEngine.calcBalanceSheet();
     const totalEq = bs.find(r => r.name.toLowerCase().includes('total equity and liabilities'))?.value || 0;
     const totalAssets = bs.find(r => r.name.toLowerCase().includes('total assets'))?.value || 0;
@@ -49,7 +65,6 @@ const CompliancePanel = ({ isOpen, onClose }) => {
       findings.push({ severity: 'ok', title: 'Balance Sheet Balanced', detail: `Assets = Equity + Liabilities = ${formatINR(totalAssets)}` });
     }
 
-    // Check trial balance
     let totalDebits = 0, totalCredits = 0;
     txs.forEach(t => {
       if (t.type === 'Debit') totalDebits += t.amount;
@@ -64,7 +79,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     return findings;
   };
 
-  // --- Build financial context snapshot to send with every query ---
+  // --- Build financial context snapshot ---
   const buildFinancialContext = () => {
     const kpis = LedgerEngine.calcKPIs();
     const bs = LedgerEngine.calcBalanceSheet();
@@ -78,42 +93,68 @@ const CompliancePanel = ({ isOpen, onClose }) => {
       else totalCredits += t.amount;
     });
 
-    // Recent 10 transactions as readable text
     const recent = [...txs].slice(-10).map(t =>
-      `${t.date} | ${t.type} | ${t.account} | ₹${t.amount.toLocaleString('en-IN')} | ${t.narration || 'No narration'}`
+      `${t.date} | ${t.type} | ${t.account} | Rs.${t.amount.toLocaleString('en-IN')} | ${t.narration || 'No narration'}`
     ).join('\n');
 
-    // Inventory summary
     let inventoryValue = 0;
     try {
       const items = InventoryEngine.getItemSummary ? InventoryEngine.getItemSummary() : [];
       inventoryValue = items.reduce((s, i) => s + i.totalValue, 0);
     } catch (_) {}
 
-    // Invoice count
     let invoiceCount = 0;
     try { invoiceCount = InvoiceEngine.invoices.length; } catch (_) {}
 
-    return {
-      cashBalance: kpis.cashBalance,
-      totalRevenue: kpis.totalRevenue,
-      totalExpenses: kpis.totalExpenses,
-      netProfit: kpis.netProfit,
-      accountsReceivable: kpis.accountsReceivable || 0,
-      accountsPayable: kpis.accountsPayable || 0,
-      totalAssets,
-      totalEquityAndLiabilities: totalEq,
-      bsBalanced: Math.abs(totalEq - totalAssets) <= 1,
-      totalDebits,
-      totalCredits,
-      transactionCount: txs.length,
-      inventoryValue,
-      invoiceCount,
-      recentTransactions: recent
-    };
+    const parts = [];
+    parts.push(`Cash & Bank Balance: Rs.${(kpis.cashBalance || 0).toLocaleString('en-IN')}`);
+    parts.push(`Total Revenue: Rs.${(kpis.totalRevenue || 0).toLocaleString('en-IN')}`);
+    parts.push(`Total Expenses: Rs.${(kpis.totalExpenses || 0).toLocaleString('en-IN')}`);
+    parts.push(`Net Profit (PAT): Rs.${(kpis.netProfit || 0).toLocaleString('en-IN')}`);
+    parts.push(`Total Assets: Rs.${totalAssets.toLocaleString('en-IN')}`);
+    parts.push(`Total Equity & Liabilities: Rs.${totalEq.toLocaleString('en-IN')}`);
+    parts.push(`Balance Sheet Status: ${Math.abs(totalEq - totalAssets) <= 1 ? 'Balanced' : 'IMBALANCED'}`);
+    parts.push(`Trial Balance - Debits: Rs.${totalDebits.toLocaleString('en-IN')}, Credits: Rs.${totalCredits.toLocaleString('en-IN')}`);
+    parts.push(`Total Ledger Entries: ${txs.length}`);
+    if (inventoryValue > 0) parts.push(`Inventory Valuation (FIFO): Rs.${inventoryValue.toLocaleString('en-IN')}`);
+    if (invoiceCount > 0) parts.push(`Total Invoices: ${invoiceCount}`);
+    if (recent) parts.push(`Recent Transactions (last 10):\n${recent}`);
+
+    return parts.join('\n');
   };
 
-  // --- Real Gemini API call via backend ---
+  // --- Direct Gemini API call from browser ---
+  const callGemini = async (userQuestion) => {
+    const contextSection = buildFinancialContext();
+    const prompt = `User question: "${userQuestion}"\n\n--- CURRENT FINANCIAL DATA ---\n${contextSection}\n--- END FINANCIAL DATA ---`;
+
+    const payload = {
+      contents: [{ parts: [{ text: prompt }] }],
+      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+      generationConfig: { temperature: 0.3 }
+    };
+
+    const res = await fetch(GEMINI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      const errMsg = errData?.error?.message || `API error (${res.status})`;
+      throw new Error(errMsg);
+    }
+
+    const data = await res.json();
+    const candidates = data.candidates || [];
+    if (candidates.length > 0 && candidates[0].content?.parts?.[0]?.text) {
+      return candidates[0].content.parts[0].text;
+    }
+    throw new Error('No response from AI model');
+  };
+
+  // --- Handle send ---
   const handleSend = async () => {
     if (!input.trim() || isTyping) return;
     const userMsg = input.trim();
@@ -121,28 +162,15 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     setInput('');
     setIsTyping(true);
 
+    if (!GEMINI_API_KEY) {
+      setMessages(prev => [...prev, { role: 'bot', text: '⚠️ AI Audit Assistant unavailable — API key not configured.' }]);
+      setIsTyping(false);
+      return;
+    }
+
     try {
-      const res = await fetch('http://localhost:8000/api/ai/audit-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: userMsg,
-          financial_context: buildFinancialContext()
-        })
-      });
-
-      if (!res.ok) {
-        let errDetail = 'AI Audit Assistant unavailable — please try again.';
-        try {
-          const errJson = await res.json();
-          if (errJson && errJson.detail) errDetail = errJson.detail;
-        } catch (_) {}
-        throw new Error(errDetail);
-      }
-
-      const data = await res.json();
-      setMessages(prev => [...prev, { role: 'bot', text: data.answer }]);
-
+      const answer = await callGemini(userMsg);
+      setMessages(prev => [...prev, { role: 'bot', text: answer }]);
     } catch (err) {
       setMessages(prev => [...prev, {
         role: 'bot',
