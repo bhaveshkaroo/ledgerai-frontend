@@ -15,12 +15,32 @@ Your capabilities:
 3. Financial Q&A: Answer questions about the user's own financial statements — Balance Sheet, P&L, Cash Flow, Trial Balance, GST position — using the actual data provided in the context.
 4. Corrective Entries: When asked, suggest corrective journal entries in proper double-entry format. Always present these as SUGGESTIONS requiring user confirmation — NEVER state that an entry has been posted or will be auto-posted.
 
-Constraints:
-- Always ground your answers in the actual financial data provided in the context. If the context doesn't contain enough information to answer, say so explicitly rather than guessing.
-- If the user asks something outside your scope (weather, sports, general knowledge, coding, etc.), politely decline and redirect: "I'm your accounting audit assistant — I can help with ledger reviews, AS compliance checks, financial statement analysis, and corrective journal entries. How can I help with your books?"
-- Use Indian accounting terminology and INR formatting.
-- Be concise and professional. Use bullet points for lists.
+Formatting Rules:
+- NEVER use LaTeX math tags, delimiters, or expressions (e.g. do NOT use $$, \\frac, \\text, \\mathbf).
+- Format all equations, fractions, and ratios in clean, standard human-readable text. For example:
+  (Rs. 20,00,000 ÷ Rs. 42,17,000) = 0.47 : 1
+- Use Indian accounting terminology and INR formatting (Rs. or ₹).
+- Be concise, structured, and professional. Use bullet points and clean headers.
 - When suggesting corrective entries, format them clearly and always end with: "This is a suggestion — please review and confirm before posting."`;
+
+const cleanTextFormatting = (text) => {
+  if (!text) return '';
+  return text
+    // Replace \frac{a}{b} with (a / b)
+    .replace(/\\frac\s*\{([^}]+)\}\s*\{([^}]+)\}/g, '($1 ÷ $2)')
+    // Replace \text{...} or \mathbf{...} or \textbf{...} with inner content
+    .replace(/\\(text|mathbf|textbf|mathit|mathrm)\s*\{([^}]+)\}/g, '$2')
+    // Replace LaTeX symbols
+    .replace(/\\times/g, '×')
+    .replace(/\\div/g, '÷')
+    .replace(/\\pm/g, '±')
+    .replace(/\\approx/g, '≈')
+    // Remove $$ and $ math delimiters
+    .replace(/\$\$([\s\S]*?)\$\$/g, '$1')
+    .replace(/\$([^\$]+)\$/g, '$1')
+    // Clean up double spaces or residual backslashes
+    .replace(/\\([a-zA-Z]+)/g, '$1');
+};
 
 const CompliancePanel = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState('chat');
@@ -198,7 +218,7 @@ const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash
 
     try {
       const answer = await callGemini(userMsg);
-      setMessages(prev => [...prev, { role: 'bot', text: answer }]);
+      setMessages(prev => [...prev, { role: 'bot', text: cleanTextFormatting(answer) }]);
     } catch (err) {
       if (err.message && err.message.toLowerCase().includes('key')) {
         setShowKeyInput(true);
