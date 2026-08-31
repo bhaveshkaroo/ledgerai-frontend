@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot, AlertTriangle, CheckCircle2, Info, Key, Check, Paperclip, FileText, CheckCheck } from 'lucide-react';
+import { X, Send, Bot, AlertTriangle, CheckCircle2, Info, Key, Check, Paperclip, FileText, CheckCheck, Sparkles } from 'lucide-react';
 import { LedgerEngine, formatINR, CHART_OF_ACCOUNTS } from '../utils/LedgerEngine';
 import { InventoryEngine } from '../utils/InventoryEngine';
 import { InvoiceEngine } from '../utils/InvoiceEngine';
@@ -15,13 +15,14 @@ const SYSTEM_INSTRUCTION = `You are Meso AI Audit & Accounting Assistant — an 
 Your core capabilities:
 1. Document & Photo OCR: When the user uploads an invoice, bill, receipt, or document image/PDF, analyze it, extract all details (Vendor/Customer, Date, Invoice No, GSTIN, Line items, Tax amounts, Total), and formulate the balanced double-entry journal entry.
 2. Natural Language Journal Entry: When the user asks to record, add, create, or post ANY transaction (e.g. "Record rent payment of 25000", "Bought office laptop for 50000 with 18% GST via bank", "Received payment from client"), formulate the proper balanced Indian double-entry journal voucher.
-3. Financial Q&A & Audit Review: Answer questions about Balance Sheet, P&L, Cash Flow, ratios, and AS compliance using the provided financial context.
+3. Audit Finding Review & Remediation: When asked to review an audit finding or ledger discrepancy (e.g. missing narration, duplicate reference, imbalance, compliance breach), analyze the root cause under Indian AS standards, and propose the exact corrective journal voucher in the proposal format so the user can resolve it with one click.
+4. Financial Q&A & Audit Review: Answer questions about Balance Sheet, P&L, Cash Flow, ratios, and AS compliance using the provided financial context.
 
 Chart of Accounts in Meso:
 ${COA_NAMES}
 
 MANDATORY JOURNAL VOUCHER FORMAT:
-Whenever you propose, formulate, or suggest a journal entry (from an uploaded photo/document or from user chat), you MUST include the structured JSON block inside [JOURNAL_ENTRY_PROPOSAL]...[/JOURNAL_ENTRY_PROPOSAL] tags like this:
+Whenever you propose, formulate, or suggest a journal entry (from an uploaded photo/document, user chat, or audit finding correction), you MUST include the structured JSON block inside [JOURNAL_ENTRY_PROPOSAL]...[/JOURNAL_ENTRY_PROPOSAL] tags like this:
 
 [JOURNAL_ENTRY_PROPOSAL]
 {
@@ -85,7 +86,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([
     {
       role: 'bot',
-      text: "Hello! I'm your AI Audit & Accounting Assistant.\n\n• 📎 **Upload bills, receipts, or invoices** — I'll scan them and draft the journal voucher.\n• ✍️ **Type any transaction** — e.g. *\"Paid Rs. 15,000 for office stationery with 18% GST via bank\"*.\n• 📊 **Ask financial questions** about your Balance Sheet, P&L, and AS compliance.",
+      text: "Hello! I'm your AI Audit & Accounting Assistant.\n\n• 📎 **Upload bills, receipts, or invoices** — I'll scan them and draft the journal voucher.\n• ✍️ **Type any transaction** — e.g. *\"Paid Rs. 15,000 for office stationery with 18% GST via bank\"*.\n• 🔍 **Review Audit Findings** — Click 'Audit Findings' to scan for anomalies and auto-generate corrective entries.\n• 📊 **Ask financial questions** about your Balance Sheet, P&L, and AS compliance.",
       proposals: [],
       postedState: {}
     }
@@ -131,22 +132,45 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     });
     Object.entries(refCounts).forEach(([ref, count]) => {
       if (count > 2) {
-        findings.push({ severity: 'warning', title: 'Possible Duplicate', detail: `Reference ${ref} appears ${count} times (expected 2 for double-entry).` });
+        findings.push({
+          id: `dup-${ref}`,
+          severity: 'warning',
+          title: 'Possible Duplicate Reference',
+          detail: `Reference ${ref} appears ${count} times (expected 2 for double-entry balanced pair).`,
+          context: { ref, count }
+        });
       }
     });
 
     const missingNarration = txs.filter(t => !t.narration || t.narration.trim() === '');
     if (missingNarration.length > 0) {
-      findings.push({ severity: 'error', title: 'Missing Narrations', detail: `${missingNarration.length} entries have no narration. AS 1 requires adequate disclosure.` });
+      findings.push({
+        id: 'missing-narration',
+        severity: 'error',
+        title: 'Missing Transaction Narrations (AS 1)',
+        detail: `${missingNarration.length} journal entries have no narration. AS 1 requires adequate disclosure and proper documentation for all ledger postings.`,
+        context: { count: missingNarration.length }
+      });
     }
 
     const bs = LedgerEngine.calcBalanceSheet();
     const totalEq = bs.find(r => r.name.toLowerCase().includes('total equity and liabilities'))?.value || 0;
     const totalAssets = bs.find(r => r.name.toLowerCase().includes('total assets'))?.value || 0;
     if (Math.abs(totalEq - totalAssets) > 1) {
-      findings.push({ severity: 'error', title: 'Balance Sheet Imbalance', detail: `Assets (${formatINR(totalAssets)}) ≠ Equity+Liabilities (${formatINR(totalEq)}). Difference: ${formatINR(Math.abs(totalEq - totalAssets))}` });
+      findings.push({
+        id: 'bs-imbalance',
+        severity: 'error',
+        title: 'Balance Sheet Imbalance',
+        detail: `Assets (${formatINR(totalAssets)}) ≠ Equity+Liabilities (${formatINR(totalEq)}). Discrepancy: ${formatINR(Math.abs(totalEq - totalAssets))}.`,
+        context: { totalAssets, totalEq }
+      });
     } else {
-      findings.push({ severity: 'ok', title: 'Balance Sheet Balanced', detail: `Assets = Equity + Liabilities = ${formatINR(totalAssets)}` });
+      findings.push({
+        id: 'bs-balanced',
+        severity: 'ok',
+        title: 'Balance Sheet Balanced',
+        detail: `Assets = Equity + Liabilities = ${formatINR(totalAssets)}. Accounting equation holds true.`
+      });
     }
 
     let totalDebits = 0, totalCredits = 0;
@@ -155,9 +179,20 @@ const CompliancePanel = ({ isOpen, onClose }) => {
       else totalCredits += t.amount;
     });
     if (Math.abs(totalDebits - totalCredits) > 1) {
-      findings.push({ severity: 'error', title: 'Trial Balance Mismatch', detail: `Debits (${formatINR(totalDebits)}) ≠ Credits (${formatINR(totalCredits)})` });
+      findings.push({
+        id: 'tb-mismatch',
+        severity: 'error',
+        title: 'Trial Balance Mismatch',
+        detail: `Total Debits (${formatINR(totalDebits)}) ≠ Total Credits (${formatINR(totalCredits)}).`,
+        context: { totalDebits, totalCredits }
+      });
     } else {
-      findings.push({ severity: 'ok', title: 'Trial Balance Verified', detail: `Total Debits = Total Credits = ${formatINR(totalDebits)}` });
+      findings.push({
+        id: 'tb-verified',
+        severity: 'ok',
+        title: 'Trial Balance Verified',
+        detail: `Total Debits = Total Credits = ${formatINR(totalDebits)}.`
+      });
     }
 
     return findings;
@@ -197,7 +232,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     parts.push(`Total Assets: Rs.${totalAssets.toLocaleString('en-IN')}`);
     parts.push(`Total Equity & Liabilities: Rs.${totalEq.toLocaleString('en-IN')}`);
     parts.push(`Balance Sheet Status: ${Math.abs(totalEq - totalAssets) <= 1 ? 'Balanced' : 'IMBALANCED'}`);
-    parts.push(`Trial Balance - Debits: Rs.${totalDebits.toLocaleString('en-IN')}, Credits: Rs.${totalCredits.toLocaleString('en-IN')}`);
+    parts.push(`Trial Balance - Debits: Rs.${totalDebits.toLocaleString('en-IN'), Credits: Rs.${totalCredits.toLocaleString('en-IN')}`);
     parts.push(`Total Ledger Entries: ${txs.length}`);
     if (inventoryValue > 0) parts.push(`Inventory Valuation (FIFO): Rs.${inventoryValue.toLocaleString('en-IN')}`);
     if (invoiceCount > 0) parts.push(`Total Invoices: ${invoiceCount}`);
@@ -293,6 +328,48 @@ const CompliancePanel = ({ isOpen, onClose }) => {
 
     try {
       const rawAnswer = await callGemini(userMsg, sentAttachment);
+      const { cleanText, proposals } = parseJournalProposals(rawAnswer);
+      
+      setMessages(prev => [...prev, {
+        role: 'bot',
+        text: cleanTextFormatting(cleanText),
+        proposals: proposals,
+        postedState: {}
+      }]);
+    } catch (err) {
+      if (err.message && err.message.toLowerCase().includes('key')) {
+        setShowKeyInput(true);
+      }
+      setMessages(prev => [...prev, {
+        role: 'bot',
+        text: `⚠️ ${err.message || 'AI Audit Assistant unavailable — please try again.'}`
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  // Triggered when user clicks "AI Review & Solve" on an audit finding card
+  const handleReviewFinding = async (finding) => {
+    setActiveTab('chat');
+    const prompt = `Review this audit finding: "${finding.title} — ${finding.detail}". Explain the AS compliance impact and formulate the exact corrective journal entry or rectification in the [JOURNAL_ENTRY_PROPOSAL] format so I can fix it.`;
+    
+    setMessages(prev => [...prev, {
+      role: 'user',
+      text: `🔍 Please review this audit finding: "${finding.title}"\n${finding.detail}`
+    }]);
+    
+    setIsTyping(true);
+    const currentKey = getGeminiKey();
+    if (!currentKey) {
+      setShowKeyInput(true);
+      setMessages(prev => [...prev, { role: 'bot', text: '⚠️ Please enter a valid Gemini API Key above to activate the AI Assistant.' }]);
+      setIsTyping(false);
+      return;
+    }
+
+    try {
+      const rawAnswer = await callGemini(prompt);
       const { cleanText, proposals } = parseJournalProposals(rawAnswer);
       
       setMessages(prev => [...prev, {
@@ -697,9 +774,12 @@ const CompliancePanel = ({ isOpen, onClose }) => {
       ) : (
         /* Findings Tab */
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            Click <strong>"AI Review & Fix"</strong> on any anomaly to have the AI diagnose the compliance risk and draft a corrective journal voucher.
+          </div>
           {findings.map((f, i) => (
             <div key={i} style={{
-              padding: '14px', marginBottom: '8px', borderRadius: 'var(--radius-md)',
+              padding: '14px', marginBottom: '10px', borderRadius: 'var(--radius-md)',
               background: f.severity === 'error' ? 'rgba(239,68,68,0.06)' : f.severity === 'warning' ? 'rgba(245,158,11,0.06)' : 'rgba(16,185,129,0.06)',
               border: `1px solid ${f.severity === 'error' ? 'rgba(239,68,68,0.15)' : f.severity === 'warning' ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)'}`
             }}>
@@ -708,6 +788,31 @@ const CompliancePanel = ({ isOpen, onClose }) => {
                 <span style={{ fontSize: '13px', fontWeight: 600 }}>{f.title}</span>
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{f.detail}</div>
+              
+              {/* AI Review & Fix Button */}
+              {f.severity !== 'ok' && (
+                <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => handleReviewFinding(f)}
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      background: 'var(--bg-surface)',
+                      border: '1px solid rgba(139,92,246,0.3)',
+                      color: '#8b5cf6',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Sparkles size={12} color="#8b5cf6" />
+                    <span>AI Review & Fix</span>
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
