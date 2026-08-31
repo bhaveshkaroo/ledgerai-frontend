@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { X, Send, Bot, AlertTriangle, CheckCircle2, Info, Key, Check } from 'lucide-react';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
 import { InventoryEngine } from '../utils/InventoryEngine';
 import { InvoiceEngine } from '../utils/InvoiceEngine';
 
-const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
+const getGeminiKey = () => localStorage.getItem('MESO_GEMINI_API_KEY') || process.env.REACT_APP_GEMINI_API_KEY || '';
 const GEMINI_MODEL = 'gemini-3.6-flash';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 const SYSTEM_INSTRUCTION = `You are Meso AI Audit Assistant — an expert Indian Chartered Accountant and financial auditor embedded in an Indian MSME accounting platform called "Meso".
 
@@ -30,6 +29,9 @@ const CompliancePanel = ({ isOpen, onClose }) => {
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [showKeyInput, setShowKeyInput] = useState(!getGeminiKey());
+  const [apiKeyInput, setApiKeyInput] = useState(getGeminiKey());
+  const [keySaved, setKeySaved] = useState(false);
   const chatEndRef = useRef(null);
 
   useEffect(() => {
@@ -125,6 +127,12 @@ const CompliancePanel = ({ isOpen, onClose }) => {
 
   // --- Direct Gemini API call from browser ---
   const callGemini = async (userQuestion) => {
+    const key = getGeminiKey();
+    if (!key) {
+      throw new Error('Please set your Gemini API Key first using the key button above.');
+    }
+
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
     const contextSection = buildFinancialContext();
     const prompt = `User question: "${userQuestion}"\n\n--- CURRENT FINANCIAL DATA ---\n${contextSection}\n--- END FINANCIAL DATA ---`;
 
@@ -134,7 +142,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
       generationConfig: { temperature: 0.3 }
     };
 
-    const res = await fetch(GEMINI_URL, {
+    const res = await fetch(geminiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -162,8 +170,10 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     setInput('');
     setIsTyping(true);
 
-    if (!GEMINI_API_KEY) {
-      setMessages(prev => [...prev, { role: 'bot', text: '⚠️ AI Audit Assistant unavailable — API key not configured.' }]);
+    const currentKey = getGeminiKey();
+    if (!currentKey) {
+      setShowKeyInput(true);
+      setMessages(prev => [...prev, { role: 'bot', text: '⚠️ Please enter a valid Gemini API Key above to activate the AI Assistant.' }]);
       setIsTyping(false);
       return;
     }
@@ -172,6 +182,9 @@ const CompliancePanel = ({ isOpen, onClose }) => {
       const answer = await callGemini(userMsg);
       setMessages(prev => [...prev, { role: 'bot', text: answer }]);
     } catch (err) {
+      if (err.message && err.message.toLowerCase().includes('key')) {
+        setShowKeyInput(true);
+      }
       setMessages(prev => [...prev, {
         role: 'bot',
         text: `⚠️ ${err.message || 'AI Audit Assistant unavailable — please try again.'}`
@@ -192,10 +205,77 @@ const CompliancePanel = ({ isOpen, onClose }) => {
           <span style={{ fontWeight: 600, fontSize: '15px' }}>AI Audit Assistant</span>
           <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(16,185,129,0.12)', color: '#10b981', fontWeight: 600 }}>Live</span>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
-          <X size={18} color="var(--text-muted)" />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button 
+            onClick={() => setShowKeyInput(!showKeyInput)} 
+            title="Configure Gemini API Key" 
+            style={{ 
+              background: showKeyInput ? 'var(--border)' : 'none', 
+              border: '1px solid var(--border)', 
+              borderRadius: '6px', 
+              cursor: 'pointer', 
+              padding: '5px 8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '11px',
+              color: 'var(--text-secondary)'
+            }}
+          >
+            <Key size={13} color="var(--text-muted)" />
+            <span>Key</span>
+          </button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+            <X size={18} color="var(--text-muted)" />
+          </button>
+        </div>
       </div>
+
+      {/* Key Input Banner */}
+      {showKeyInput && (
+        <div style={{ padding: '12px 16px', background: 'rgba(59,130,246,0.06)', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '6px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Key size={13} color="#3b82f6" />
+            <span>Gemini API Key Setup</span>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input
+              type="password"
+              value={apiKeyInput}
+              onChange={(e) => { setApiKeyInput(e.target.value); setKeySaved(false); }}
+              placeholder="Paste your Gemini API key (AIza...)"
+              style={{
+                flex: 1,
+                padding: '6px 10px',
+                borderRadius: '6px',
+                border: '1px solid var(--border)',
+                fontSize: '12px',
+                background: 'var(--bg-surface)',
+                outline: 'none'
+              }}
+            />
+            <button
+              onClick={() => {
+                if (apiKeyInput.trim()) {
+                  localStorage.setItem('MESO_GEMINI_API_KEY', apiKeyInput.trim());
+                  setKeySaved(true);
+                  setTimeout(() => {
+                    setKeySaved(false);
+                    setShowKeyInput(false);
+                  }, 1200);
+                }
+              }}
+              className="btn-primary"
+              style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              {keySaved ? <Check size={14} color="#10b981" /> : 'Save'}
+            </button>
+          </div>
+          <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '5px' }}>
+            Saved locally in your browser — never sent to any server or committed to Git.
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
