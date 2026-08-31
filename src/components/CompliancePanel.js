@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot, AlertTriangle, CheckCircle2, Info, Key, Check, Paperclip, Image as ImageIcon, FileText, CheckCheck } from 'lucide-react';
+import { X, Send, Bot, AlertTriangle, CheckCircle2, Info, Key, Check, Paperclip, FileText, CheckCheck } from 'lucide-react';
 import { LedgerEngine, formatINR, CHART_OF_ACCOUNTS } from '../utils/LedgerEngine';
 import { InventoryEngine } from '../utils/InventoryEngine';
 import { InvoiceEngine } from '../utils/InvoiceEngine';
@@ -12,17 +12,16 @@ const COA_NAMES = CHART_OF_ACCOUNTS.map(a => a.name).join(', ');
 
 const SYSTEM_INSTRUCTION = `You are Meso AI Audit & Accounting Assistant — an expert Indian Chartered Accountant embedded in the Indian MSME accounting software "Meso".
 
-Your capabilities:
-1. Document & Photo OCR: When the user uploads an invoice, bill, receipt, or document image/PDF, analyze it, extract key details (Vendor/Customer, Date, Invoice No, GSTIN, Line items, Tax, Total Amount), and PROPOSE a complete double-entry journal entry.
-2. Natural Language Journal Entry: When the user asks to record or create any transaction (e.g. "Record rent payment of 25000", "Bought 5 chairs for 10000 with 18% GST on credit", "Received 50000 from client"), formulate the proper balanced Indian double-entry journal voucher.
-3. Ledger Review & Anomaly Detection: Review transactions for anomalies, duplicate postings, unrecorded expenses, or missing disclosures.
-4. AS Compliance & Financial Q&A: Answer questions regarding Balance Sheet, P&L, Cash Flow, AS 1-29 compliance, and ratios using the provided financial context.
+Your core capabilities:
+1. Document & Photo OCR: When the user uploads an invoice, bill, receipt, or document image/PDF, analyze it, extract all details (Vendor/Customer, Date, Invoice No, GSTIN, Line items, Tax amounts, Total), and formulate the balanced double-entry journal entry.
+2. Natural Language Journal Entry: When the user asks to record, add, create, or post ANY transaction (e.g. "Record rent payment of 25000", "Bought office laptop for 50000 with 18% GST via bank", "Received payment from client"), formulate the proper balanced Indian double-entry journal voucher.
+3. Financial Q&A & Audit Review: Answer questions about Balance Sheet, P&L, Cash Flow, ratios, and AS compliance using the provided financial context.
 
-Chart of Accounts available in Meso:
+Chart of Accounts in Meso:
 ${COA_NAMES}
 
-IMPORTANT Journal Entry Proposal Format:
-Whenever you propose or create a journal entry (from an uploaded document, photo, or user command), ALWAYS include a JSON proposal block enclosed in [JOURNAL_ENTRY_PROPOSAL]...[/JOURNAL_ENTRY_PROPOSAL] like this:
+MANDATORY JOURNAL VOUCHER FORMAT:
+Whenever you propose, formulate, or suggest a journal entry (from an uploaded photo/document or from user chat), you MUST include the structured JSON block inside [JOURNAL_ENTRY_PROPOSAL]...[/JOURNAL_ENTRY_PROPOSAL] tags like this:
 
 [JOURNAL_ENTRY_PROPOSAL]
 {
@@ -30,21 +29,21 @@ Whenever you propose or create a journal entry (from an uploaded document, photo
   "narration": "Brief description of the transaction and party",
   "category": "Expense" | "Revenue" | "Capital" | "Investing" | "Financing" | "Tax",
   "legs": [
-    { "account": "Debit Account Name from COA", "type": "Debit", "amount": 10000 },
-    { "account": "Credit Account Name from COA", "type": "Credit", "amount": 10000 }
+    { "account": "Debit Account Name", "type": "Debit", "amount": 10000 },
+    { "account": "Credit Account Name", "type": "Credit", "amount": 10000 }
   ]
 }
 [/JOURNAL_ENTRY_PROPOSAL]
 
 Rules for Journal Proposals:
 - Total Debits MUST equal Total Credits.
-- Use only valid accounts from the Chart of Accounts provided.
+- Use only valid accounts from the Chart of Accounts provided above.
 - If GST applies, split into Input CGST & Input SGST (intra-state) or Input IGST (inter-state), and Output CGST & Output SGST or Output IGST for sales.
-- Outside the JSON block, explain your reasoning, tax calculations, and note that the user can click "Confirm & Post to Ledger" to record it.
+- Outside the JSON block, explain your reasoning and invite the user to click the "Confirm & Post to Ledger" button below to record it.
 
-General Formatting Rules:
-- NEVER use LaTeX math delimiters ($$, $, \\frac, \\text, \\mathbf).
-- Format fractions and ratios in clean human text: (Rs. 20,000 ÷ Rs. 40,000) = 0.50 : 1.
+Formatting Rules:
+- NEVER use LaTeX math tags or delimiters ($$, $, \\frac, \\text, \\mathbf).
+- Format all equations and ratios in clean human text: (Rs. 20,000 ÷ Rs. 40,000) = 0.50 : 1.
 - Use Indian accounting terminology and INR formatting (Rs. or ₹).`;
 
 const cleanTextFormatting = (text) => {
@@ -86,7 +85,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([
     {
       role: 'bot',
-      text: "Hello! I'm your AI Audit & Accounting Assistant.\n\n• 📸 **Upload bills or receipts** — I'll scan them and draft the journal voucher.\n• ✍️ **Type any transaction** — e.g. *\"Paid Rs. 15,000 for office stationery with 18% GST via bank\"*.\n• 📊 **Ask financial questions** about your Balance Sheet, P&L, and compliance.",
+      text: "Hello! I'm your AI Audit & Accounting Assistant.\n\n• 📎 **Upload bills, receipts, or invoices** — I'll scan them and draft the journal voucher.\n• ✍️ **Type any transaction** — e.g. *\"Paid Rs. 15,000 for office stationery with 18% GST via bank\"*.\n• 📊 **Ask financial questions** about your Balance Sheet, P&L, and AS compliance.",
       proposals: [],
       postedState: {}
     }
@@ -104,7 +103,6 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // Handle file selection (Images & PDFs)
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -120,7 +118,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
       });
     };
     reader.readAsDataURL(file);
-    e.target.value = ''; // Reset
+    e.target.value = '';
   };
 
   const getAuditFindings = () => {
@@ -215,7 +213,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     }
 
     const contextSection = buildFinancialContext();
-    const promptText = userQuestion ? `User message: "${userQuestion}"\n\n--- CURRENT FINANCIAL DATA ---\n${contextSection}\n--- END FINANCIAL DATA ---` : `Please analyze this uploaded document/invoice, extract all relevant line items and taxes, and formulate the appropriate double-entry journal voucher in the specified JSON proposal format.\n\n--- CURRENT FINANCIAL DATA ---\n${contextSection}\n--- END FINANCIAL DATA ---`;
+    const promptText = userQuestion ? `User message: "${userQuestion}"\n\n--- CURRENT FINANCIAL DATA ---\n${contextSection}\n--- END FINANCIAL DATA ---` : `Please analyze this uploaded document/invoice, extract all relevant line items and taxes, and formulate the appropriate double-entry journal voucher in the specified [JOURNAL_ENTRY_PROPOSAL] JSON format.\n\n--- CURRENT FINANCIAL DATA ---\n${contextSection}\n--- END FINANCIAL DATA ---`;
 
     const parts = [];
     if (fileAttachment && fileAttachment.base64) {
@@ -316,7 +314,6 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     }
   };
 
-  // Post the proposed voucher to the Ledger
   const handlePostProposal = async (msgIndex, propIndex, proposal) => {
     const date = proposal.date || new Date().toISOString().split('T')[0];
     const narration = proposal.narration || 'AI Posted Journal Entry';
@@ -343,7 +340,6 @@ const CompliancePanel = ({ isOpen, onClose }) => {
 
     LedgerEngine.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    // Optional Cloud Supabase record
     try {
       await supabase.from('transactions').insert([{
         ref,
@@ -354,10 +350,8 @@ const CompliancePanel = ({ isOpen, onClose }) => {
       }]);
     } catch (_) {}
 
-    // Dispatch global event so Dashboard, Statements, Day Book re-render
     window.dispatchEvent(new Event('ledger-updated'));
 
-    // Update message card state to posted
     setMessages(prev => {
       const next = [...prev];
       const targetMsg = { ...next[msgIndex] };
@@ -673,7 +667,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={attachment ? "Add instructions or press send..." : "Type transaction or ask about your books..."}
+              placeholder={attachment ? "Add instructions or press send..." : "Type transaction (e.g. Paid Rs 20000 rent via bank)..."}
               disabled={isTyping}
               style={{
                 flex: 1, padding: '10px 14px', borderRadius: 'var(--radius-pill)',
