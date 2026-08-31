@@ -232,7 +232,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     parts.push(`Total Assets: Rs.${totalAssets.toLocaleString('en-IN')}`);
     parts.push(`Total Equity & Liabilities: Rs.${totalEq.toLocaleString('en-IN')}`);
     parts.push(`Balance Sheet Status: ${Math.abs(totalEq - totalAssets) <= 1 ? 'Balanced' : 'IMBALANCED'}`);
-    parts.push(`Trial Balance - Debits: Rs.${totalDebits.toLocaleString('en-IN'), Credits: Rs.${totalCredits.toLocaleString('en-IN')}`);
+    parts.push(`Trial Balance - Debits: Rs.${totalDebits.toLocaleString('en-IN')}, Credits: Rs.${totalCredits.toLocaleString('en-IN')}`);
     parts.push(`Total Ledger Entries: ${txs.length}`);
     if (inventoryValue > 0) parts.push(`Inventory Valuation (FIFO): Rs.${inventoryValue.toLocaleString('en-IN')}`);
     if (invoiceCount > 0) parts.push(`Total Invoices: ${invoiceCount}`);
