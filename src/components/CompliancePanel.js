@@ -125,14 +125,15 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     return parts.join('\n');
   };
 
-  // --- Direct Gemini API call from browser ---
+const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash'];
+
+  // --- Direct Gemini API call from browser with automatic fallback ---
   const callGemini = async (userQuestion) => {
     const key = getGeminiKey();
     if (!key) {
-      throw new Error('Please set your Gemini API Key first using the key button above.');
+      throw new Error('Please set your Gemini API Key first using the Key button above.');
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
     const contextSection = buildFinancialContext();
     const prompt = `User question: "${userQuestion}"\n\n--- CURRENT FINANCIAL DATA ---\n${contextSection}\n--- END FINANCIAL DATA ---`;
 
@@ -142,24 +143,41 @@ const CompliancePanel = ({ isOpen, onClose }) => {
       generationConfig: { temperature: 0.3 }
     };
 
-    const res = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    let lastError = null;
 
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      const errMsg = errData?.error?.message || `API error (${res.status})`;
-      throw new Error(errMsg);
+    for (const model of GEMINI_MODELS) {
+      try {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+        const res = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const candidates = data.candidates || [];
+          if (candidates.length > 0 && candidates[0].content?.parts?.[0]?.text) {
+            return candidates[0].content.parts[0].text;
+          }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          const errMsg = errData?.error?.message || `Error ${res.status}`;
+          lastError = errMsg;
+          // If auth error / invalid key, don't keep trying other models
+          if (res.status === 400 && errMsg.toLowerCase().includes('key')) {
+            throw new Error(errMsg);
+          }
+        }
+      } catch (err) {
+        if (err.message && err.message.toLowerCase().includes('key')) {
+          throw err;
+        }
+        lastError = err.message;
+      }
     }
 
-    const data = await res.json();
-    const candidates = data.candidates || [];
-    if (candidates.length > 0 && candidates[0].content?.parts?.[0]?.text) {
-      return candidates[0].content.parts[0].text;
-    }
-    throw new Error('No response from AI model');
+    throw new Error(lastError || 'High demand on Gemini models. Please retry in a few seconds.');
   };
 
   // --- Handle send ---
