@@ -9,10 +9,12 @@ import CompliancePanel from './components/CompliancePanel';
 import GSTCompliance from './components/GSTCompliance';
 import BankReconciliation from './components/BankReconciliation';
 import Insights from './components/Insights';
+import InsightsLevel2 from './components/InsightsLevel2';
+import InsightsLevel3 from './components/InsightsLevel3';
 import { InvoiceEngine } from './utils/InvoiceEngine';
 import { InventoryEngine } from './utils/InventoryEngine';
 import { supabase } from './supabaseClient';
-import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale, Landmark, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale, Landmark, TrendingUp, BarChart2, Activity } from 'lucide-react';
 import Auth from './components/Auth';
 
 function App() {
@@ -61,6 +63,8 @@ function App() {
       case 'gst-compliance': return <GSTCompliance key={ledgerVersion} period="Full Year" />;
       case 'brs': return <BankReconciliation key={ledgerVersion} />;
       case 'insights': return <Insights key={ledgerVersion} />;
+      case 'insights-level2': return <InsightsLevel2 key={ledgerVersion} />;
+      case 'insights-level3': return <InsightsLevel3 key={ledgerVersion} />;
       default: return <Dashboard key={ledgerVersion} />;
     }
   };
@@ -105,8 +109,19 @@ function App() {
           <div className={`sidebar-item ${activeTab === 'brs' ? 'active' : ''}`} onClick={() => setActiveTab('brs')}>
             <Landmark className="icon" size={16} /> Bank Reconciliation
           </div>
+
+          <div className="sidebar-section-title" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', fontWeight: 600, marginTop: '16px', marginBottom: '8px' }}>
+            Advisory &amp; Insights
+          </div>
+
           <div className={`sidebar-item ${activeTab === 'insights' ? 'active' : ''}`} onClick={() => setActiveTab('insights')}>
-            <TrendingUp className="icon" size={16} /> Insights
+            <TrendingUp className="icon" size={16} /> Level 1: Health
+          </div>
+          <div className={`sidebar-item ${activeTab === 'insights-level2' ? 'active' : ''}`} onClick={() => setActiveTab('insights-level2')}>
+            <BarChart2 className="icon" size={16} /> Level 2: Forecast
+          </div>
+          <div className={`sidebar-item ${activeTab === 'insights-level3' ? 'active' : ''}`} onClick={() => setActiveTab('insights-level3')}>
+            <Activity className="icon" size={16} /> Level 3: Strategic
           </div>
           <div className="sidebar-item" onClick={() => setIsBotOpen(true)}>
             <Bot className="icon" size={16} /> AI Audit Assistant
