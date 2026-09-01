@@ -20,8 +20,9 @@ const ManualEntryModal = ({ isOpen, onClose, onConfirm }) => {
     setLoading(true);
     setErrorMsg('');
     
+    const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://ledgerai-backend-production-a992.up.railway.app';
     try {
-      const res = await fetch('http://localhost:8000/api/ai/suggest-entry', {
+      const res = await fetch(`${BACKEND_URL}/api/ai/suggest-entry`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description })
