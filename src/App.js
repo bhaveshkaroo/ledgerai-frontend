@@ -20,7 +20,7 @@ function App() {
   const [isBotOpen, setIsBotOpen] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
 
-  const [, setAppTick] = useState(0);
+  const [ledgerVersion, setLedgerVersion] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -31,7 +31,7 @@ function App() {
       setSession(session);
     });
 
-    const handleLedgerUpdate = () => setAppTick(t => t + 1);
+    const handleLedgerUpdate = () => setLedgerVersion(v => v + 1);
     window.addEventListener('ledger-updated', handleLedgerUpdate);
 
     // Ensure invoices are seeded (idempotent if handled, but we run once here)
@@ -52,14 +52,14 @@ function App() {
 
   const renderContent = () => {
     switch(activeTab) {
-      case 'dashboard': return <Dashboard />;
-      case 'transactions': return <TransactionList period="Full Year" />;
-      case 'invoicing': return <Invoicing />;
-      case 'inventory': return <Inventory />;
-      case 'reports': return <Statements period="Full Year" />;
-      case 'gst-compliance': return <GSTCompliance period="Full Year" />;
-      case 'brs': return <BankReconciliation />;
-      default: return <Dashboard />;
+      case 'dashboard': return <Dashboard key={ledgerVersion} />;
+      case 'transactions': return <TransactionList key={ledgerVersion} period="Full Year" />;
+      case 'invoicing': return <Invoicing key={ledgerVersion} />;
+      case 'inventory': return <Inventory key={ledgerVersion} />;
+      case 'reports': return <Statements key={ledgerVersion} period="Full Year" />;
+      case 'gst-compliance': return <GSTCompliance key={ledgerVersion} period="Full Year" />;
+      case 'brs': return <BankReconciliation key={ledgerVersion} />;
+      default: return <Dashboard key={ledgerVersion} />;
     }
   };
 
