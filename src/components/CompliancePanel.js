@@ -84,21 +84,22 @@ const cleanTextFormatting = (text) => {
 
 const parseJournalProposals = (text) => {
   if (!text) return { cleanText: text, proposals: [] };
-  const regex = /\[JOURNAL_ENTRY_PROPOSAL\]([\s\S]*?)\[\/JOURNAL_ENTRY_PROPOSAL\]/g;
+  const regex = /\[JOURNAL_ENTRY_PROPOSAL\]([\s\S]*?)\[\/JOURNAL_ENTRY_PROPOSAL\]/gi;
   const proposals = [];
   let match;
-  let cleanText = text;
 
   while ((match = regex.exec(text)) !== null) {
     try {
-      const parsed = JSON.parse(match[1].trim());
+      let raw = match[1].trim();
+      raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+      const parsed = JSON.parse(raw);
       proposals.push(parsed);
     } catch (e) {
-      console.warn('Could not parse journal proposal JSON', e);
+      console.warn('Could not parse journal proposal JSON', e, match[1]);
     }
   }
 
-  cleanText = cleanText.replace(regex, '').trim();
+  const cleanText = text.replace(regex, '').trim();
   return { cleanText, proposals };
 };
 
@@ -107,7 +108,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([
     {
       role: 'bot',
-      text: "Hello! I'm your AI Audit & Accounting Assistant.\n\n• 📎 **Upload bills or receipts** — I'll scan them and formulate the journal entry.\n• ✍️ **Type any transaction or reversal** — e.g. *\"Paid Rs. 15,000 for rent\"* or *\"Reverse transaction PUR-2025-102\"*.\n• 🔍 **Auto-Solve Audit Findings** — Check 'Audit Findings' to auto-diagnose and resolve ledger anomalies with 1 tap.\n• 📊 **Ask financial questions** about your Balance Sheet, P&L, and AS compliance.",
+      text: "Hello! I'm your AI Audit & Accounting Assistant.\n\n• 📎 **Upload bills or receipts** — I'll scan them and formulate the balanced journal entry.\n• ✍️ **Type any transaction, correction, or reversal** — e.g. *\"Paid Rs. 15,000 for rent\"* or *\"Give Rs. 50,000 charity to NGO\"* or *\"Reverse transaction PUR-2025-102\"*.\n• 🔍 **Auto-Solve Audit Findings** — Check 'Audit Findings' to auto-diagnose and resolve ledger anomalies with 1 tap.\n• 📊 **Ask financial questions** about your Balance Sheet, P&L, and AS compliance.",
       proposals: [],
       postedState: {}
     }
@@ -155,33 +156,59 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     const txs = LedgerEngine.transactions;
     const findings = [];
 
-    const refCounts = {};
+    // 1. Double-Entry Imbalance Check per Voucher Ref
+    const refLegs = {};
     txs.forEach(t => {
-      refCounts[t.ref] = (refCounts[t.ref] || 0) + 1;
+      if (!refLegs[t.ref]) refLegs[t.ref] = { debits: 0, credits: 0, count: 0, date: t.date };
+      if (t.type === 'Debit') refLegs[t.ref].debits += Number(t.amount);
+      else refLegs[t.ref].credits += Number(t.amount);
+      refLegs[t.ref].count += 1;
     });
-    Object.entries(refCounts).forEach(([ref, count]) => {
-      if (count > 2 && !ref.startsWith('REV-')) {
+
+    Object.entries(refLegs).forEach(([ref, data]) => {
+      const diff = Math.abs(data.debits - data.credits);
+      if (diff > 1) {
         findings.push({
-          id: `dup-${ref}`,
-          severity: 'warning',
-          title: 'Possible Duplicate Reference',
-          detail: `Reference ${ref} appears ${count} times (expected 2 for double-entry balanced pair).`,
+          id: `imbalance-${ref}`,
+          severity: 'error',
+          title: 'Unbalanced Voucher (Double-Entry Violation)',
+          detail: `Voucher ${ref} on ${data.date} has mismatched legs: Debits ₹${data.debits.toLocaleString('en-IN')} vs Credits ₹${data.credits.toLocaleString('en-IN')}. Discrepancy: ₹${diff.toLocaleString('en-IN')}.`,
           targetRef: ref
         });
       }
     });
 
+    // 2. AS 1 Missing Narrations Check
     const missingNarration = txs.filter(t => !t.narration || t.narration.trim() === '');
     if (missingNarration.length > 0) {
       findings.push({
         id: 'missing-narration',
         severity: 'error',
-        title: 'Missing Transaction Narrations (AS 1)',
+        title: 'Missing Transaction Narrations (AS 1 Compliance)',
         detail: `${missingNarration.length} journal entries have no narration. AS 1 requires adequate disclosure and proper documentation for all ledger postings.`,
         actionType: 'FIX_NARRATIONS'
       });
     }
 
+    // 3. Section 40A(3) & 80G High Value Cash Compliance
+    const cashDonations = txs.filter(t => 
+      t.type === 'Debit' && 
+      (t.narration || '').toLowerCase().includes('donation') || (t.narration || '').toLowerCase().includes('charity')
+    );
+    if (cashDonations.length > 0) {
+      const highCashDonations = cashDonations.filter(t => t.amount > 2000);
+      if (highCashDonations.length > 0) {
+        findings.push({
+          id: 'sec-80g-cash',
+          severity: 'warning',
+          title: 'Cash Donation > ₹2,000 (Sec 80G Restriction)',
+          detail: `${highCashDonations.length} donation/charity entries exceed ₹2,000 in cash. Under Section 80G of Income Tax Act, cash donations above ₹2,000 are not eligible for tax deductions.`,
+          suggestion: 'Ensure future charity/donations are paid via banking channels (NEFT/RTGS/Cheque) to preserve Sec 80G tax benefit.'
+        });
+      }
+    }
+
+    // 4. Balance Sheet Verification
     const bs = LedgerEngine.calcBalanceSheet();
     const totalEq = bs.find(r => r.name.toLowerCase().includes('total equity and liabilities'))?.value || 0;
     const totalAssets = bs.find(r => r.name.toLowerCase().includes('total assets'))?.value || 0;
@@ -196,11 +223,12 @@ const CompliancePanel = ({ isOpen, onClose }) => {
       findings.push({
         id: 'bs-balanced',
         severity: 'ok',
-        title: 'Balance Sheet Balanced',
-        detail: `Assets = Equity + Liabilities = ${formatINR(totalAssets)}. Accounting equation holds true.`
+        title: 'Balance Sheet Verified (Balanced)',
+        detail: `Total Assets = Total Equity & Liabilities = ${formatINR(totalAssets)}. Accounting equation holds true.`
       });
     }
 
+    // 5. Trial Balance Verification
     let totalDebits = 0, totalCredits = 0;
     txs.forEach(t => {
       if (t.type === 'Debit') totalDebits += t.amount;
@@ -211,7 +239,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
         id: 'tb-mismatch',
         severity: 'error',
         title: 'Trial Balance Mismatch',
-        detail: `Total Debits (${formatINR(totalDebits)}) ≠ Total Credits (${formatINR(totalCredits)}).`
+        detail: `Total Debits (${formatINR(totalDebits)}) ≠ Total Credits (${formatINR(totalCredits)}). Discrepancy: ${formatINR(Math.abs(totalDebits - totalCredits))}.`
       });
     } else {
       findings.push({
