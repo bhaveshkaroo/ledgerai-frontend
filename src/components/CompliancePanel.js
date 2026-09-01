@@ -193,7 +193,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     // 3. Section 40A(3) & 80G High Value Cash Compliance
     const cashDonations = txs.filter(t => 
       t.type === 'Debit' && 
-      (t.narration || '').toLowerCase().includes('donation') || (t.narration || '').toLowerCase().includes('charity')
+      ((t.narration || '').toLowerCase().includes('donation') || (t.narration || '').toLowerCase().includes('charity'))
     );
     if (cashDonations.length > 0) {
       const highCashDonations = cashDonations.filter(t => t.amount > 2000);
