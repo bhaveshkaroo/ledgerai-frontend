@@ -151,11 +151,11 @@ export const InventoryEngine = {
     this.stock = {};
 
     const suppliers = [
-      { name: 'Gujarat Cotton Mills', item: 'Cotton Fabric 60s', baseCost: 140, gst: 0.05, baseQty: 450 },
-      { name: 'Surat Silk Suppliers', item: 'Silk Crepe Fabric', baseCost: 380, gst: 0.12, baseQty: 260 },
-      { name: 'Vardhman Textiles', item: 'Denim Weave 12oz', baseCost: 190, gst: 0.05, baseQty: 360 },
-      { name: 'Tirupur Yarn Ltd', item: 'Linen Yarn 40s', baseCost: 220, gst: 0.05, baseQty: 300 },
-      { name: 'Arvind Weaves', item: 'Organic Dyed Rayon', baseCost: 230, gst: 0.12, baseQty: 320 }
+      { name: 'Gujarat Cotton Mills', item: 'Cotton Fabric 60s', baseCost: 140, gst: 0.05, baseQty: 345 },
+      { name: 'Surat Silk Suppliers', item: 'Silk Crepe Fabric', baseCost: 380, gst: 0.12, baseQty: 195 },
+      { name: 'Vardhman Textiles', item: 'Denim Weave 12oz', baseCost: 190, gst: 0.05, baseQty: 270 },
+      { name: 'Tirupur Yarn Ltd', item: 'Linen Yarn 40s', baseCost: 220, gst: 0.05, baseQty: 100 },
+      { name: 'Arvind Weaves', item: 'Organic Dyed Rayon', baseCost: 230, gst: 0.12, baseQty: 235 }
     ];
 
     // Seed purchases across 3 full years (2024 to 2026 = 36 months)
@@ -165,7 +165,7 @@ export const InventoryEngine = {
         const isFestive = month === 10 || month === 11;
 
         suppliers.forEach((s) => {
-          const qty = isFestive ? Math.round(s.baseQty * 1.4) : s.baseQty;
+          const qty = isFestive ? Math.round(s.baseQty * 1.45) : s.baseQty;
           const unitCost = s.baseCost + (month * 1.5);
           this.recordPurchase(`${year}-${m}-05`, s.item, qty, unitCost, s.name, s.gst);
         });
@@ -173,6 +173,7 @@ export const InventoryEngine = {
     }
   }
 };
+
 
 
 

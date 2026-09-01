@@ -84,12 +84,13 @@ const generateBalancedTransactions = () => {
         addEntry(`${year}-${m}-22`, `Customer Invoice Settlements (30-day cycle)`, 'Cash and Bank', 'Accounts Receivable', monthlyGrossSales, 'Receipts');
       }
       
-      // Monthly gross purchases are ~Rs 4.00L (festive ~Rs 5.60L)
-      // Vendors are paid on 35-day terms (Month M is paid in Month M+1), leaving final month in AP (~Rs 4.00L / ~51 days DPO)
+      // Monthly gross purchases are ~Rs 2.71L (festive ~Rs 3.97L)
+      // Vendors are paid on 35-day terms (Month M is paid in Month M+1), leaving final month in AP (~Rs 2.71L / ~35-40 days DPO)
       if (year < 2026 || month < 12) {
-        const monthlyGrossPurchases = isFestive ? 560501 : 400358;
+        const monthlyGrossPurchases = isFestive ? 396800 : 271208;
         addEntry(`${year}-${m}-26`, `Supplier Invoice Payments (35-day credit terms)`, 'Accounts Payable', 'Cash and Bank', monthlyGrossPurchases, 'Payments');
       }
+
 
       
       // Operating Expenses
