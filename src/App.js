@@ -8,10 +8,11 @@ import Statements from './components/Statements';
 import CompliancePanel from './components/CompliancePanel';
 import GSTCompliance from './components/GSTCompliance';
 import BankReconciliation from './components/BankReconciliation';
+import Insights from './components/Insights';
 import { InvoiceEngine } from './utils/InvoiceEngine';
 import { InventoryEngine } from './utils/InventoryEngine';
 import { supabase } from './supabaseClient';
-import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale, Landmark } from 'lucide-react';
+import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale, Landmark, TrendingUp } from 'lucide-react';
 import Auth from './components/Auth';
 
 function App() {
@@ -59,6 +60,7 @@ function App() {
       case 'reports': return <Statements key={ledgerVersion} period="Full Year" />;
       case 'gst-compliance': return <GSTCompliance key={ledgerVersion} period="Full Year" />;
       case 'brs': return <BankReconciliation key={ledgerVersion} />;
+      case 'insights': return <Insights key={ledgerVersion} />;
       default: return <Dashboard key={ledgerVersion} />;
     }
   };
@@ -102,6 +104,9 @@ function App() {
           </div>
           <div className={`sidebar-item ${activeTab === 'brs' ? 'active' : ''}`} onClick={() => setActiveTab('brs')}>
             <Landmark className="icon" size={16} /> Bank Reconciliation
+          </div>
+          <div className={`sidebar-item ${activeTab === 'insights' ? 'active' : ''}`} onClick={() => setActiveTab('insights')}>
+            <TrendingUp className="icon" size={16} /> Insights
           </div>
           <div className="sidebar-item" onClick={() => setIsBotOpen(true)}>
             <Bot className="icon" size={16} /> AI Audit Assistant
