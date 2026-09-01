@@ -72,19 +72,21 @@ export const FinancialAnalysisEngine = {
     const cashRatio = currentLiabilities > 0 ? (cash / currentLiabilities) : 0;
     const netWorkingCapital = currentAssets - currentLiabilities;
 
-    // 2. ACTIVITY & EFFICIENCY RATIOS (Normalized by actual ledger operating span)
+    // 2. ACTIVITY & EFFICIENCY RATIOS (Normalized to annual rates from operating span)
     const totalOperatingDays = Math.max(365, (monthlyData?.length || 12) * (365 / 12));
     const dailyRevenue = revenue > 0 ? (revenue / totalOperatingDays) : 1;
     const dailyCOGS = cogs > 0 ? (cogs / totalOperatingDays) : 1;
+    const annualizedRevenue = dailyRevenue * 365;
+    const annualizedCOGS = dailyCOGS * 365;
+    const annualizedNetProfit = (netProfit / totalOperatingDays) * 365;
 
     const dso = dailyRevenue > 0 ? Math.round(ar / dailyRevenue) : 0;
     const dpo = dailyCOGS > 0 ? Math.round(ap / dailyCOGS) : 0;
     const dio = dailyCOGS > 0 ? Math.round(inventory / dailyCOGS) : 0;
     const ccc = dio + dso - dpo; // Cash Conversion Cycle
-    const inventoryTurnover = inventory > 0 ? Number((cogs / inventory).toFixed(2)) : 0;
-    const assetTurnover = totalAssets > 0 ? Number((revenue / totalAssets).toFixed(2)) : 0;
-    const fixedAssetTurnover = netFixedAssets > 0 ? Number((revenue / netFixedAssets).toFixed(2)) : 0;
-
+    const inventoryTurnover = inventory > 0 ? Number((annualizedCOGS / inventory).toFixed(2)) : 0;
+    const assetTurnover = totalAssets > 0 ? Number((annualizedRevenue / totalAssets).toFixed(2)) : 0;
+    const fixedAssetTurnover = netFixedAssets > 0 ? Number((annualizedRevenue / netFixedAssets).toFixed(2)) : 0;
 
     // 3. SOLVENCY & LEVERAGE RATIOS
     const debtToEquity = totalEquity > 0 ? (totalDebt / totalEquity) : 0;
@@ -92,18 +94,19 @@ export const FinancialAnalysisEngine = {
     const equityMultiplier = totalEquity > 0 ? (totalAssets / totalEquity) : 1;
     const interestCoverage = financeCost > 0 ? (ebit / financeCost) : 0;
 
-    // 4. PROFITABILITY & DUPONT DECOMPOSITION
+    // 4. PROFITABILITY & DUPONT DECOMPOSITION (Annualized)
     const grossMargin = revenue > 0 ? ((grossProfit / revenue) * 100) : 0;
     const operatingMargin = revenue > 0 ? ((ebit / revenue) * 100) : 0;
     const netMargin = revenue > 0 ? ((netProfit / revenue) * 100) : 0;
-    const roa = totalAssets > 0 ? ((netProfit / totalAssets) * 100) : 0;
-    const roe = totalEquity > 0 ? ((netProfit / totalEquity) * 100) : 0;
+    const roa = totalAssets > 0 ? ((annualizedNetProfit / totalAssets) * 100) : 0;
+    const roe = totalEquity > 0 ? ((annualizedNetProfit / totalEquity) * 100) : 0;
 
-    // DuPont 3-Step: ROE = Net Margin * Asset Turnover * Equity Multiplier
+    // DuPont 3-Step: Annualized ROE = Net Margin * Annual Asset Turnover * Equity Multiplier
     const dupontNetMargin = revenue > 0 ? (netProfit / revenue) : 0;
-    const dupontAssetTurnover = totalAssets > 0 ? (revenue / totalAssets) : 0;
+    const dupontAssetTurnover = totalAssets > 0 ? (annualizedRevenue / totalAssets) : 0;
     const dupontLeverage = equityMultiplier;
     const dupontCalculatedROE = (dupontNetMargin * dupontAssetTurnover * dupontLeverage) * 100;
+
 
     // 6. FORECASTING (Next Month & Next Quarter Projections)
     const forecast = this.generateForecast(monthlyData, cash, revenue, totalExpenses);
