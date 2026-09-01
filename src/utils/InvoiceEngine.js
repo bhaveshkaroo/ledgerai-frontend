@@ -1,12 +1,15 @@
 import { LedgerEngine } from './LedgerEngine.js';
 import { InventoryEngine } from './InventoryEngine.js';
 
-// HSN/SAC to GST Rate Master Data (Simulating what would back a real system)
+// HSN/SAC to GST Rate Master Data (Textiles, Apparels & Services)
 export const HSN_MASTER = {
-  '9983': { description: 'IT Services', rate: 18, type: 'services' },
-  '8471': { description: 'Computers', rate: 18, type: 'goods' },
-  '8517': { description: 'Phones', rate: 12, type: 'goods' },
-  '0401': { description: 'Milk', rate: 0, type: 'goods' }
+  '5208': { description: 'Cotton Fabric 60s', rate: 5, type: 'goods' },
+  '5007': { description: 'Silk Crepe Fabric', rate: 12, type: 'goods' },
+  '5209': { description: 'Denim Weave 12oz', rate: 5, type: 'goods' },
+  '5403': { description: 'Organic Dyed Rayon', rate: 12, type: 'goods' },
+  '5302': { description: 'Linen Yarn 40s', rate: 5, type: 'goods' },
+  '9983': { description: 'Design & Dyeing Services', rate: 18, type: 'services' },
+  '8471': { description: 'Computers & IT Hardware', rate: 18, type: 'goods' }
 };
 
 let invoiceCounter = 1;
@@ -22,7 +25,7 @@ export const InvoiceEngine = {
     let igstTotal = 0;
 
     const enrichedLineItems = lineItems.map(item => {
-      const master = HSN_MASTER[item.hsnSac] || { rate: 18, type: 'services' }; // Default 18% if unknown
+      const master = HSN_MASTER[item.hsnSac] || { rate: 5, type: 'goods' };
       const itemSubtotal = item.qty * item.rate;
       const itemTax = itemSubtotal * (master.rate / 100);
       
@@ -86,17 +89,11 @@ export const InvoiceEngine = {
     // Pre-check inventory if there are goods
     invoice.lineItems.forEach(item => {
       if (item.type === 'goods') {
-        // We do a dry run check here ideally, but since issueGoods throws on fail, it's fine.
-        // If it throws, the invoice fails to finalize and ledger isn't updated.
         InventoryEngine.issueGoods(invoice.date, item.description, item.qty);
       }
     });
 
     // Post to Ledger
-    // 1. Dr. Accounts Receivable (Total)
-    // 2. Cr. Sales Revenue (Subtotal)
-    // 3. Cr. Output CGST/SGST/IGST (Taxes)
-    
     LedgerEngine.postTransaction(
       invoice.date, 
       `Sales Invoice ${invoice.invoiceNumber} to ${invoice.party}`, 
@@ -107,7 +104,6 @@ export const InvoiceEngine = {
       invoice.invoiceNumber
     );
     
-    // Only post tax if there is tax
     if (invoice.cgstTotal > 0) {
       LedgerEngine.postTransaction(invoice.date, `CGST on ${invoice.invoiceNumber}`, 'Accounts Receivable', 'Output CGST', invoice.cgstTotal, 'Tax', `${invoice.invoiceNumber}-C`);
     }
@@ -128,14 +124,11 @@ export const InvoiceEngine = {
     if (invoice.status === 'Void') throw new Error("Invoice already voided");
 
     if (invoice.status === 'Finalized') {
-      // Reverse entries
-      // Cr. Accounts Receivable
-      // Dr. Sales Revenue
       LedgerEngine.postTransaction(
-        new Date().toISOString().split('T')[0], // Voiding date is today
+        new Date().toISOString().split('T')[0],
         `Reversal of Voided Invoice ${invoice.invoiceNumber}`, 
-        'Sales Revenue', // Reverse is Dr Revenue
-        'Accounts Receivable', // Cr AR
+        'Sales Revenue',
+        'Accounts Receivable',
         invoice.subtotal, 
         'Sales', 
         `${invoice.invoiceNumber}-REV`
@@ -161,21 +154,32 @@ export const InvoiceEngine = {
   },
 
   seedInvoices() {
-    for (let month = 4; month <= 15; month++) {
-      const year = month > 12 ? 2026 : 2025;
-      const m = (month > 12 ? month - 12 : month).toString().padStart(2, '0');
-      const isFestive = month === 10 || month === 11;
-      
-      const qty = isFestive ? 80 : 50;
-      
-      // We create an invoice matching the old 500k/800k sales volume roughly, 
-      // but let's use actual item rates.
-      // 50 * 10,000 = 500,000
-      const inv = this.createInvoice(`${year}-${m}-15`, 'Acme Corp', [
-        { description: 'Computers', hsnSac: '8471', qty: qty, rate: 10000 }
-      ], 'LOCAL');
-      
-      this.finalizeInvoice(inv.invoiceNumber);
+    this.invoices = [];
+    invoiceCounter = 1;
+
+    const customers = [
+      { name: 'Rajan Fabrics', item: 'Cotton Fabric 60s', hsn: '5208', rate: 260, baseQty: 400 },
+      { name: 'Bombay Fashion House', item: 'Silk Crepe Fabric', hsn: '5007', rate: 680, baseQty: 250 },
+      { name: 'Lucky Hosiery', item: 'Denim Weave 12oz', hsn: '5209', rate: 340, baseQty: 350 },
+      { name: 'Mehta Garments', item: 'Organic Dyed Rayon', hsn: '5403', rate: 410, baseQty: 300 }
+    ];
+
+    // Seed sales invoices across 3 full years (2024 to 2026 = 36 months)
+    for (let year = 2024; year <= 2026; year++) {
+      for (let month = 1; month <= 12; month++) {
+        const m = month.toString().padStart(2, '0');
+        const isFestive = month === 10 || month === 11;
+
+        customers.forEach((c, cIdx) => {
+          const qty = isFestive ? Math.round(c.baseQty * 1.5) : c.baseQty;
+          const inv = this.createInvoice(`${year}-${m}-${10 + cIdx * 4}`, c.name, [
+            { description: c.item, hsnSac: c.hsn, qty, rate: c.rate }
+          ], cIdx % 2 === 0 ? 'LOCAL' : 'INTERSTATE');
+
+          this.finalizeInvoice(inv.invoiceNumber);
+        });
+      }
     }
   }
 };
+

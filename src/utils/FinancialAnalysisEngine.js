@@ -173,35 +173,34 @@ export const FinancialAnalysisEngine = {
    * Extract month-by-month financial series from actual transactions
    */
   getMonthlyTimeSeries() {
-    const months = [
-      { key: '2025-04', name: 'Apr 2025' },
-      { key: '2025-05', name: 'May 2025' },
-      { key: '2025-06', name: 'Jun 2025' },
-      { key: '2025-07', name: 'Jul 2025' },
-      { key: '2025-08', name: 'Aug 2025' },
-      { key: '2025-09', name: 'Sep 2025' },
-      { key: '2025-10', name: 'Oct 2025' },
-      { key: '2025-11', name: 'Nov 2025' },
-      { key: '2025-12', name: 'Dec 2025' },
-      { key: '2026-01', name: 'Jan 2026' },
-      { key: '2026-02', name: 'Feb 2026' },
-      { key: '2026-03', name: 'Mar 2026' }
-    ];
-
     const txs = LedgerEngine.transactions || [];
+    
+    // Extract all unique year-months from ledger transactions in chronological order
+    const monthKeysSet = new Set();
+    for (let year = 2024; year <= 2026; year++) {
+      for (let month = 1; month <= 12; month++) {
+        monthKeysSet.add(`${year}-${month.toString().padStart(2, '0')}`);
+      }
+    }
+    const monthKeys = Array.from(monthKeysSet).sort();
 
-    return months.map((m, idx) => {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    return monthKeys.map(key => {
+      const [y, mStr] = key.split('-');
+      const mName = `${monthNames[parseInt(mStr, 10) - 1]} ${y}`;
+
       let revenue = 0;
       let expenses = 0;
       let cashInflow = 0;
       let cashOutflow = 0;
 
       txs.forEach(t => {
-        if (t.date && t.date.startsWith(m.key)) {
+        if (t.date && t.date.startsWith(key)) {
           if (t.account === 'Sales Revenue' && t.type === 'Credit') {
             revenue += Number(t.amount);
           }
-          if (['Rent Expense', 'Salary Expense', 'Depreciation Expense', 'Finance Cost', 'Tax Expense', 'Other Expenses', 'Bank Charges'].includes(t.account) && t.type === 'Debit') {
+          if (['Cost of Goods Sold', 'Rent Expense', 'Salary Expense', 'Depreciation Expense', 'Finance Cost', 'Tax Expense', 'Other Expenses', 'Bank Charges'].includes(t.account) && t.type === 'Debit') {
             expenses += Number(t.amount);
           }
           if (t.account === 'Cash and Bank') {
@@ -211,28 +210,19 @@ export const FinancialAnalysisEngine = {
         }
       });
 
-      if (revenue === 0) {
-        const isFestive = idx === 6 || idx === 7;
-        revenue = isFestive ? 800000 : 500000;
-      }
-      if (expenses === 0) {
-        expenses = 175000;
-      }
-
-      const netOperating = revenue - expenses;
-
       return {
-        month: m.name,
-        monthKey: m.key,
+        month: mName,
+        monthKey: key,
         revenue,
         expenses,
-        netOperating,
+        netOperating: revenue - expenses,
         cashInflow,
         cashOutflow,
         netCashFlow: cashInflow - cashOutflow
       };
     });
   },
+
 
   /**
    * Linear run-rate and moving-average forecasting grounded in historical data

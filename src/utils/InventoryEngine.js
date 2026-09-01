@@ -151,19 +151,27 @@ export const InventoryEngine = {
     this.movements = [];
     this.stock = {};
 
-    // Seed purchases to satisfy the sales volume in InvoiceEngine
-    for (let month = 4; month <= 15; month++) {
-      const year = month > 12 ? 2026 : 2025;
-      const m = (month > 12 ? month - 12 : month).toString().padStart(2, '0');
-      const isFestive = month === 10 || month === 11;
-      
-      // Buy slightly more than we sell (Sales: 50 or 80 qty per month)
-      const purchaseQty = isFestive ? 90 : 60; 
-      
-      // Assume unit cost fluctuates to prove FIFO works (Base cost 6000)
-      const unitCost = 6000 + (month * 100); 
-      
-      this.recordPurchase(`${year}-${m}-05`, 'Computers', purchaseQty, unitCost, 'TechWholesale Inc');
+    const suppliers = [
+      { name: 'Gujarat Cotton Mills', item: 'Cotton Fabric 60s', baseCost: 180, gst: 0.05 },
+      { name: 'Surat Silk Suppliers', item: 'Silk Crepe Fabric', baseCost: 450, gst: 0.12 },
+      { name: 'Vardhman Textiles', item: 'Denim Weave 12oz', baseCost: 220, gst: 0.05 },
+      { name: 'Tirupur Yarn Ltd', item: 'Linen Yarn 40s', baseCost: 310, gst: 0.05 },
+      { name: 'Arvind Weaves', item: 'Organic Dyed Rayon', baseCost: 260, gst: 0.12 }
+    ];
+
+    // Seed purchases across 3 full years (2024 to 2026 = 36 months)
+    for (let year = 2024; year <= 2026; year++) {
+      for (let month = 1; month <= 12; month++) {
+        const m = month.toString().padStart(2, '0');
+        const isFestive = month === 10 || month === 11; // Oct, Nov festive demand
+
+        suppliers.forEach((s, sIdx) => {
+          const qty = isFestive ? 800 + (sIdx * 100) : 500 + (sIdx * 60);
+          const unitCost = s.baseCost + (month * 2);
+          this.recordPurchase(`${year}-${m}-05`, s.item, qty, unitCost, s.name, s.gst);
+        });
+      }
     }
   }
 };
+

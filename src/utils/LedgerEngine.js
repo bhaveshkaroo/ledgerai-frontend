@@ -50,7 +50,7 @@ export const formatCurrency = (amount, currency = 'INR') => {
   return formatINR(amount); // Stubbed to INR for simplicity
 };
 
-// Generates STRICTLY BALANCED double-entry transactions
+// Generates STRICTLY BALANCED double-entry transactions across 3 full years (2024 to 2026)
 const generateBalancedTransactions = () => {
   const txs = [];
   let jvCount = 1000;
@@ -63,54 +63,49 @@ const generateBalancedTransactions = () => {
     txs.push({ id: jvCount + 'B', date, account: creditAccount, amount, type: 'Credit', narration, ref, category });
   };
 
-  // 1. Initial Capital & Loan (April 2025)
-  addEntry('2025-04-01', 'Initial Capital Injection', 'Cash and Bank', 'Share Capital', 5000000, 'Capital');
-  addEntry('2025-04-05', 'Term Loan Received', 'Cash and Bank', 'Bank Loan', 2000000, 'Financing');
-  addEntry('2025-04-10', 'Purchase of Factory Equipment', 'Fixed Assets (Gross)', 'Cash and Bank', 1500000, 'Investing');
+  // 1. Initial Capital & Term Loan (January 2024)
+  addEntry('2024-01-01', 'Initial Capital Injection', 'Cash and Bank', 'Share Capital', 5000000, 'Capital');
+  addEntry('2024-01-05', 'Term Loan Received', 'Cash and Bank', 'Bank Loan', 2000000, 'Financing');
+  addEntry('2024-01-10', 'Purchase of Factory Equipment & Weaving Looms', 'Fixed Assets (Gross)', 'Cash and Bank', 1500000, 'Investing');
 
-  // Generate monthly operations
-  for (let month = 4; month <= 15; month++) {
-    const year = month > 12 ? 2026 : 2025;
-    const m = (month > 12 ? month - 12 : month).toString().padStart(2, '0');
-    
-    const isFestive = month === 10 || month === 11; // Oct, Nov
-    const salesVol = isFestive ? 800000 : 500000;
-    
-    // Sales are now handled by InvoiceEngine.seedInvoices()
-    // Cash collection for AR (simulated 90% of old sales volume to keep cash flow realistic)
-    addEntry(`${year}-${m}-20`, 'Cash Collection from AR', 'Cash and Bank', 'Accounts Receivable', salesVol * 0.9, 'Receipts');
-    
-    // Payment to Suppliers (Simulated 85% of standard volume to keep cash flow realistic)
-    const simulatedPurchaseVol = salesVol * 0.4 * 1.1;
-    addEntry(`${year}-${m}-25`, 'Payment to Suppliers', 'Accounts Payable', 'Cash and Bank', simulatedPurchaseVol * 0.85, 'Payments');
-    
-    // Expenses
-    addEntry(`${year}-${m}-01`, 'Monthly Rent', 'Rent Expense', 'Cash and Bank', 40000, 'Expense');
-    addEntry(`${year}-${m}-07`, 'Staff Salaries', 'Salary Expense', 'Cash and Bank', 120000, 'Expense');
-    addEntry(`${year}-${m}-15`, 'Interest on Term Loan', 'Finance Cost', 'Cash and Bank', 15000, 'Finance');
-    
-    // Depreciation (AS 10)
-    addEntry(`${year}-${m}-28`, 'Monthly Depreciation', 'Depreciation Expense', 'Accumulated Depreciation', 12500, 'Depreciation');
+  // Generate 36 months of operational transactions (2024-01 to 2026-12)
+  for (let year = 2024; year <= 2026; year++) {
+    for (let month = 1; month <= 12; month++) {
+      const m = month.toString().padStart(2, '0');
+      const isFestive = month === 10 || month === 11;
+      const salesVol = isFestive ? 750000 : 500000;
+      
+      // Cash collection for AR (90% settlement velocity)
+      addEntry(`${year}-${m}-22`, `Cash Collection from Customers against Invoices`, 'Cash and Bank', 'Accounts Receivable', salesVol * 0.9, 'Receipts');
+      
+      // Payment to Suppliers (85% settlement velocity)
+      const simulatedPurchaseVol = salesVol * 0.55;
+      addEntry(`${year}-${m}-26`, `Supplier Payments for Raw Materials`, 'Accounts Payable', 'Cash and Bank', simulatedPurchaseVol * 0.85, 'Payments');
+      
+      // Operating Expenses
+      addEntry(`${year}-${m}-01`, 'Monthly Factory & Office Rent', 'Rent Expense', 'Cash and Bank', 45000, 'Expense');
+      addEntry(`${year}-${m}-07`, 'Staff & Worker Salaries', 'Salary Expense', 'Cash and Bank', 135000, 'Expense');
+      addEntry(`${year}-${m}-15`, 'Interest on Term Loan', 'Finance Cost', 'Cash and Bank', 15000, 'Finance');
+      addEntry(`${year}-${m}-20`, 'Power & Factory Utilities', 'Other Expenses', 'Cash and Bank', 25000, 'Expense');
+      
+      // Depreciation (AS 10)
+      addEntry(`${year}-${m}-28`, 'Monthly Plant & Machinery Depreciation', 'Depreciation Expense', 'Accumulated Depreciation', 12500, 'Depreciation');
+    }
+
+    // Year End Adjustments for each fiscal year
+    addEntry(`${year}-03-31`, `Annual Income Tax Provision FY ${year-1}-${year.toString().slice(2)}`, 'Tax Expense', 'Tax Payable', 350000, 'Tax');
+    addEntry(`${year}-03-31`, 'Deferred Tax Asset Recognition (AS 22)', 'Deferred Tax Asset', 'Tax Expense', 15000, 'Tax');
+    addEntry(`${year}-03-31`, 'Gratuity & Employee Benefit Provision (AS 15)', 'Salary Expense', 'Provision for Employee Benefits', 60000, 'Expense');
   }
 
-  // Year End Adjustments
-  addEntry('2026-03-31', 'Provision for Income Tax', 'Tax Expense', 'Tax Payable', 450000, 'Tax');
-  
-  // AS 22 Deferred Tax (Timing difference on depreciation)
-  addEntry('2026-03-31', 'Deferred Tax Asset Recognition', 'Deferred Tax Asset', 'Tax Expense', 15000, 'Tax');
-  
-  // AS 15 Employee Benefits (Gratuity Provision)
-  addEntry('2026-03-31', 'Provision for Gratuity', 'Salary Expense', 'Provision for Employee Benefits', 80000, 'Expense');
-  
-  // AS 29 Provisions (Warranty Provision)
-  addEntry('2026-03-31', 'Provision for Warranty', 'Other Expenses', 'Short-Term Provisions', 35000, 'Expense');
-  
-  // AS 26 Intangible Asset Purchase & Amortization
-  addEntry('2025-10-01', 'Purchase of Software License', 'Intangible Assets (Gross)', 'Cash and Bank', 300000, 'Investing');
+  // AS 26 Intangible Asset Purchase (ERP System in Oct 2024)
+  addEntry('2024-10-01', 'Purchase of ERP Software License', 'Intangible Assets (Gross)', 'Cash and Bank', 300000, 'Investing');
+  addEntry('2025-03-31', 'Amortization of Software', 'Depreciation Expense', 'Accumulated Amortization', 50000, 'Depreciation');
   addEntry('2026-03-31', 'Amortization of Software', 'Depreciation Expense', 'Accumulated Amortization', 50000, 'Depreciation');
 
   return txs.sort((a, b) => new Date(b.date) - new Date(a.date));
 };
+
 
 export const LedgerEngine = {
   transactions: generateBalancedTransactions(),

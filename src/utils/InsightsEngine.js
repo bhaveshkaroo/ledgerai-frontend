@@ -198,15 +198,20 @@ export const InsightsEngine = {
     const adjRevenue = Math.round(rev * revMultiplier);
     const adjExpenses = Math.round(exp * expMultiplier);
 
-    // Collection Impact from DSO Slip: Delayed Cash = (Daily Sales * Slip Days)
-    const dailyRev = rev / 365;
+    // Operational cash flow shift (Delta Revenue - Delta Expenses)
+    const deltaOperatingCashFlow = (adjRevenue - rev) - (adjExpenses - exp);
+
+    // Working Capital Impact: Delayed Cash Collection = (Daily Adjusted Sales * DSO Slip Days)
+    const dailyRev = adjRevenue / 365;
     const delayedCashCollection = Math.round(dailyRev * dsoSlip);
 
-    const projectedOperatingSurplus = adjRevenue - adjExpenses;
-    const stressTestedCashBalance = Math.round(baseCash + (projectedOperatingSurplus * 0.3) - delayedCashCollection);
+    // Stressed Liquid Cash Position: Baseline Cash + Delta Operating CF - Delayed AR Trap
+    const stressTestedCashBalance = Math.round(baseCash + deltaOperatingCashFlow - delayedCashCollection);
 
+    // Stressed Monthly Burn Rate and Adjusted Runway
     const avgMonthlyBurn = adjExpenses / 12;
     const stressRunwayMonths = avgMonthlyBurn > 0 ? Number((stressTestedCashBalance / avgMonthlyBurn).toFixed(1)) : 999;
+
 
     // 2. Automated Rule-Based Red Flag Diagnostics
     const redFlags = [];
