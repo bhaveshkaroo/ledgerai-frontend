@@ -63,10 +63,12 @@ const generateBalancedTransactions = () => {
     txs.push({ id: jvCount + 'B', date, account: creditAccount, amount, type: 'Credit', narration, ref, category });
   };
 
-  // 1. Initial Capital & Term Loan (January 2024)
-  addEntry('2024-01-01', 'Initial Capital Injection', 'Cash and Bank', 'Share Capital', 6000000, 'Capital');
-  addEntry('2024-01-05', 'Term Loan Received', 'Cash and Bank', 'Bank Loan', 2000000, 'Financing');
+  // 1. Initial Capital & Term/Working Capital Loan (January 2024)
+  addEntry('2024-01-01', 'Initial Capital Injection', 'Cash and Bank', 'Share Capital', 5000000, 'Capital');
+  addEntry('2024-01-05', 'Term & Working Capital Loan Disbursed', 'Cash and Bank', 'Bank Loan', 3000000, 'Financing');
   addEntry('2024-01-10', 'Purchase of Factory Equipment & Weaving Looms', 'Fixed Assets (Gross)', 'Cash and Bank', 1500000, 'Investing');
+
+
 
 
   // Generate 36 months of operational transactions (2024-01 to 2026-12)
