@@ -125,6 +125,65 @@ export const LedgerEngine = {
     // Maintain descending sort
     this.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
   },
+
+  reverseTransaction(targetRef, reason = 'Correction of error') {
+    const legsToReverse = this.transactions.filter(t => t.ref === targetRef);
+    if (legsToReverse.length === 0) return false;
+
+    const date = new Date().toISOString().split('T')[0];
+    const idNum = this.transactions.length > 0 ? parseInt(this.transactions[0].id) + 1 : 1000;
+    const revRef = `REV-${targetRef}`;
+
+    legsToReverse.forEach((leg, idx) => {
+      const oppositeType = leg.type === 'Debit' ? 'Credit' : 'Debit';
+      this.transactions.push({
+        id: `${idNum}${String.fromCharCode(65 + idx)}`,
+        date,
+        account: leg.account,
+        amount: leg.amount,
+        type: oppositeType,
+        narration: `Contra Reversal of ${targetRef}: ${reason}`,
+        ref: revRef,
+        category: leg.category || 'Adjustment'
+      });
+    });
+
+    this.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return revRef;
+  },
+
+  updateNarration(targetRef, newNarration) {
+    let updated = false;
+    this.transactions.forEach(t => {
+      if (t.ref === targetRef) {
+        t.narration = newNarration;
+        updated = true;
+      }
+    });
+    return updated;
+  },
+
+  batchFixMissingNarrations() {
+    let count = 0;
+    this.transactions.forEach(t => {
+      if (!t.narration || t.narration.trim() === '') {
+        t.narration = `Standard entry for ${t.account} (${t.category || 'General'})`;
+        count++;
+      }
+    });
+    return count;
+  },
+
+  reclassifyTransaction(targetRef, oldAccount, newAccount) {
+    let updated = false;
+    this.transactions.forEach(t => {
+      if (t.ref === targetRef && t.account === oldAccount) {
+        t.account = newAccount;
+        updated = true;
+      }
+    });
+    return updated;
+  },
   
   getFilteredTransactions(period, filters = {}) {
     return this.transactions; // Stubbed for brevity

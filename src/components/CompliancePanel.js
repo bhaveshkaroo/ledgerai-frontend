@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot, AlertTriangle, CheckCircle2, Info, Key, Check, Paperclip, FileText, CheckCheck, Sparkles } from 'lucide-react';
+import { X, Send, Bot, AlertTriangle, CheckCircle2, Info, Key, Check, Paperclip, FileText, CheckCheck, Sparkles, RefreshCw } from 'lucide-react';
 import { LedgerEngine, formatINR, CHART_OF_ACCOUNTS } from '../utils/LedgerEngine';
 import { InventoryEngine } from '../utils/InventoryEngine';
 import { InvoiceEngine } from '../utils/InvoiceEngine';
@@ -10,37 +10,58 @@ const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash
 
 const COA_NAMES = CHART_OF_ACCOUNTS.map(a => a.name).join(', ');
 
-const SYSTEM_INSTRUCTION = `You are Meso AI Audit & Accounting Assistant — an expert Indian Chartered Accountant embedded in the Indian MSME accounting software "Meso".
+const SYSTEM_INSTRUCTION = `You are Meso AI Audit & Accounting Assistant — an autonomous expert Indian Chartered Accountant embedded in the Indian MSME accounting software "Meso".
 
 Your core capabilities:
 1. Document & Photo OCR: When the user uploads an invoice, bill, receipt, or document image/PDF, analyze it, extract all details (Vendor/Customer, Date, Invoice No, GSTIN, Line items, Tax amounts, Total), and formulate the balanced double-entry journal entry.
 2. Natural Language Journal Entry: When the user asks to record, add, create, or post ANY transaction (e.g. "Record rent payment of 25000", "Bought office laptop for 50000 with 18% GST via bank", "Received payment from client"), formulate the proper balanced Indian double-entry journal voucher.
-3. Audit Finding Review & Remediation: When asked to review an audit finding or ledger discrepancy (e.g. missing narration, duplicate reference, imbalance, compliance breach), analyze the root cause under Indian AS standards, and propose the exact corrective journal voucher in the proposal format so the user can resolve it with one click.
+3. 1-Tap Reversal & Error Rectification: When the user asks to reverse, void, cancel, reclassify, or fix an entry or audit finding (such as missing narrations, duplicated reference, or account misclassification), you have FULL AUTHORITY to propose the exact 1-tap resolution action.
 4. Financial Q&A & Audit Review: Answer questions about Balance Sheet, P&L, Cash Flow, ratios, and AS compliance using the provided financial context.
 
 Chart of Accounts in Meso:
 ${COA_NAMES}
 
-MANDATORY JOURNAL VOUCHER FORMAT:
-Whenever you propose, formulate, or suggest a journal entry (from an uploaded photo/document, user chat, or audit finding correction), you MUST include the structured JSON block inside [JOURNAL_ENTRY_PROPOSAL]...[/JOURNAL_ENTRY_PROPOSAL] tags like this:
+MANDATORY 1-TAP ACTION PROPOSAL FORMAT:
+Whenever you propose a journal entry, reversal, correction, or audit fix, you MUST include a JSON proposal block enclosed in [JOURNAL_ENTRY_PROPOSAL]...[/JOURNAL_ENTRY_PROPOSAL] tags like this:
 
+For creating/correcting entries:
 [JOURNAL_ENTRY_PROPOSAL]
 {
+  "action": "POST_ENTRY",
+  "title": "Record Transaction / Corrective Entry",
   "date": "YYYY-MM-DD",
-  "narration": "Brief description of the transaction and party",
+  "narration": "Detailed explanation of the entry",
   "category": "Expense" | "Revenue" | "Capital" | "Investing" | "Financing" | "Tax",
   "legs": [
-    { "account": "Debit Account Name", "type": "Debit", "amount": 10000 },
-    { "account": "Credit Account Name", "type": "Credit", "amount": 10000 }
+    { "account": "Debit Account Name from COA", "type": "Debit", "amount": 10000 },
+    { "account": "Credit Account Name from COA", "type": "Credit", "amount": 10000 }
   ]
 }
 [/JOURNAL_ENTRY_PROPOSAL]
 
-Rules for Journal Proposals:
+For reversing/voiding an erroneous transaction:
+[JOURNAL_ENTRY_PROPOSAL]
+{
+  "action": "REVERSE_ENTRY",
+  "title": "Contra Reversal of Transaction",
+  "targetRef": "REF-TO-REVERSE",
+  "reason": "Reason for reversal"
+}
+[/JOURNAL_ENTRY_PROPOSAL]
+
+For batch fixing missing narrations (AS 1):
+[JOURNAL_ENTRY_PROPOSAL]
+{
+  "action": "FIX_NARRATIONS",
+  "title": "Standardize Missing Transaction Narrations (AS 1 Compliance)"
+}
+[/JOURNAL_ENTRY_PROPOSAL]
+
+Rules for Proposals:
 - Total Debits MUST equal Total Credits.
-- Use only valid accounts from the Chart of Accounts provided above.
+- Use only valid accounts from the Chart of Accounts provided.
 - If GST applies, split into Input CGST & Input SGST (intra-state) or Input IGST (inter-state), and Output CGST & Output SGST or Output IGST for sales.
-- Outside the JSON block, explain your reasoning and invite the user to click the "Confirm & Post to Ledger" button below to record it.
+- Outside the JSON block, explain your reasoning and invite the user to click the 1-Tap button below to execute the change immediately.
 
 Formatting Rules:
 - NEVER use LaTeX math tags or delimiters ($$, $, \\frac, \\text, \\mathbf).
@@ -86,7 +107,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([
     {
       role: 'bot',
-      text: "Hello! I'm your AI Audit & Accounting Assistant.\n\n• 📎 **Upload bills, receipts, or invoices** — I'll scan them and draft the journal voucher.\n• ✍️ **Type any transaction** — e.g. *\"Paid Rs. 15,000 for office stationery with 18% GST via bank\"*.\n• 🔍 **Review Audit Findings** — Click 'Audit Findings' to scan for anomalies and auto-generate corrective entries.\n• 📊 **Ask financial questions** about your Balance Sheet, P&L, and AS compliance.",
+      text: "Hello! I'm your AI Audit & Accounting Assistant.\n\n• 📎 **Upload bills or receipts** — I'll scan them and formulate the journal entry.\n• ✍️ **Type any transaction or reversal** — e.g. *\"Paid Rs. 15,000 for rent\"* or *\"Reverse transaction PUR-2025-102\"*.\n• 🔍 **Auto-Solve Audit Findings** — Check 'Audit Findings' to auto-diagnose and resolve ledger anomalies with 1 tap.\n• 📊 **Ask financial questions** about your Balance Sheet, P&L, and AS compliance.",
       proposals: [],
       postedState: {}
     }
@@ -96,13 +117,21 @@ const CompliancePanel = ({ isOpen, onClose }) => {
   const [showKeyInput, setShowKeyInput] = useState(!getGeminiKey());
   const [apiKeyInput, setApiKeyInput] = useState(getGeminiKey());
   const [keySaved, setKeySaved] = useState(false);
-  const [attachment, setAttachment] = useState(null); // { name, type, base64, previewUrl }
+  const [attachment, setAttachment] = useState(null);
+  const [, setLedgerTick] = useState(0);
   const fileInputRef = useRef(null);
   const chatEndRef = useRef(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
+
+  // Re-render and re-evaluate findings whenever ledger updates
+  useEffect(() => {
+    const handleUpdate = () => setLedgerTick(t => t + 1);
+    window.addEventListener('ledger-updated', handleUpdate);
+    return () => window.removeEventListener('ledger-updated', handleUpdate);
+  }, []);
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
@@ -131,13 +160,13 @@ const CompliancePanel = ({ isOpen, onClose }) => {
       refCounts[t.ref] = (refCounts[t.ref] || 0) + 1;
     });
     Object.entries(refCounts).forEach(([ref, count]) => {
-      if (count > 2) {
+      if (count > 2 && !ref.startsWith('REV-')) {
         findings.push({
           id: `dup-${ref}`,
           severity: 'warning',
           title: 'Possible Duplicate Reference',
           detail: `Reference ${ref} appears ${count} times (expected 2 for double-entry balanced pair).`,
-          context: { ref, count }
+          targetRef: ref
         });
       }
     });
@@ -149,7 +178,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
         severity: 'error',
         title: 'Missing Transaction Narrations (AS 1)',
         detail: `${missingNarration.length} journal entries have no narration. AS 1 requires adequate disclosure and proper documentation for all ledger postings.`,
-        context: { count: missingNarration.length }
+        actionType: 'FIX_NARRATIONS'
       });
     }
 
@@ -161,8 +190,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
         id: 'bs-imbalance',
         severity: 'error',
         title: 'Balance Sheet Imbalance',
-        detail: `Assets (${formatINR(totalAssets)}) ≠ Equity+Liabilities (${formatINR(totalEq)}). Discrepancy: ${formatINR(Math.abs(totalEq - totalAssets))}.`,
-        context: { totalAssets, totalEq }
+        detail: `Assets (${formatINR(totalAssets)}) ≠ Equity+Liabilities (${formatINR(totalEq)}). Discrepancy: ${formatINR(Math.abs(totalEq - totalAssets))}.`
       });
     } else {
       findings.push({
@@ -183,8 +211,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
         id: 'tb-mismatch',
         severity: 'error',
         title: 'Trial Balance Mismatch',
-        detail: `Total Debits (${formatINR(totalDebits)}) ≠ Total Credits (${formatINR(totalCredits)}).`,
-        context: { totalDebits, totalCredits }
+        detail: `Total Debits (${formatINR(totalDebits)}) ≠ Total Credits (${formatINR(totalCredits)}).`
       });
     } else {
       findings.push({
@@ -211,8 +238,8 @@ const CompliancePanel = ({ isOpen, onClose }) => {
       else totalCredits += t.amount;
     });
 
-    const recent = [...txs].slice(-10).map(t =>
-      `${t.date} | ${t.type} | ${t.account} | Rs.${t.amount.toLocaleString('en-IN')} | ${t.narration || 'No narration'}`
+    const recent = [...txs].slice(-12).map(t =>
+      `${t.date} | ${t.type} | ${t.account} | Rs.${t.amount.toLocaleString('en-IN')} | Ref: ${t.ref} | ${t.narration || 'No narration'}`
     ).join('\n');
 
     let inventoryValue = 0;
@@ -236,7 +263,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     parts.push(`Total Ledger Entries: ${txs.length}`);
     if (inventoryValue > 0) parts.push(`Inventory Valuation (FIFO): Rs.${inventoryValue.toLocaleString('en-IN')}`);
     if (invoiceCount > 0) parts.push(`Total Invoices: ${invoiceCount}`);
-    if (recent) parts.push(`Recent Transactions (last 10):\n${recent}`);
+    if (recent) parts.push(`Recent Transactions (last 12 with Refs):\n${recent}`);
 
     return parts.join('\n');
   };
@@ -349,14 +376,20 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     }
   };
 
-  // Triggered when user clicks "AI Review & Solve" on an audit finding card
+  // 1-Tap Trigger from Audit Findings
   const handleReviewFinding = async (finding) => {
     setActiveTab('chat');
-    const prompt = `Review this audit finding: "${finding.title} — ${finding.detail}". Explain the AS compliance impact and formulate the exact corrective journal entry or rectification in the [JOURNAL_ENTRY_PROPOSAL] format so I can fix it.`;
+    let prompt = `Review this audit finding: "${finding.title} — ${finding.detail}". Explain the AS compliance impact and formulate the exact 1-tap resolution action in the [JOURNAL_ENTRY_PROPOSAL] format so I can fix it immediately.`;
+    
+    if (finding.targetRef) {
+      prompt += ` If this is an unintended duplicate voucher, propose a REVERSE_ENTRY for reference "${finding.targetRef}".`;
+    } else if (finding.actionType === 'FIX_NARRATIONS') {
+      prompt += ` Please formulate a FIX_NARRATIONS proposal to standardize and insert compliant narrations for all un-narrated entries as required by AS 1.`;
+    }
     
     setMessages(prev => [...prev, {
       role: 'user',
-      text: `🔍 Please review this audit finding: "${finding.title}"\n${finding.detail}`
+      text: `🔍 Please review and resolve this audit finding:\n**${finding.title}**\n${finding.detail}`
     }]);
     
     setIsTyping(true);
@@ -391,44 +424,56 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     }
   };
 
+  // 1-Tap Execution Handler
   const handlePostProposal = async (msgIndex, propIndex, proposal) => {
-    const date = proposal.date || new Date().toISOString().split('T')[0];
-    const narration = proposal.narration || 'AI Posted Journal Entry';
-    const category = proposal.category || 'Expense';
-    const idNum = LedgerEngine.transactions.length > 0 ? parseInt(LedgerEngine.transactions[0].id) + 1 : 1000;
-    const ref = `AI-${idNum}`;
+    const action = proposal.action || 'POST_ENTRY';
 
-    if (proposal.legs && Array.isArray(proposal.legs)) {
-      proposal.legs.forEach((leg, idx) => {
-        LedgerEngine.transactions.push({
-          id: `${idNum}${String.fromCharCode(65 + idx)}`,
-          date,
-          account: leg.account,
-          amount: Number(leg.amount),
-          type: leg.type,
-          narration,
-          ref,
-          category
+    if (action === 'REVERSE_ENTRY' && proposal.targetRef) {
+      LedgerEngine.reverseTransaction(proposal.targetRef, proposal.reason || 'AI Reversal of duplicate/erroneous entry');
+    } else if (action === 'FIX_NARRATIONS') {
+      LedgerEngine.batchFixMissingNarrations();
+    } else if (action === 'RECLASSIFY_ENTRY' && proposal.targetRef && proposal.oldAccount && proposal.newAccount) {
+      LedgerEngine.reclassifyTransaction(proposal.targetRef, proposal.oldAccount, proposal.newAccount);
+    } else {
+      // Standard Post Entry
+      const date = proposal.date || new Date().toISOString().split('T')[0];
+      const narration = proposal.narration || 'AI Posted Journal Entry';
+      const category = proposal.category || 'Expense';
+      const idNum = LedgerEngine.transactions.length > 0 ? parseInt(LedgerEngine.transactions[0].id) + 1 : 1000;
+      const ref = `AI-${idNum}`;
+
+      if (proposal.legs && Array.isArray(proposal.legs)) {
+        proposal.legs.forEach((leg, idx) => {
+          LedgerEngine.transactions.push({
+            id: `${idNum}${String.fromCharCode(65 + idx)}`,
+            date,
+            account: leg.account,
+            amount: Number(leg.amount),
+            type: leg.type,
+            narration,
+            ref,
+            category
+          });
         });
-      });
-    } else if (proposal.debitAccount && proposal.creditAccount && proposal.amount) {
-      LedgerEngine.postTransaction(date, narration, proposal.debitAccount, proposal.creditAccount, Number(proposal.amount), category, ref);
+      } else if (proposal.debitAccount && proposal.creditAccount && proposal.amount) {
+        LedgerEngine.postTransaction(date, narration, proposal.debitAccount, proposal.creditAccount, Number(proposal.amount), category, ref);
+      }
+      LedgerEngine.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
     }
 
-    LedgerEngine.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-
+    // Sync to Supabase audit log if available
     try {
-      await supabase.from('transactions').insert([{
-        ref,
-        date,
-        narration,
-        category,
-        data: proposal
+      await supabase.from('audit_logs').insert([{
+        action,
+        timestamp: new Date().toISOString(),
+        details: proposal
       }]);
     } catch (_) {}
 
+    // Dispatch global event so Dashboard, Statements, Day Book, and Findings re-render live
     window.dispatchEvent(new Event('ledger-updated'));
 
+    // Update message card state
     setMessages(prev => {
       const next = [...prev];
       const targetMsg = { ...next[msgIndex] };
@@ -449,9 +494,9 @@ const CompliancePanel = ({ isOpen, onClose }) => {
           <div>
             <div style={{ fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span>Meso AI Assistant</span>
-              <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(16,185,129,0.12)', color: '#10b981', fontWeight: 600 }}>OCR & Entry</span>
+              <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(16,185,129,0.12)', color: '#10b981', fontWeight: 600 }}>1-Tap Control</span>
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Audit • Bill Scanner • Auto-Journal</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Scan • Auto-Journal • Reversal • Fix Findings</div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -570,80 +615,109 @@ const CompliancePanel = ({ isOpen, onClose }) => {
 
                 {/* Text Bubble */}
                 {msg.text && (
-                  <div className={`chat-bubble ${msg.role}`} style={{ whiteSpace: 'pre-line', maxWidth: '85%' }}>
+                  <div className={`chat-bubble ${msg.role}`} style={{ whiteSpace: 'pre-line', maxWidth: '88%' }}>
                     {msg.text}
                   </div>
                 )}
 
-                {/* Proposed Journal Entry Cards */}
+                {/* Proposed 1-Tap Action / Voucher Cards */}
                 {msg.proposals && msg.proposals.map((prop, propIndex) => {
                   const isPosted = msg.postedState && msg.postedState[propIndex];
+                  const isReversal = prop.action === 'REVERSE_ENTRY';
+                  const isFixNarrations = prop.action === 'FIX_NARRATIONS';
+
                   return (
                     <div key={propIndex} style={{
                       marginTop: '8px',
                       padding: '14px',
                       background: 'var(--bg-surface)',
-                      border: '1px solid #10b981',
+                      border: `1px solid ${isReversal ? '#ef4444' : isFixNarrations ? '#8b5cf6' : '#10b981'}`,
                       borderRadius: '10px',
                       maxWidth: '92%',
                       boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <CheckCircle2 size={15} color="#10b981" />
-                          <span style={{ fontSize: '13px', fontWeight: 600 }}>Proposed Journal Voucher</span>
+                          {isReversal ? <RefreshCw size={15} color="#ef4444" /> : isFixNarrations ? <Sparkles size={15} color="#8b5cf6" /> : <CheckCircle2 size={15} color="#10b981" />}
+                          <span style={{ fontSize: '13px', fontWeight: 600 }}>{prop.title || 'Proposed 1-Tap Resolution'}</span>
                         </div>
-                        <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 600 }}>
-                          {prop.category || 'Journal Entry'}
+                        <span style={{
+                          fontSize: '10px', padding: '2px 6px', borderRadius: '4px',
+                          background: isReversal ? 'rgba(239,68,68,0.1)' : isFixNarrations ? 'rgba(139,92,246,0.1)' : 'rgba(16,185,129,0.1)',
+                          color: isReversal ? '#ef4444' : isFixNarrations ? '#8b5cf6' : '#10b981',
+                          fontWeight: 600
+                        }}>
+                          {prop.action || 'POST_ENTRY'}
                         </span>
                       </div>
 
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                        Date: <strong>{prop.date || new Date().toISOString().split('T')[0]}</strong>
-                      </div>
+                      {/* Reversal specifics */}
+                      {isReversal && (
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                          Target Voucher to Void: <strong>{prop.targetRef}</strong>
+                          {prop.reason && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Reason: {prop.reason}</div>}
+                        </div>
+                      )}
 
-                      {/* Line Table */}
-                      <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse', marginBottom: '10px' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '10px', textAlign: 'left' }}>
-                            <th style={{ padding: '4px' }}>Account Head</th>
-                            <th style={{ padding: '4px', textAlign: 'right' }}>Type</th>
-                            <th style={{ padding: '4px', textAlign: 'right' }}>Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {prop.legs ? prop.legs.map((leg, li) => (
-                            <tr key={li} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                              <td style={{ padding: '4px', fontWeight: 500 }}>{leg.account}</td>
-                              <td style={{ padding: '4px', textAlign: 'right', color: leg.type === 'Debit' ? '#3b82f6' : '#8b5cf6', fontWeight: 600 }}>{leg.type}</td>
-                              <td style={{ padding: '4px', textAlign: 'right', fontWeight: 600 }}>₹{Number(leg.amount).toLocaleString('en-IN')}</td>
-                            </tr>
-                          )) : (
-                            <>
-                              <tr>
-                                <td style={{ padding: '4px', fontWeight: 500 }}>{prop.debitAccount}</td>
-                                <td style={{ padding: '4px', textAlign: 'right', color: '#3b82f6', fontWeight: 600 }}>Debit</td>
-                                <td style={{ padding: '4px', textAlign: 'right', fontWeight: 600 }}>₹{Number(prop.amount).toLocaleString('en-IN')}</td>
+                      {/* Fix narrations specifics */}
+                      {isFixNarrations && (
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                          Will automatically populate standardized, compliant transaction narrations for all un-narrated entries per AS 1.
+                        </div>
+                      )}
+
+                      {/* Line Table for Standard Entries */}
+                      {!isReversal && !isFixNarrations && (
+                        <>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                            Date: <strong>{prop.date || new Date().toISOString().split('T')[0]}</strong>
+                          </div>
+
+                          <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse', marginBottom: '10px' }}>
+                            <thead>
+                              <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '10px', textAlign: 'left' }}>
+                                <th style={{ padding: '4px' }}>Account Head</th>
+                                <th style={{ padding: '4px', textAlign: 'right' }}>Type</th>
+                                <th style={{ padding: '4px', textAlign: 'right' }}>Amount</th>
                               </tr>
-                              <tr>
-                                <td style={{ padding: '4px', fontWeight: 500 }}>{prop.creditAccount}</td>
-                                <td style={{ padding: '4px', textAlign: 'right', color: '#8b5cf6', fontWeight: 600 }}>Credit</td>
-                                <td style={{ padding: '4px', textAlign: 'right', fontWeight: 600 }}>₹{Number(prop.amount).toLocaleString('en-IN')}</td>
-                              </tr>
-                            </>
+                            </thead>
+                            <tbody>
+                              {prop.legs ? prop.legs.map((leg, li) => (
+                                <tr key={li} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                                  <td style={{ padding: '4px', fontWeight: 500 }}>{leg.account}</td>
+                                  <td style={{ padding: '4px', textAlign: 'right', color: leg.type === 'Debit' ? '#3b82f6' : '#8b5cf6', fontWeight: 600 }}>{leg.type}</td>
+                                  <td style={{ padding: '4px', textAlign: 'right', fontWeight: 600 }}>₹{Number(leg.amount).toLocaleString('en-IN')}</td>
+                                </tr>
+                              )) : (
+                                <>
+                                  <tr>
+                                    <td style={{ padding: '4px', fontWeight: 500 }}>{prop.debitAccount}</td>
+                                    <td style={{ padding: '4px', textAlign: 'right', color: '#3b82f6', fontWeight: 600 }}>Debit</td>
+                                    <td style={{ padding: '4px', textAlign: 'right', fontWeight: 600 }}>₹{Number(prop.amount).toLocaleString('en-IN')}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style={{ padding: '4px', fontWeight: 500 }}>{prop.creditAccount}</td>
+                                    <td style={{ padding: '4px', textAlign: 'right', color: '#8b5cf6', fontWeight: 600 }}>Credit</td>
+                                    <td style={{ padding: '4px', textAlign: 'right', fontWeight: 600 }}>₹{Number(prop.amount).toLocaleString('en-IN')}</td>
+                                  </tr>
+                                </>
+                              )}
+                            </tbody>
+                          </table>
+
+                          {prop.narration && (
+                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '10px', fontStyle: 'italic' }}>
+                              Narration: {prop.narration}
+                            </div>
                           )}
-                        </tbody>
-                      </table>
-
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '10px', fontStyle: 'italic' }}>
-                        Narration: {prop.narration}
-                      </div>
+                        </>
+                      )}
 
                       {/* Action Button */}
                       {isPosted ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontSize: '12px', fontWeight: 600, padding: '6px' }}>
                           <CheckCheck size={16} color="#10b981" />
-                          <span>Posted to Ledger & Books Updated ✅</span>
+                          <span>Correction Applied & Ledger Updated ✅</span>
                         </div>
                       ) : (
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -652,18 +726,19 @@ const CompliancePanel = ({ isOpen, onClose }) => {
                             className="btn-primary"
                             style={{
                               flex: 1,
-                              padding: '7px 12px',
+                              padding: '8px 12px',
                               borderRadius: '6px',
                               fontSize: '12px',
                               fontWeight: 600,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              gap: '6px'
+                              gap: '6px',
+                              background: isReversal ? '#ef4444' : isFixNarrations ? '#8b5cf6' : undefined
                             }}
                           >
                             <Check size={14} />
-                            <span>Confirm & Post to Ledger</span>
+                            <span>{isReversal ? 'Confirm & Execute 1-Tap Reversal' : isFixNarrations ? 'Confirm & Apply 1-Tap Fix' : 'Confirm & Post to Ledger'}</span>
                           </button>
                         </div>
                       )}
@@ -674,7 +749,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
             ))}
             {isTyping && (
               <div className="chat-bubble bot" style={{ opacity: 0.6 }}>
-                Analyzing document & financial books...
+                Analyzing books & formulating 1-tap resolution...
               </div>
             )}
             <div ref={chatEndRef} />
@@ -744,7 +819,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={attachment ? "Add instructions or press send..." : "Type transaction (e.g. Paid Rs 20000 rent via bank)..."}
+              placeholder={attachment ? "Add instructions or press send..." : "Type transaction, reversal (e.g. Reverse PUR-2025-101), or question..."}
               disabled={isTyping}
               style={{
                 flex: 1, padding: '10px 14px', borderRadius: 'var(--radius-pill)',
@@ -775,7 +850,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
         /* Findings Tab */
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-            Click <strong>"AI Review & Fix"</strong> on any anomaly to have the AI diagnose the compliance risk and draft a corrective journal voucher.
+            Click <strong>"AI Review & Fix"</strong> on any anomaly to have the AI diagnose the compliance risk and draft a 1-tap corrective action.
           </div>
           {findings.map((f, i) => (
             <div key={i} style={{
@@ -795,7 +870,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
                   <button
                     onClick={() => handleReviewFinding(f)}
                     style={{
-                      padding: '5px 10px',
+                      padding: '6px 12px',
                       borderRadius: '6px',
                       fontSize: '11px',
                       fontWeight: 600,
@@ -809,7 +884,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
                     }}
                   >
                     <Sparkles size={12} color="#8b5cf6" />
-                    <span>AI Review & Fix</span>
+                    <span>AI Review & Auto-Solve (1-Tap)</span>
                   </button>
                 </div>
               )}
