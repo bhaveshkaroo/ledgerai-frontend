@@ -99,61 +99,36 @@ ${monthlyData.map(m => `• ${m.month}: Revenue Rs. ${m.revenue.toLocaleString('
     setAiQuestion('');
     setIsAiLoading(true);
 
-    const apiKey = getGeminiKey();
-    if (!apiKey) {
-      setAiChat(prev => [...prev, { 
-        role: 'assistant', 
-        text: "⚠️ Please configure your Gemini API Key using the Key icon in the AI Audit Assistant or settings to enable AI analytical advisory." 
-      }]);
-      setIsAiLoading(false);
-      return;
-    }
+    try {
+      const res = await fetch('http://localhost:8000/api/insights/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          question: q,
+          financial_context: {
+             metrics: metrics,
+             monthlyData: monthlyData,
+             forecast: forecast
+          }
+        })
+      });
 
-    const systemPrompt = `You are the Meso Financial Analysis & Forecasting Advisor — an expert Chartered Financial Analyst (CFA) and Indian corporate finance specialist.
-
-Your role:
-1. Provide deep, accurate, CFA-grounded financial analysis (Ratio interpretation, DuPont breakdown, Working Capital diagnostics, Seasonality/Trend analysis, and near-term forecasting) using the user's verified financial ledger data.
-2. Ground EVERY single number in the provided context. NEVER hallucinate or invent figures.
-3. When discussing forecasting, ALWAYS explicitly state that projections are statistical estimates based on historical 12-month run rates, not guarantees.
-4. If asked for data that is unavailable (such as 3-year or 5-year multi-year trends when only FY 2025-26 data is available), EXPLICITLY state the limitation: "Historical data is currently available for FY 2025-26 (1 year). Multi-year historical trends will become available as additional financial years are completed."
-5. Analysis ONLY — NEVER suggest posting journal entries or altering the ledger from this module.
-6. Use clean text formatting (NO LaTeX delimiters like $$, $, \\frac). Use Indian Rupees (Rs. or ₹).`;
-
-    const promptPayload = {
-      contents: [{
-        parts: [{
-          text: `User Question: "${q}"\n\n${buildContextForAI()}\n\nPlease provide a thorough, structured, CFA-grounded financial analysis.`
-        }]
-      }],
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      generationConfig: { temperature: 0.2 }
-    };
-
-    let answer = '';
-    for (const model of GEMINI_MODELS) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(promptPayload)
-        });
-        if (res.ok) {
-          const data = await res.json();
-          answer = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (answer) break;
-        }
-      } catch (err) {
-        console.warn(`Model ${model} failed`, err);
+      if (res.ok) {
+        const data = await res.json();
+        const answer = data.answer;
+        setAiChat(prev => [...prev, { role: 'assistant', text: cleanTextFormatting(answer) }]);
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        setAiChat(prev => [...prev, { role: 'assistant', text: errorData.detail || "Error communicating with the backend Insights service." }]);
       }
+    } catch (err) {
+      console.warn("Backend insights call failed", err);
+      setAiChat(prev => [...prev, { role: 'assistant', text: "Unable to complete AI analysis. Ensure the backend server is running." }]);
+    } finally {
+      setIsAiLoading(false);
     }
-
-    if (!answer) {
-      answer = "Unable to complete AI analysis at this moment due to network demand. Please verify your internet connection or retry in a few seconds.";
-    }
-
-    setAiChat(prev => [...prev, { role: 'assistant', text: cleanTextFormatting(answer) }]);
-    setIsAiLoading(false);
   };
 
   return (
