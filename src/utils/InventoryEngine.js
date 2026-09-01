@@ -6,14 +6,17 @@ export const InventoryEngine = {
   // Audit log of all stock movements: [ { id, date, itemCode, type: 'IN' | 'OUT', qty, unitCost, totalValue, balanceQty, ref } ]
   movements: [],
 
-  recordPurchase(date, itemCode, qty, unitCost, supplier) {
+  recordPurchase(date, itemCode, qty, unitCost, supplier, gstRate = 0.18) {
     if (!this.stock[itemCode]) {
       this.stock[itemCode] = [];
     }
 
-    const totalCost = qty * unitCost;
+    const baseCost = qty * unitCost;
+    const cgst = Math.round(baseCost * (gstRate / 2));
+    const sgst = Math.round(baseCost * (gstRate / 2));
+    const totalInvoicePayable = baseCost + cgst + sgst;
 
-    // Add to FIFO queue
+    // Add to FIFO queue at pure cost basis (excl GST per AS 2)
     this.stock[itemCode].push({ qty, unitCost, date });
 
     const currentBalanceQty = this.stock[itemCode].reduce((sum, b) => sum + b.qty, 0);
@@ -28,24 +31,25 @@ export const InventoryEngine = {
       type: 'IN',
       qty,
       unitCost,
-      totalValue: totalCost,
+      totalValue: baseCost,
       balanceQty: currentBalanceQty,
       ref,
       party: supplier
     });
 
-    // Post to Ledger
-    // Dr. Inventory
-    // Cr. Accounts Payable
-    LedgerEngine.postTransaction(
-      date,
-      `Purchase of ${qty} ${itemCode} @ ${unitCost} from ${supplier}`,
-      'Inventory',
-      'Accounts Payable',
-      totalCost,
-      'Purchases',
-      ref
-    );
+    // Post Double-Entry to Ledger:
+    // Dr. Inventory (Base cost)
+    // Dr. Input CGST (9%)
+    // Dr. Input SGST (9%)
+    // Cr. Accounts Payable (Gross invoice amount)
+    const idNum = LedgerEngine.transactions.length > 0 ? parseInt(LedgerEngine.transactions[0].id) + 1 : 1000;
+    
+    LedgerEngine.transactions.push({ id: `${idNum}A`, date, account: 'Inventory', amount: baseCost, type: 'Debit', narration: `Purchase of ${qty} ${itemCode} @ ${unitCost} from ${supplier}`, ref, category: 'Purchases' });
+    LedgerEngine.transactions.push({ id: `${idNum}B`, date, account: 'Input CGST', amount: cgst, type: 'Debit', narration: `Input CGST on Purchase of ${itemCode} (${ref})`, ref, category: 'Purchases' });
+    LedgerEngine.transactions.push({ id: `${idNum}C`, date, account: 'Input SGST', amount: sgst, type: 'Debit', narration: `Input SGST on Purchase of ${itemCode} (${ref})`, ref, category: 'Purchases' });
+    LedgerEngine.transactions.push({ id: `${idNum}D`, date, account: 'Accounts Payable', amount: totalInvoicePayable, type: 'Credit', narration: `Invoice Payable to ${supplier} for ${qty} ${itemCode} (${ref})`, ref, category: 'Purchases' });
+
+    LedgerEngine.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     return ref;
   },
