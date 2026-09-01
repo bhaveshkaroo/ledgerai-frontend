@@ -425,61 +425,84 @@ const CompliancePanel = ({ isOpen, onClose }) => {
   };
 
   // 1-Tap Execution Handler
-  const handlePostProposal = async (msgIndex, propIndex, proposal) => {
+  const handlePostProposal = (msgIndex, propIndex, proposal) => {
     const action = proposal.action || 'POST_ENTRY';
+    console.log('[MESO AI] Executing 1-tap action:', action, proposal);
 
-    if (action === 'REVERSE_ENTRY' && proposal.targetRef) {
-      LedgerEngine.reverseTransaction(proposal.targetRef, proposal.reason || 'AI Reversal of duplicate/erroneous entry');
-    } else if (action === 'FIX_NARRATIONS') {
-      LedgerEngine.batchFixMissingNarrations();
-    } else if (action === 'RECLASSIFY_ENTRY' && proposal.targetRef && proposal.oldAccount && proposal.newAccount) {
-      LedgerEngine.reclassifyTransaction(proposal.targetRef, proposal.oldAccount, proposal.newAccount);
-    } else {
-      // Standard Post Entry
-      const date = proposal.date || new Date().toISOString().split('T')[0];
-      const narration = proposal.narration || 'AI Posted Journal Entry';
-      const category = proposal.category || 'Expense';
-      const idNum = LedgerEngine.transactions.length > 0 ? parseInt(LedgerEngine.transactions[0].id) + 1 : 1000;
-      const ref = `AI-${idNum}`;
+    try {
+      if (action === 'REVERSE_ENTRY' && proposal.targetRef) {
+        const result = LedgerEngine.reverseTransaction(proposal.targetRef, proposal.reason || 'AI Reversal of duplicate/erroneous entry');
+        console.log('[MESO AI] Reversal result:', result);
+      } else if (action === 'FIX_NARRATIONS') {
+        const count = LedgerEngine.batchFixMissingNarrations();
+        console.log('[MESO AI] Fixed narrations count:', count);
+      } else if (action === 'RECLASSIFY_ENTRY' && proposal.targetRef && proposal.oldAccount && proposal.newAccount) {
+        const result = LedgerEngine.reclassifyTransaction(proposal.targetRef, proposal.oldAccount, proposal.newAccount);
+        console.log('[MESO AI] Reclassify result:', result);
+      } else {
+        // Standard Post Entry
+        const date = proposal.date || new Date().toISOString().split('T')[0];
+        const narration = proposal.narration || 'AI Posted Journal Entry';
+        const category = proposal.category || 'Expense';
 
-      if (proposal.legs && Array.isArray(proposal.legs)) {
-        proposal.legs.forEach((leg, idx) => {
-          LedgerEngine.transactions.push({
-            id: `${idNum}${String.fromCharCode(65 + idx)}`,
-            date,
-            account: leg.account,
-            amount: Number(leg.amount),
-            type: leg.type,
-            narration,
-            ref,
-            category
+        if (proposal.legs && Array.isArray(proposal.legs)) {
+          // Multi-leg entry: push each leg individually
+          const maxId = LedgerEngine.transactions.reduce((max, t) => {
+            const num = parseInt(t.id);
+            return isNaN(num) ? max : Math.max(max, num);
+          }, 0);
+          const idNum = maxId + 1;
+          const ref = `AI-${idNum}`;
+
+          proposal.legs.forEach((leg, idx) => {
+            LedgerEngine.transactions.push({
+              id: `${idNum}${String.fromCharCode(65 + idx)}`,
+              date,
+              account: leg.account,
+              amount: Number(leg.amount),
+              type: leg.type,
+              narration,
+              ref,
+              category
+            });
           });
-        });
-      } else if (proposal.debitAccount && proposal.creditAccount && proposal.amount) {
-        LedgerEngine.postTransaction(date, narration, proposal.debitAccount, proposal.creditAccount, Number(proposal.amount), category, ref);
+          LedgerEngine.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+          console.log('[MESO AI] Posted multi-leg entry, ref:', ref, 'legs:', proposal.legs.length);
+        } else if (proposal.debitAccount && proposal.creditAccount && proposal.amount) {
+          const ref = `AI-${LedgerEngine.transactions.length}`;
+          LedgerEngine.postTransaction(date, narration, proposal.debitAccount, proposal.creditAccount, Number(proposal.amount), category, ref);
+          console.log('[MESO AI] Posted 2-leg entry, ref:', ref);
+        }
       }
-      LedgerEngine.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      console.log('[MESO AI] Total transactions after action:', LedgerEngine.transactions.length);
+      console.log('[MESO AI] Cash balance after action:', LedgerEngine.getAccountBalance('Cash and Bank'));
+    } catch (err) {
+      console.error('[MESO AI] Error executing action:', err);
     }
 
-    // Sync to Supabase audit log if available
-    try {
-      await supabase.from('audit_logs').insert([{
-        action,
-        timestamp: new Date().toISOString(),
-        details: proposal
-      }]);
-    } catch (_) {}
-
-    // Dispatch global event so Dashboard, Statements, Day Book, and Findings re-render live
+    // IMMEDIATELY dispatch the event and update UI — do NOT wait for supabase
     window.dispatchEvent(new Event('ledger-updated'));
+    console.log('[MESO AI] ledger-updated event dispatched');
 
-    // Update message card state
+    // Update message card to show green checkmark
     setMessages(prev => {
       const next = [...prev];
       const targetMsg = { ...next[msgIndex] };
       targetMsg.postedState = { ...targetMsg.postedState, [propIndex]: true };
       next[msgIndex] = targetMsg;
       return next;
+    });
+
+    // Sync to Supabase audit log in background (fire and forget — never blocks UI)
+    supabase.from('audit_logs').insert([{
+      action,
+      timestamp: new Date().toISOString(),
+      details: proposal
+    }]).then(() => {
+      console.log('[MESO AI] Audit log synced to Supabase');
+    }).catch(() => {
+      // Silently ignore — audit log sync is optional
     });
   };
 
