@@ -64,27 +64,31 @@ const generateBalancedTransactions = () => {
   };
 
   // 1. Initial Capital & Term Loan (January 2024)
-  addEntry('2024-01-01', 'Initial Capital Injection', 'Cash and Bank', 'Share Capital', 5000000, 'Capital');
+  addEntry('2024-01-01', 'Initial Capital Injection', 'Cash and Bank', 'Share Capital', 6000000, 'Capital');
   addEntry('2024-01-05', 'Term Loan Received', 'Cash and Bank', 'Bank Loan', 2000000, 'Financing');
   addEntry('2024-01-10', 'Purchase of Factory Equipment & Weaving Looms', 'Fixed Assets (Gross)', 'Cash and Bank', 1500000, 'Investing');
+
 
   // Generate 36 months of operational transactions (2024-01 to 2026-12)
   for (let year = 2024; year <= 2026; year++) {
     for (let month = 1; month <= 12; month++) {
       const m = month.toString().padStart(2, '0');
       const isFestive = month === 10 || month === 11;
-      const salesVol = isFestive ? 750000 : 500000;
       
-      // Cash collection for AR (88% settlement velocity on 35-day terms)
-      // Billed sales are ~Rs 4.1L/mo; collections are ~Rs 3.6L/mo, maintaining positive AR (~Rs 18L / 42-day DSO)
-      const monthlySalesVol = isFestive ? 550000 : 370000;
-      addEntry(`${year}-${m}-22`, `Cash Collection from Customers against Invoices`, 'Cash and Bank', 'Accounts Receivable', monthlySalesVol * 0.88, 'Receipts');
+      // Monthly gross billed sales are ~Rs 4.15L (festive ~Rs 6.22L)
+      // Customers settle on 30-day terms (Month M is paid in Month M+1), leaving final month in AR (~Rs 4.15L / ~31 days DSO)
+      if (year < 2026 || month < 12) {
+        const monthlyGrossSales = isFestive ? 622083 : 414722;
+        addEntry(`${year}-${m}-22`, `Customer Invoice Settlements (30-day cycle)`, 'Cash and Bank', 'Accounts Receivable', monthlyGrossSales, 'Receipts');
+      }
+      
+      // Monthly gross purchases are ~Rs 4.00L (festive ~Rs 5.60L)
+      // Vendors are paid on 35-day terms (Month M is paid in Month M+1), leaving final month in AP (~Rs 4.00L / ~51 days DPO)
+      if (year < 2026 || month < 12) {
+        const monthlyGrossPurchases = isFestive ? 560501 : 400358;
+        addEntry(`${year}-${m}-26`, `Supplier Invoice Payments (35-day credit terms)`, 'Accounts Payable', 'Cash and Bank', monthlyGrossPurchases, 'Payments');
+      }
 
-      
-      // Payment to Suppliers against Accounts Payable (90% settlement velocity on 35-day terms)
-      // Purchases are ~Rs 3.3L/mo base; payments settle ~Rs 3.1L/mo, maintaining healthy ~38-day DPO
-      const purchaseVol = isFestive ? 420000 : 310000;
-      addEntry(`${year}-${m}-26`, `Supplier Payments for Raw Materials`, 'Accounts Payable', 'Cash and Bank', purchaseVol * 0.92, 'Payments');
       
       // Operating Expenses
       addEntry(`${year}-${m}-01`, 'Monthly Factory & Office Rent', 'Rent Expense', 'Cash and Bank', 35000, 'Expense');
@@ -95,6 +99,7 @@ const generateBalancedTransactions = () => {
       // Depreciation (AS 10)
       addEntry(`${year}-${m}-28`, 'Monthly Plant & Machinery Depreciation', 'Depreciation Expense', 'Accumulated Depreciation', 12500, 'Depreciation');
     }
+
 
     // Year End Adjustments for each fiscal year
     addEntry(`${year}-03-31`, `Annual Income Tax Provision FY ${year-1}-${year.toString().slice(2)}`, 'Tax Expense', 'Tax Payable', 110000, 'Tax');
