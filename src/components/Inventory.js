@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { InventoryEngine } from '../utils/InventoryEngine';
-import { formatINR } from '../utils/LedgerEngine';
+import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
 import { Package, ArrowDownLeft, ArrowUpRight, Search, Layers, RefreshCw } from 'lucide-react';
 
-function Inventory() {
+function Inventory({ period = 'Full Year' }) {
+  const [selectedPeriod, setSelectedPeriod] = useState(period);
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -12,8 +13,11 @@ function Inventory() {
   }, []);
 
   const movements = useMemo(() => {
-    return InventoryEngine.movements;
-  }, []);
+    const { start, end } = LedgerEngine.getPeriodDateRange(selectedPeriod);
+    return InventoryEngine.movements.filter(m => {
+      return (!start || m.date >= start) && (!end || m.date <= end);
+    });
+  }, [selectedPeriod]);
 
   const totalValuation = useMemo(() => {
     return InventoryEngine.getStockValuation();
@@ -38,9 +42,33 @@ function Inventory() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Inventory Management</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>FIFO stock valuation, real-time balances &amp; movement history</p>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            FIFO stock valuation, real-time balances &amp; movement history — {LedgerEngine.getPeriodDateRange(selectedPeriod).name}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <select 
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '6px',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-primary)',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            <option value="Full Year">All 3 Years (FY 2024-27)</option>
+            <option value="FY 2024-25">FY 2024-25</option>
+            <option value="FY 2025-26">FY 2025-26</option>
+            <option value="FY 2026-27">FY 2026-27</option>
+          </select>
         </div>
       </div>
+
 
       {/* Summary KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>

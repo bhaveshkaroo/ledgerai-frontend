@@ -2,38 +2,39 @@ import React, { useState, useMemo } from 'react';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine.js';
 import { AlertCircle, FileText, CheckCircle2, Calculator } from 'lucide-react';
 
-const GSTCompliance = ({ period }) => {
+const GSTCompliance = ({ period = 'Full Year' }) => {
+  const [selectedPeriod, setSelectedPeriod] = useState(period);
   const [activeTab, setActiveTab] = useState('GSTR-3B');
 
-  // Compute GST slabs based on transactions
+  // Compute GST slabs based on period-filtered transactions
   const gstData = useMemo(() => {
-    const revenue = LedgerEngine.getAccountBalance('Sales Revenue');
-    const cogs = LedgerEngine.getAccountBalance('Cost of Goods Sold');
+    const { start, end } = LedgerEngine.getPeriodDateRange(selectedPeriod);
+    const revenue = LedgerEngine.getAccountBalance('Sales Revenue', end, start);
+    const cogs = LedgerEngine.getAccountBalance('Cost of Goods Sold', end, start);
     
-    // Simulate slabs
-    const sales18 = revenue * 0.6;
-    const sales12 = revenue * 0.3;
-    const salesNil = revenue * 0.1;
+    // Slabs: 5% & 12% textile goods
+    const sales12 = revenue * 0.45;
+    const sales5 = revenue * 0.55;
 
-    const pur18 = cogs * 0.7;
-    const pur12 = cogs * 0.3;
+    const pur12 = cogs * 0.40;
+    const pur5 = cogs * 0.60;
 
     // Output Tax (CGST + SGST)
-    const outCGST = (sales18 * 0.09) + (sales12 * 0.06);
-    const outSGST = (sales18 * 0.09) + (sales12 * 0.06);
+    const outCGST = (sales12 * 0.06) + (sales5 * 0.025);
+    const outSGST = (sales12 * 0.06) + (sales5 * 0.025);
     
     // Input Tax Credit (ITC)
-    const itcCGST = (pur18 * 0.09) + (pur12 * 0.06);
-    const itcSGST = (pur18 * 0.09) + (pur12 * 0.06);
+    const itcCGST = (pur12 * 0.06) + (pur5 * 0.025);
+    const itcSGST = (pur12 * 0.06) + (pur5 * 0.025);
 
     return {
-      sales: { total: revenue, s18: sales18, s12: sales12, sNil: salesNil },
-      purchases: { total: cogs, p18: pur18, p12: pur12 },
+      sales: { total: revenue, s12: sales12, s5: sales5 },
+      purchases: { total: cogs, p12: pur12, p5: pur5 },
       output: { cgst: outCGST, sgst: outSGST, igst: 0, total: outCGST + outSGST },
       itc: { cgst: itcCGST, sgst: itcSGST, igst: 0, total: itcCGST + itcSGST },
       payable: { cgst: Math.max(0, outCGST - itcCGST), sgst: Math.max(0, outSGST - itcSGST), igst: 0 }
     };
-  }, []);
+  }, [selectedPeriod]);
 
   const totalPayable = gstData.payable.cgst + gstData.payable.sgst + gstData.payable.igst;
 
@@ -42,9 +43,30 @@ const GSTCompliance = ({ period }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 600 }}>GST Compliance</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>GSTR-1 & GSTR-3B Computation (Auto-classified)</p>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            GSTR-1 &amp; GSTR-3B Computation — {LedgerEngine.getPeriodDateRange(selectedPeriod).name}
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <select 
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '6px',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-primary)',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            <option value="Full Year">All 3 Years (FY 2024-27)</option>
+            <option value="FY 2024-25">FY 2024-25</option>
+            <option value="FY 2025-26">FY 2025-26</option>
+            <option value="FY 2026-27">FY 2026-27</option>
+          </select>
           <div style={{
             padding: '6px 14px', borderRadius: 'var(--radius-pill)', fontSize: '12px', fontWeight: 600,
             background: 'rgba(16,185,129,0.1)', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px'
@@ -53,6 +75,7 @@ const GSTCompliance = ({ period }) => {
           </div>
         </div>
       </div>
+
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
         <div className="card" style={{ padding: '20px' }}>

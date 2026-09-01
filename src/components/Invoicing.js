@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { InvoiceEngine, HSN_MASTER } from '../utils/InvoiceEngine';
-import { formatINR } from '../utils/LedgerEngine';
+import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
 import { Search, Plus, FileText, CheckCircle2, AlertCircle, Ban, X, Trash2 } from 'lucide-react';
 
 function Invoicing() {
   const [invoices, setInvoices] = useState([...InvoiceEngine.invoices]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [selectedPeriod, setSelectedPeriod] = useState('Full Year');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState(null);
 
@@ -15,26 +16,34 @@ function Invoicing() {
   };
 
   const filteredInvoices = useMemo(() => {
+    const { start, end } = LedgerEngine.getPeriodDateRange(selectedPeriod);
+    const startDate = start ? new Date(start) : null;
+    const endDate = end ? new Date(end) : null;
+
     return invoices.filter(inv => {
+      const invDate = new Date(inv.date);
+      const matchPeriod = (!startDate || invDate >= startDate) && (!endDate || invDate <= endDate);
+      
       const matchSearch = inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           inv.party.toLowerCase().includes(searchTerm.toLowerCase());
       const matchStatus = statusFilter === 'All' || inv.status === statusFilter;
-      return matchSearch && matchStatus;
+      
+      return matchPeriod && matchSearch && matchStatus;
     });
-  }, [invoices, searchTerm, statusFilter]);
+  }, [invoices, searchTerm, statusFilter, selectedPeriod]);
 
   // KPI calculations
   const totalInvoiced = useMemo(() => {
-    return invoices
+    return filteredInvoices
       .filter(i => i.status === 'Finalized')
       .reduce((sum, i) => sum + i.total, 0);
-  }, [invoices]);
+  }, [filteredInvoices]);
 
   const totalTax = useMemo(() => {
-    return invoices
+    return filteredInvoices
       .filter(i => i.status === 'Finalized')
       .reduce((sum, i) => sum + i.taxAmount, 0);
-  }, [invoices]);
+  }, [filteredInvoices]);
 
   const handleVoid = (invoiceNumber) => {
     if (window.confirm(`Are you sure you want to void invoice ${invoiceNumber}? This will create a reversal entry in the ledger.`)) {
@@ -100,7 +109,7 @@ function Invoicing() {
         <div className="card" style={{ padding: '20px' }}>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Finalized Invoices</div>
           <div style={{ fontSize: '22px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#10b981' }}>
-            {invoices.filter(i => i.status === 'Finalized').length} <span style={{ fontSize: '13px', fontWeight: 400, color: 'var(--text-muted)' }}>/ {invoices.length} Total</span>
+            {filteredInvoices.filter(i => i.status === 'Finalized').length} <span style={{ fontSize: '13px', fontWeight: 400, color: 'var(--text-muted)' }}>/ {filteredInvoices.length} Filtered ({invoices.length} Total)</span>
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>Posted to Ledger &amp; AR</div>
         </div>
@@ -108,7 +117,18 @@ function Invoicing() {
 
       {/* Toolbar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <select 
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, outline: 'none' }}
+          >
+            <option value="Full Year">All 3 Years</option>
+            <option value="FY 2024-25">FY 2024-25</option>
+            <option value="FY 2025-26">FY 2025-26</option>
+            <option value="FY 2026-27">FY 2026-27</option>
+          </select>
+          <div style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 8px' }}></div>
           {['All', 'Finalized', 'Draft', 'Void'].map(status => (
             <button
               key={status}

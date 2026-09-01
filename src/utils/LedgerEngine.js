@@ -193,38 +193,97 @@ export const LedgerEngine = {
     return updated;
   },
   
-  getFilteredTransactions(period, filters = {}) {
-    return this.transactions; // Stubbed for brevity
+  getPeriodDateRange(period = 'Full Year') {
+    if (period === 'FY 2024-25' || period === '2024-25') {
+      return { start: '2024-01-01', end: '2025-03-31', name: 'FY 2024-25' };
+    }
+    if (period === 'FY 2025-26' || period === '2025-26') {
+      return { start: '2025-04-01', end: '2026-03-31', name: 'FY 2025-26' };
+    }
+    if (period === 'FY 2026-27' || period === '2026-27') {
+      return { start: '2026-04-01', end: '2026-12-31', name: 'FY 2026-27' };
+    }
+    // Default: All 3 Years (2024 to 2026)
+    return { start: '2024-01-01', end: '2026-12-31', name: 'All 3 Years (FY 2024-27)' };
   },
 
-  getAccountBalance(accountName, asOfDate = '2099-12-31') {
+  getFilteredTransactions(period = 'Full Year', filters = {}) {
+    const { start, end } = this.getPeriodDateRange(period);
+    return this.transactions.filter(t => {
+      const txDate = t.date;
+      const inRange = (!start || txDate >= start) && (!end || txDate <= end);
+      if (!inRange) return false;
+      if (filters.category && filters.category !== 'All' && t.category !== filters.category) return false;
+      if (filters.account && t.account !== filters.account) return false;
+      if (filters.type && t.type !== filters.type) return false;
+      return true;
+    });
+  },
+
+  getAccountBalance(accountName, asOfDate = '2099-12-31', startDate = null) {
     let balance = 0;
     const accConfig = CHART_OF_ACCOUNTS.find(a => a.name === accountName);
     if (!accConfig) return 0;
     
     const isDebitNormal = ['Asset', 'Expense'].includes(accConfig.type);
+    const isPL = accConfig.classification === 'P&L';
     
     this.transactions.forEach(t => {
-      if (t.account === accountName && new Date(t.date) <= new Date(asOfDate)) {
-        if (isDebitNormal) {
-          balance += t.type === 'Debit' ? t.amount : -t.amount;
-        } else {
-          balance += t.type === 'Credit' ? t.amount : -t.amount;
+      if (t.account === accountName) {
+        const inStartDate = !startDate || (!isPL ? true : t.date >= startDate);
+        const inEndDate = t.date <= asOfDate;
+        if (inStartDate && inEndDate) {
+          if (isDebitNormal) {
+            balance += t.type === 'Debit' ? t.amount : -t.amount;
+          } else {
+            balance += t.type === 'Credit' ? t.amount : -t.amount;
+          }
         }
       }
     });
     return balance;
   },
 
-  calcTradingAccount(period) {
-    const rev = this.getAccountBalance('Sales Revenue');
-    
-    // Purchases and Inventory
-    const cogs = this.getAccountBalance('Cost of Goods Sold');
-    const closingInventory = this.getAccountBalance('Inventory');
-    const purchasesOfStock = cogs + closingInventory; // Under AS 2, purchases = consumed + closing
-    const openingInventory = 0; // Simplified for Year 1
-    
+  calcKPIs(period = 'Full Year') {
+    const { start, end } = this.getPeriodDateRange(period);
+    const rev = this.getAccountBalance('Sales Revenue', end, start);
+    const otherInc = this.getAccountBalance('Other Income', end, start);
+    const totalRevenue = rev + otherInc;
+
+    const cogs = this.getAccountBalance('Cost of Goods Sold', end, start);
+    const salaries = this.getAccountBalance('Salary Expense', end, start);
+    const rent = this.getAccountBalance('Rent Expense', end, start);
+    const otherExp = this.getAccountBalance('Other Expenses', end, start);
+    const bankChg = this.getAccountBalance('Bank Charges', end, start);
+    const dep = this.getAccountBalance('Depreciation Expense', end, start);
+    const finCost = this.getAccountBalance('Finance Cost', end, start);
+    const taxExp = this.getAccountBalance('Tax Expense', end, start);
+
+    const operatingExpenses = cogs + salaries + rent + otherExp + bankChg + dep + finCost;
+    const totalExpenses = operatingExpenses + taxExp;
+    const pbt = totalRevenue - operatingExpenses;
+    const netProfit = totalRevenue - totalExpenses;
+    const cashBalance = this.getAccountBalance('Cash and Bank', end);
+
+    return {
+      totalRevenue,
+      operatingExpenses,
+      taxExpense: taxExp,
+      totalExpenses,
+      pbt,
+      netProfit,
+      cashBalance,
+      periodName: this.getPeriodDateRange(period).name
+    };
+  },
+
+  calcTradingAccount(period = 'Full Year') {
+    const { start, end } = this.getPeriodDateRange(period);
+    const rev = this.getAccountBalance('Sales Revenue', end, start);
+    const cogs = this.getAccountBalance('Cost of Goods Sold', end, start);
+    const closingInventory = this.getAccountBalance('Inventory', end);
+    const purchasesOfStock = cogs + closingInventory;
+    const openingInventory = 0;
     const grossProfit = rev - (openingInventory + purchasesOfStock - closingInventory);
     
     return [
@@ -238,31 +297,30 @@ export const LedgerEngine = {
     ];
   },
 
-  calcIncomeStatement(period) {
-    const rev = this.getAccountBalance('Sales Revenue');
-    const otherInc = this.getAccountBalance('Other Income');
+  calcIncomeStatement(period = 'Full Year') {
+    const { start, end } = this.getPeriodDateRange(period);
+    const rev = this.getAccountBalance('Sales Revenue', end, start);
+    const otherInc = this.getAccountBalance('Other Income', end, start);
     const totalRev = rev + otherInc;
     
-    const cogs = this.getAccountBalance('Cost of Goods Sold');
-    
-    // For presentation per Schedule III
-    const closingInventory = this.getAccountBalance('Inventory');
-    const purchasesOfStock = cogs + closingInventory; // Since opening is 0 in year 1
-    const changesInInventory = -closingInventory; // Increase in inventory is a negative expense
+    const cogs = this.getAccountBalance('Cost of Goods Sold', end, start);
+    const closingInventory = this.getAccountBalance('Inventory', end);
+    const purchasesOfStock = cogs + closingInventory;
+    const changesInInventory = -closingInventory;
 
-    const salaries = this.getAccountBalance('Salary Expense');
-    const rent = this.getAccountBalance('Rent Expense');
-    const otherExp = this.getAccountBalance('Other Expenses');
-    const bankChg = this.getAccountBalance('Bank Charges');
-    const dep = this.getAccountBalance('Depreciation Expense');
-    const finCost = this.getAccountBalance('Finance Cost');
+    const salaries = this.getAccountBalance('Salary Expense', end, start);
+    const rent = this.getAccountBalance('Rent Expense', end, start);
+    const otherExp = this.getAccountBalance('Other Expenses', end, start);
+    const bankChg = this.getAccountBalance('Bank Charges', end, start);
+    const dep = this.getAccountBalance('Depreciation Expense', end, start);
+    const finCost = this.getAccountBalance('Finance Cost', end, start);
     
     const totalExp = purchasesOfStock + changesInInventory + salaries + rent + otherExp + bankChg + dep + finCost;
     const pbt = totalRev - totalExp;
-    const currentTax = this.getAccountBalance('Tax Payable'); // Actual provision for the year
-    const defTaxAsset = this.getAccountBalance('Deferred Tax Asset');
-    const defTaxLiab = this.getAccountBalance('Deferred Tax Liability');
-    const deferredTaxExpense = defTaxLiab - defTaxAsset; // Net deferred tax expense
+    const currentTax = this.getAccountBalance('Tax Payable', end, start);
+    const defTaxAsset = this.getAccountBalance('Deferred Tax Asset', end, start);
+    const defTaxLiab = this.getAccountBalance('Deferred Tax Liability', end, start);
+    const deferredTaxExpense = defTaxLiab - defTaxAsset;
     const totalTax = currentTax + deferredTaxExpense;
     const pat = pbt - totalTax;
 
@@ -290,6 +348,7 @@ export const LedgerEngine = {
       { name: "XI. Profit (Loss) for the period from continuing operations (IX-X)", value: pat, level: 0, isSummary: true, isTotal: true },
     ];
   },
+
 
   calcBalanceSheet(period) {
     const sc = this.getAccountBalance('Share Capital');
@@ -442,27 +501,7 @@ export const LedgerEngine = {
       
       { name: "Net Increase in Cash and Cash Equivalents (A+B+C)", value: netCash, level: 0, isSummary: true, isTotal: true },
     ];
-  },
-
-  calcKPIs(period) {
-    const cash = this.getAccountBalance('Cash and Bank');
-    const is = this.calcIncomeStatement();
-    const rev = is.find(r => r.name.toLowerCase().includes("total revenue"))?.value || 0;
-    const opExp = is.find(r => r.name.toLowerCase().includes("total expenses"))?.value || 0;
-    const pbt = is.find(r => r.name.toLowerCase().includes("profit before tax"))?.value || 0;
-    const pat = is.find(r => r.name.toLowerCase().includes("profit (loss) for the period"))?.value || 0;
-    const tax = pbt - pat;
-    const totalExpIncTax = opExp + tax;
-    
-    return {
-      totalRevenue: rev,
-      operatingExpenses: opExp,
-      taxExpense: tax,
-      totalExpenses: totalExpIncTax,
-      pbt: pbt,
-      netProfit: pat,
-      cashBalance: cash
-    };
   }
 };
+
 

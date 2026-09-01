@@ -4,22 +4,28 @@ import { Search, ChevronLeft, ChevronRight, Download, MoreHorizontal, Filter, Pl
 import { exportToPDF } from '../utils/exportUtils';
 import ManualEntryModal from './ManualEntryModal';
 
-function TransactionList({ period }) {
+function TransactionList({ period = 'Full Year' }) {
+  const [selectedPeriod, setSelectedPeriod] = useState(period);
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
-  const [localTransactions, setLocalTransactions] = useState([...LedgerEngine.transactions]);
-  const pageSize = 12;
+  const [localTransactions, setLocalTransactions] = useState(LedgerEngine.getFilteredTransactions(selectedPeriod));
+  const pageSize = 25;
 
   // Reactively update whenever any transaction is added, reversed, or updated by AI or user
   useEffect(() => {
     const handleUpdate = () => {
-      setLocalTransactions([...LedgerEngine.transactions]);
+      setLocalTransactions(LedgerEngine.getFilteredTransactions(selectedPeriod));
     };
     window.addEventListener('ledger-updated', handleUpdate);
     return () => window.removeEventListener('ledger-updated', handleUpdate);
-  }, []);
+  }, [selectedPeriod]);
+
+  useEffect(() => {
+    setLocalTransactions(LedgerEngine.getFilteredTransactions(selectedPeriod));
+    setPage(1);
+  }, [selectedPeriod]);
 
   const filteredTransactions = useMemo(() => {
     let txs = localTransactions;
@@ -48,7 +54,18 @@ function TransactionList({ period }) {
     <div className="tab-content" style={{ maxWidth: '1100px', margin: '0 auto' }}>
       {/* Toolbar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <select 
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, outline: 'none' }}
+          >
+            <option value="Full Year">All 3 Years</option>
+            <option value="FY 2024-25">FY 2024-25</option>
+            <option value="FY 2025-26">FY 2025-26</option>
+            <option value="FY 2026-27">FY 2026-27</option>
+          </select>
+          <div style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 8px' }}></div>
           {['All', 'Revenue', 'Expenses'].map(f => (
             <button
               key={f}
@@ -132,7 +149,7 @@ function TransactionList({ period }) {
         {/* Pagination */}
         <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            Showing {paginatedTxs.length} of {filteredTransactions.length} transactions
+            Showing {paginatedTxs.length} of {filteredTransactions.length} entries
           </span>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button 

@@ -3,7 +3,7 @@ import { LedgerEngine, formatINR, CHART_OF_ACCOUNTS } from '../utils/LedgerEngin
 import { TrendingUp, TrendingDown, DollarSign, Clock, AlertTriangle, BarChart2, PieChart, ArrowUpRight, ArrowDownRight, CreditCard, Wallet, Target } from 'lucide-react';
 
 const Dashboard = () => {
-  const [period] = useState('Full Year');
+  const [period, setPeriod] = useState('Full Year');
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -44,23 +44,45 @@ const Dashboard = () => {
   // Working Capital
   const workingCapital = currentAssets - currentLiabilities;
 
+  const dateRange = LedgerEngine.getPeriodDateRange(period);
+  const startD = new Date(dateRange.start);
+  const endD = new Date(dateRange.end);
+  const monthCount = (endD.getFullYear() - startD.getFullYear()) * 12 + endD.getMonth() - startD.getMonth() + 1;
+  const totalOperatingDays = Math.max(365, monthCount * 30.4167);
+
   // Days Sales Outstanding (DSO) - approximate
-  const avgDailySales = totalRevenue / 365;
+  const avgDailySales = totalRevenue / totalOperatingDays;
   const dso = avgDailySales > 0 ? Math.round(accountsReceivable / avgDailySales) : 0;
 
   // Days Payable Outstanding (DPO) - approximate
   const cogs = LedgerEngine.getAccountBalance('Cost of Goods Sold');
-  const avgDailyCOGS = cogs / 365;
+  const avgDailyCOGS = cogs / totalOperatingDays;
   const dpo = avgDailyCOGS > 0 ? Math.round(accountsPayable / avgDailyCOGS) : 0;
 
-  // Monthly revenue breakdown (approximate from transaction data)
-  const monthlyRevenue = [];
-  const months = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
-  for (let i = 4; i <= 15; i++) {
-    const isFestive = i === 10 || i === 11;
-    monthlyRevenue.push({ month: months[i - 4], value: isFestive ? 800000 : 500000 });
-  }
-  const maxRevenue = Math.max(...monthlyRevenue.map(m => m.value));
+  // Monthly revenue breakdown (from real transaction data)
+  const periodTx = LedgerEngine.getFilteredTransactions(period);
+  const revenueByMonth = {};
+  periodTx.forEach(tx => {
+    if (tx.account === 'Sales Revenue' && tx.type === 'Credit') {
+      const date = new Date(tx.date);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const key = `${year}-${month}`;
+      
+      if (!revenueByMonth[key]) {
+        const monthShort = date.toLocaleString('default', { month: 'short' });
+        revenueByMonth[key] = {
+          month: `${monthShort} ${String(year).slice(-2)}`,
+          value: 0,
+          sortKey: key
+        };
+      }
+      revenueByMonth[key].value += tx.amount;
+    }
+  });
+  
+  const monthlyRevenue = Object.values(revenueByMonth).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  const maxRevenue = monthlyRevenue.length > 0 ? Math.max(...monthlyRevenue.map(m => m.value)) : 0;
 
   // Liability deadlines
   const liabilities = [
@@ -86,9 +108,19 @@ const Dashboard = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '32px' }}>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.5px' }}>Financial Overview</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>FY 2025-26 | As at Mar 31, 2026</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>{LedgerEngine.getPeriodDateRange(period).name}</p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <select 
+            value={period} 
+            onChange={e => setPeriod(e.target.value)}
+            style={{ fontSize: '13px', padding: '6px 12px', borderRadius: '8px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+          >
+            <option value="All 3 Years">All 3 Years</option>
+            <option value="FY 2024-25">FY 2024-25</option>
+            <option value="FY 2025-26">FY 2025-26</option>
+            <option value="FY 2026-27">FY 2026-27</option>
+          </select>
           <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: 'var(--radius-pill)', background: netProfit > 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: netProfit > 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>
             {netProfit > 0 ? 'Profitable' : 'Loss-making'}
           </span>
@@ -167,7 +199,7 @@ const Dashboard = () => {
             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Inventory Value</span>
           </div>
           <div className="digital-number" style={{ fontSize: '24px', fontWeight: 600 }}>{formatINR(inventory)}</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Turnover: {cogs > 0 && inventory > 0 ? (cogs / inventory).toFixed(1) : 'N/A'}x</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Turnover: {cogs > 0 && inventory > 0 ? (((cogs / totalOperatingDays) * 365) / inventory).toFixed(1) : 'N/A'}x</div>
         </div>
       </div>
 
@@ -178,23 +210,37 @@ const Dashboard = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <div>
               <div style={{ fontSize: '14px', fontWeight: 600 }}>Monthly Revenue</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>FY 2025-26</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{LedgerEngine.getPeriodDateRange(period).name}</div>
             </div>
             <BarChart2 size={16} color="var(--text-muted)" />
           </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '120px' }}>
-            {monthlyRevenue.map((m, i) => (
-              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                <div style={{
-                  width: '100%', 
-                  height: (m.value / maxRevenue * 100) + 'px',
-                  background: m.value === maxRevenue ? 'var(--text-primary)' : 'var(--bg-surface)',
-                  borderRadius: '4px 4px 0 0',
-                  transition: 'height 0.3s'
-                }}></div>
-                <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{m.month}</span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {/* Y-axis */}
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '9px', color: 'var(--text-muted)', height: '120px', paddingRight: '8px', borderRight: '1px solid var(--border-color)' }}>
+              <span>{maxRevenue > 0 ? (maxRevenue / 100000).toFixed(1) : 0}</span>
+              <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>₹ (Lakhs)</span>
+              <span>0</span>
+            </div>
+            {/* Chart Area */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '120px', overflowX: 'auto', paddingBottom: '4px', borderBottom: '1px solid var(--border-color)' }}>
+                {monthlyRevenue.map((m, i) => (
+                  <div key={i} style={{ flex: 1, minWidth: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                    <div style={{
+                      width: '100%', 
+                      height: maxRevenue > 0 ? (m.value / maxRevenue * 100) + 'px' : '0px',
+                      background: m.value === maxRevenue ? 'var(--text-primary)' : 'var(--bg-surface)',
+                      borderRadius: '4px 4px 0 0',
+                      transition: 'height 0.3s'
+                    }}></div>
+                    <span style={{ fontSize: '9px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{m.month}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+              <div style={{ textAlign: 'center', fontSize: '9px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Month
+              </div>
+            </div>
           </div>
         </div>
 
