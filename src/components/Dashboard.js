@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LedgerEngine, formatINR, CHART_OF_ACCOUNTS } from '../utils/LedgerEngine';
 import { TrendingUp, TrendingDown, DollarSign, Clock, AlertTriangle, BarChart2, PieChart, ArrowUpRight, ArrowDownRight, CreditCard, Wallet, Target } from 'lucide-react';
 
 const Dashboard = () => {
   const [period] = useState('Full Year');
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const handleUpdate = () => setTick(t => t + 1);
+    window.addEventListener('ledger-updated', handleUpdate);
+    return () => window.removeEventListener('ledger-updated', handleUpdate);
+  }, []);
   const kpis = LedgerEngine.calcKPIs(period);
   const bs = LedgerEngine.calcBalanceSheet(period);
   const is = LedgerEngine.calcIncomeStatement(period);

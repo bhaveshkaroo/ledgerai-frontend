@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TradingAccount from './TradingAccount';
 import IncomeStatement from './IncomeStatement';
 import BalanceSheet from './BalanceSheet';
@@ -10,6 +10,13 @@ import { LedgerEngine } from '../utils/LedgerEngine';
 
 function Statements({ period, currency }) {
   const [activeTab, setActiveTab] = useState('Profit & Loss');
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const handleUpdate = () => setTick(t => t + 1);
+    window.addEventListener('ledger-updated', handleUpdate);
+    return () => window.removeEventListener('ledger-updated', handleUpdate);
+  }, []);
   const tabs = ['Trading A/c', 'Profit & Loss', 'Balance Sheet', 'Cash Flow', 'Trial Balance', 'Notes to Accounts', 'Schedules'];
 
   const handleExport = () => {

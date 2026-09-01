@@ -20,6 +20,8 @@ function App() {
   const [isBotOpen, setIsBotOpen] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
 
+  const [, setAppTick] = useState(0);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -29,13 +31,19 @@ function App() {
       setSession(session);
     });
 
+    const handleLedgerUpdate = () => setAppTick(t => t + 1);
+    window.addEventListener('ledger-updated', handleLedgerUpdate);
+
     // Ensure invoices are seeded (idempotent if handled, but we run once here)
     if (InvoiceEngine.invoices.length === 0) {
       InventoryEngine.seedPurchases();
       InvoiceEngine.seedInvoices();
     }
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('ledger-updated', handleLedgerUpdate);
+    };
   }, []);
 
   if (!session && !demoMode) {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
 import { Search, ChevronLeft, ChevronRight, Download, MoreHorizontal, Filter, Plus } from 'lucide-react';
 import { exportToPDF } from '../utils/exportUtils';
@@ -9,8 +9,17 @@ function TransactionList({ period }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
-  const [localTransactions, setLocalTransactions] = useState(LedgerEngine.getFilteredTransactions('Full Year'));
+  const [localTransactions, setLocalTransactions] = useState([...LedgerEngine.transactions]);
   const pageSize = 12;
+
+  // Reactively update whenever any transaction is added, reversed, or updated by AI or user
+  useEffect(() => {
+    const handleUpdate = () => {
+      setLocalTransactions([...LedgerEngine.transactions]);
+    };
+    window.addEventListener('ledger-updated', handleUpdate);
+    return () => window.removeEventListener('ledger-updated', handleUpdate);
+  }, []);
 
   const filteredTransactions = useMemo(() => {
     let txs = localTransactions;
@@ -20,44 +29,19 @@ function TransactionList({ period }) {
     }
     
     if (searchTerm) {
-      txs = txs.filter(t => t.narration.toLowerCase().includes(searchTerm.toLowerCase()) || t.ref.toLowerCase().includes(searchTerm.toLowerCase()));
+      txs = txs.filter(t => (t.narration || '').toLowerCase().includes(searchTerm.toLowerCase()) || (t.ref || '').toLowerCase().includes(searchTerm.toLowerCase()) || (t.account || '').toLowerCase().includes(searchTerm.toLowerCase()));
     }
 
     return txs;
   }, [activeFilter, searchTerm, localTransactions]);
 
-  const totalPages = Math.ceil(filteredTransactions.length / pageSize);
+  const totalPages = Math.ceil(filteredTransactions.length / pageSize) || 1;
   const paginatedTxs = filteredTransactions.slice((page - 1) * pageSize, page * pageSize);
 
   const handleManualEntry = (entry) => {
-    // Add two legs for double entry
-    const newId = (localTransactions.length + 1000).toString();
     const date = new Date().toISOString().split('T')[0];
-    
-    const debitLeg = {
-      id: newId + 'A',
-      date: date,
-      account: entry.debit,
-      amount: entry.amount,
-      type: 'Debit',
-      narration: entry.narration,
-      ref: `MANUAL-${newId}`,
-      category: entry.type
-    };
-    
-    const creditLeg = {
-      id: newId + 'B',
-      date: date,
-      account: entry.credit,
-      amount: entry.amount,
-      type: 'Credit',
-      narration: entry.narration,
-      ref: `MANUAL-${newId}`,
-      category: entry.type
-    };
-    
-    // Add to top of list
-    setLocalTransactions([debitLeg, creditLeg, ...localTransactions]);
+    LedgerEngine.postTransaction(date, entry.narration, entry.debit, entry.credit, Number(entry.amount), entry.type);
+    window.dispatchEvent(new Event('ledger-updated'));
   };
 
   return (
