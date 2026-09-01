@@ -147,31 +147,32 @@ export const InventoryEngine = {
   },
 
   seedPurchases() {
-    // Clear movements on re-seed to avoid duplicates
     this.movements = [];
     this.stock = {};
 
     const suppliers = [
-      { name: 'Gujarat Cotton Mills', item: 'Cotton Fabric 60s', baseCost: 180, gst: 0.05 },
-      { name: 'Surat Silk Suppliers', item: 'Silk Crepe Fabric', baseCost: 450, gst: 0.12 },
-      { name: 'Vardhman Textiles', item: 'Denim Weave 12oz', baseCost: 220, gst: 0.05 },
-      { name: 'Tirupur Yarn Ltd', item: 'Linen Yarn 40s', baseCost: 310, gst: 0.05 },
-      { name: 'Arvind Weaves', item: 'Organic Dyed Rayon', baseCost: 260, gst: 0.12 }
+      { name: 'Gujarat Cotton Mills', item: 'Cotton Fabric 60s', baseCost: 140, gst: 0.05, baseQty: 450 },
+      { name: 'Surat Silk Suppliers', item: 'Silk Crepe Fabric', baseCost: 380, gst: 0.12, baseQty: 260 },
+      { name: 'Vardhman Textiles', item: 'Denim Weave 12oz', baseCost: 190, gst: 0.05, baseQty: 360 },
+      { name: 'Tirupur Yarn Ltd', item: 'Linen Yarn 40s', baseCost: 220, gst: 0.05, baseQty: 300 },
+      { name: 'Arvind Weaves', item: 'Organic Dyed Rayon', baseCost: 230, gst: 0.12, baseQty: 320 }
     ];
 
     // Seed purchases across 3 full years (2024 to 2026 = 36 months)
     for (let year = 2024; year <= 2026; year++) {
       for (let month = 1; month <= 12; month++) {
         const m = month.toString().padStart(2, '0');
-        const isFestive = month === 10 || month === 11; // Oct, Nov festive demand
+        const isFestive = month === 10 || month === 11;
 
-        suppliers.forEach((s, sIdx) => {
-          const qty = isFestive ? 800 + (sIdx * 100) : 500 + (sIdx * 60);
-          const unitCost = s.baseCost + (month * 2);
+        suppliers.forEach((s) => {
+          const qty = isFestive ? Math.round(s.baseQty * 1.4) : s.baseQty;
+          const unitCost = s.baseCost + (month * 1.5);
           this.recordPurchase(`${year}-${m}-05`, s.item, qty, unitCost, s.name, s.gst);
         });
       }
     }
   }
 };
+
+
 

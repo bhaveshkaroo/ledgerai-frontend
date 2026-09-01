@@ -158,11 +158,12 @@ export const InvoiceEngine = {
     invoiceCounter = 1;
 
     const customers = [
-      { name: 'Rajan Fabrics', item: 'Cotton Fabric 60s', hsn: '5208', rate: 260, baseQty: 400 },
-      { name: 'Bombay Fashion House', item: 'Silk Crepe Fabric', hsn: '5007', rate: 680, baseQty: 250 },
-      { name: 'Lucky Hosiery', item: 'Denim Weave 12oz', hsn: '5209', rate: 340, baseQty: 350 },
-      { name: 'Mehta Garments', item: 'Organic Dyed Rayon', hsn: '5403', rate: 410, baseQty: 300 }
+      { name: 'Rajan Fabrics', item: 'Cotton Fabric 60s', hsn: '5208', rate: 260, baseQty: 320 },
+      { name: 'Bombay Fashion House', item: 'Silk Crepe Fabric', hsn: '5007', rate: 680, baseQty: 180 },
+      { name: 'Lucky Hosiery', item: 'Denim Weave 12oz', hsn: '5209', rate: 340, baseQty: 250 },
+      { name: 'Mehta Garments', item: 'Organic Dyed Rayon', hsn: '5403', rate: 410, baseQty: 220 }
     ];
+
 
     // Seed sales invoices across 3 full years (2024 to 2026 = 36 months)
     for (let year = 2024; year <= 2026; year++) {

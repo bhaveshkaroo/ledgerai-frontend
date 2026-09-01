@@ -11,9 +11,10 @@ export const FinancialAnalysisEngine = {
    * Compute comprehensive CFA-Level financial metrics
    */
   computeMetrics() {
+    const is = LedgerEngine.calcIncomeStatement();
+    const bs = LedgerEngine.calcBalanceSheet();
     const kpis = LedgerEngine.calcKPIs('Full Year');
-    const bs = LedgerEngine.calcBalanceSheet('Full Year');
-    const is = LedgerEngine.calcIncomeStatement('Full Year');
+    const monthlyData = this.getMonthlyTimeSeries();
 
     // Balance Sheet Line Items
     const cash = LedgerEngine.getAccountBalance('Cash and Bank');
@@ -71,14 +72,19 @@ export const FinancialAnalysisEngine = {
     const cashRatio = currentLiabilities > 0 ? (cash / currentLiabilities) : 0;
     const netWorkingCapital = currentAssets - currentLiabilities;
 
-    // 2. ACTIVITY & EFFICIENCY RATIOS
-    const dso = revenue > 0 ? Math.round((ar / (revenue / 365))) : 0;
-    const dpo = cogs > 0 ? Math.round((ap / (cogs / 365))) : 0;
-    const dio = cogs > 0 ? Math.round((inventory / (cogs / 365))) : 0;
+    // 2. ACTIVITY & EFFICIENCY RATIOS (Normalized by actual ledger operating span)
+    const totalOperatingDays = Math.max(365, (monthlyData?.length || 12) * (365 / 12));
+    const dailyRevenue = revenue > 0 ? (revenue / totalOperatingDays) : 1;
+    const dailyCOGS = cogs > 0 ? (cogs / totalOperatingDays) : 1;
+
+    const dso = dailyRevenue > 0 ? Math.round(ar / dailyRevenue) : 0;
+    const dpo = dailyCOGS > 0 ? Math.round(ap / dailyCOGS) : 0;
+    const dio = dailyCOGS > 0 ? Math.round(inventory / dailyCOGS) : 0;
     const ccc = dio + dso - dpo; // Cash Conversion Cycle
-    const inventoryTurnover = inventory > 0 ? (cogs / inventory) : 0;
-    const assetTurnover = totalAssets > 0 ? (revenue / totalAssets) : 0;
-    const fixedAssetTurnover = netFixedAssets > 0 ? (revenue / netFixedAssets) : 0;
+    const inventoryTurnover = inventory > 0 ? Number((cogs / inventory).toFixed(2)) : 0;
+    const assetTurnover = totalAssets > 0 ? Number((revenue / totalAssets).toFixed(2)) : 0;
+    const fixedAssetTurnover = netFixedAssets > 0 ? Number((revenue / netFixedAssets).toFixed(2)) : 0;
+
 
     // 3. SOLVENCY & LEVERAGE RATIOS
     const debtToEquity = totalEquity > 0 ? (totalDebt / totalEquity) : 0;
@@ -99,11 +105,9 @@ export const FinancialAnalysisEngine = {
     const dupontLeverage = equityMultiplier;
     const dupontCalculatedROE = (dupontNetMargin * dupontAssetTurnover * dupontLeverage) * 100;
 
-    // 5. MONTHLY TIME SERIES (12 Months of FY 2025-26)
-    const monthlyData = this.getMonthlyTimeSeries();
-
     // 6. FORECASTING (Next Month & Next Quarter Projections)
     const forecast = this.generateForecast(monthlyData, cash, revenue, totalExpenses);
+
 
     return {
       financials: {
