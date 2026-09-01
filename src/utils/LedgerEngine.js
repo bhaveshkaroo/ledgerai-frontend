@@ -435,14 +435,21 @@ export const LedgerEngine = {
     const cash = this.getAccountBalance('Cash and Bank');
     const is = this.calcIncomeStatement();
     const rev = is.find(r => r.name.toLowerCase().includes("total revenue"))?.value || 0;
-    const exp = is.find(r => r.name.toLowerCase().includes("total expenses"))?.value || 0;
+    const opExp = is.find(r => r.name.toLowerCase().includes("total expenses"))?.value || 0;
+    const pbt = is.find(r => r.name.toLowerCase().includes("profit before tax"))?.value || 0;
     const pat = is.find(r => r.name.toLowerCase().includes("profit (loss) for the period"))?.value || 0;
+    const tax = pbt - pat;
+    const totalExpIncTax = opExp + tax;
     
     return {
       totalRevenue: rev,
-      totalExpenses: exp,
+      operatingExpenses: opExp,
+      taxExpense: tax,
+      totalExpenses: totalExpIncTax,
+      pbt: pbt,
       netProfit: pat,
       cashBalance: cash
     };
   }
 };
+
