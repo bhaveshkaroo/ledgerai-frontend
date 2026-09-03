@@ -77,8 +77,20 @@ body {
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  margin-bottom: 32px;
-  padding: 0 12px;
+  margin-bottom: 28px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.sidebar-logo:hover {
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.sidebar-logo:hover img {
+  transform: scale(1.05);
 }
 
 .sidebar-section-title {

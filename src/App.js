@@ -16,6 +16,7 @@ import { InventoryEngine } from './utils/InventoryEngine';
 import { supabase } from './supabaseClient';
 import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale, Landmark, TrendingUp, BarChart2, Activity } from 'lucide-react';
 import Auth from './components/Auth';
+import logoImg from './assets/logo.png';
 
 function App() {
   const [session, setSession] = useState(null);
@@ -73,14 +74,33 @@ function App() {
     <div className="app-container">
       {/* Sidebar */}
       <aside className="sidebar">
-        <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '32px', height: '32px', borderRadius: '8px',
-            background: 'var(--text-primary)', color: 'var(--bg-card)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '16px', fontWeight: 700
-          }}>M</div>
-          MESO
+        <div 
+          className="sidebar-logo" 
+          onClick={() => setActiveTab('dashboard')}
+          style={{ display: 'flex', alignItems: 'center', gap: '12px' }}
+          title="Go to Dashboard"
+        >
+          <img 
+            src={logoImg} 
+            alt="Meso Logo" 
+            style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '9px',
+              objectFit: 'cover',
+              boxShadow: '0 3px 10px rgba(6, 64, 43, 0.2)',
+              border: '1px solid rgba(6, 64, 43, 0.12)',
+              flexShrink: 0
+            }}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '0.6px', color: 'var(--text-primary)', lineHeight: 1.1 }}>
+              MESO<span style={{ color: '#10b981', marginLeft: '3px' }}>AI</span>
+            </span>
+            <span style={{ fontSize: '9px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.6px', marginTop: '2px' }}>
+              BOOKS OF ACCOUNTS
+            </span>
+          </div>
         </div>
 
         <div className="sidebar-section-title" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>

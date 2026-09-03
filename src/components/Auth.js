@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
+import logoImg from '../assets/logo.png';
 
 function Auth({ onDemoLogin }) {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -43,14 +44,19 @@ function Auth({ onDemoLogin }) {
       <div style={{ width: '100%', maxWidth: '420px' }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: '56px', height: '56px', borderRadius: '16px',
-            background: 'var(--text-primary)', color: 'var(--bg-card)',
-            fontSize: '24px', fontWeight: 700, marginBottom: '16px'
-          }}>
-            M
-          </div>
+          <img 
+            src={logoImg} 
+            alt="Meso Logo" 
+            style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '16px',
+              objectFit: 'cover',
+              boxShadow: '0 8px 24px rgba(6, 64, 43, 0.22)',
+              border: '1px solid rgba(6, 64, 43, 0.12)',
+              marginBottom: '16px'
+            }}
+          />
           <h1 style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.5px', marginBottom: '8px' }}>Meso</h1>
           <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>AI-Powered Books of Accounts</p>
         </div>
