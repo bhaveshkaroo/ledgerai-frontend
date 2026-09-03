@@ -51,7 +51,7 @@ export const formatCurrency = (amount, currency = 'INR') => {
 };
 
 // Generates STRICTLY BALANCED double-entry transactions across 3 full years (2024 to 2026)
-const generateBalancedTransactions = () => {
+export const generateBalancedTransactions = () => {
   const txs = [];
   let jvCount = 1000;
   
@@ -123,6 +123,20 @@ const generateBalancedTransactions = () => {
 export const LedgerEngine = {
   transactions: generateBalancedTransactions(),
   
+  async hydrate() {
+    try {
+      const { SupabaseRepository } = await import('./SupabaseRepository.js');
+      const loaded = await SupabaseRepository.loadTransactions();
+      if (loaded && loaded.length > 0) {
+        this.transactions = loaded;
+        return true;
+      }
+    } catch (e) {
+      console.warn('[LedgerEngine] Hydration error, using local state:', e.message);
+    }
+    return false;
+  },
+
   postTransaction(date, narration, debitAccount, creditAccount, amount, category, ref = null) {
     const idNum = this.transactions.length > 0 ? parseInt(this.transactions[0].id) + 1 : 1000;
     const txRef = ref || `MNL-${idNum}`;
@@ -132,6 +146,11 @@ export const LedgerEngine = {
     
     // Maintain descending sort
     this.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Async persist to Supabase
+    import('./SupabaseRepository.js').then(({ SupabaseRepository }) => {
+      SupabaseRepository.saveTransaction(date, narration, debitAccount, creditAccount, amount, category, txRef);
+    }).catch(() => {});
   },
 
   reverseTransaction(targetRef, reason = 'Correction of error') {
@@ -157,6 +176,17 @@ export const LedgerEngine = {
     });
 
     this.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Async persist reversal legs to Supabase
+    import('./SupabaseRepository.js').then(({ SupabaseRepository }) => {
+      legsToReverse.forEach(leg => {
+        const oppType = leg.type === 'Debit' ? 'Credit' : 'Debit';
+        const debitAcc = oppType === 'Debit' ? leg.account : 'Retained Earnings';
+        const creditAcc = oppType === 'Credit' ? leg.account : 'Retained Earnings';
+        SupabaseRepository.saveTransaction(date, `Contra Reversal of ${targetRef}: ${reason}`, debitAcc, creditAcc, leg.amount, leg.category || 'Adjustment', revRef);
+      });
+    }).catch(() => {});
+
     return revRef;
   },
 

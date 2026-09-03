@@ -17,6 +17,21 @@ let invoiceCounter = 1;
 export const InvoiceEngine = {
   invoices: [],
 
+  async hydrate() {
+    try {
+      const { SupabaseRepository } = await import('./SupabaseRepository.js');
+      const loaded = await SupabaseRepository.loadInvoices();
+      if (loaded && loaded.length > 0) {
+        this.invoices = loaded;
+        invoiceCounter = loaded.length + 1;
+        return true;
+      }
+    } catch (e) {
+      console.warn('[InvoiceEngine] Hydration error, using local state:', e.message);
+    }
+    return false;
+  },
+
   createInvoice(date, party, lineItems, placeOfSupply = 'LOCAL') {
     let subtotal = 0;
     let totalTax = 0;
@@ -77,6 +92,12 @@ export const InvoiceEngine = {
     };
 
     this.invoices.push(invoice);
+
+    // Async persist to Supabase
+    import('./SupabaseRepository.js').then(({ SupabaseRepository }) => {
+      SupabaseRepository.saveInvoice(invoice);
+    }).catch(() => {});
+
     return invoice;
   },
 
@@ -115,6 +136,12 @@ export const InvoiceEngine = {
     }
 
     invoice.status = 'Finalized';
+
+    // Async persist status update
+    import('./SupabaseRepository.js').then(({ SupabaseRepository }) => {
+      SupabaseRepository.updateInvoiceStatus(invoiceNumber, 'Finalized');
+    }).catch(() => {});
+
     return invoice;
   },
 
@@ -146,6 +173,12 @@ export const InvoiceEngine = {
     }
 
     invoice.status = 'Void';
+
+    // Async persist status update
+    import('./SupabaseRepository.js').then(({ SupabaseRepository }) => {
+      SupabaseRepository.updateInvoiceStatus(invoiceNumber, 'Void');
+    }).catch(() => {});
+
     return invoice;
   },
 

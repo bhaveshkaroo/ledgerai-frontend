@@ -6,6 +6,21 @@ export const InventoryEngine = {
   // Audit log of all stock movements: [ { id, date, itemCode, type: 'IN' | 'OUT', qty, unitCost, totalValue, balanceQty, ref } ]
   movements: [],
 
+  async hydrate() {
+    try {
+      const { SupabaseRepository } = await import('./SupabaseRepository.js');
+      const loaded = await SupabaseRepository.loadInventory();
+      if (loaded && loaded.stock && Object.keys(loaded.stock).length > 0) {
+        this.stock = loaded.stock;
+        this.movements = loaded.movements;
+        return true;
+      }
+    } catch (e) {
+      console.warn('[InventoryEngine] Hydration error, using local state:', e.message);
+    }
+    return false;
+  },
+
   recordPurchase(date, itemCode, qty, unitCost, supplier, gstRate = 0.18) {
     if (!this.stock[itemCode]) {
       this.stock[itemCode] = [];
@@ -50,6 +65,20 @@ export const InventoryEngine = {
     LedgerEngine.transactions.push({ id: `${idNum}D`, date, account: 'Accounts Payable', amount: totalInvoicePayable, type: 'Credit', narration: `Invoice Payable to ${supplier} for ${qty} ${itemCode} (${ref})`, ref, category: 'Purchases' });
 
     LedgerEngine.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Async persist to Supabase
+    import('./SupabaseRepository.js').then(({ SupabaseRepository }) => {
+      SupabaseRepository.saveStockRecord(itemCode, this.stock[itemCode], {
+        date,
+        type: 'IN',
+        qty,
+        unitCost,
+        totalValue: baseCost,
+        balanceQty: currentBalanceQty,
+        ref,
+        party: supplier
+      });
+    }).catch(() => {});
 
     return ref;
   },
@@ -115,6 +144,20 @@ export const InventoryEngine = {
         ref
       );
     }
+
+    // Async persist to Supabase
+    import('./SupabaseRepository.js').then(({ SupabaseRepository }) => {
+      SupabaseRepository.saveStockRecord(itemCode, this.stock[itemCode], {
+        date,
+        type: 'OUT',
+        qty: requiredQty,
+        unitCost: avgUnitCost,
+        totalValue: totalCogs,
+        balanceQty: newBalanceQty,
+        ref,
+        party: 'Sales Fulfillment'
+      });
+    }).catch(() => {});
 
     return totalCogs;
   },

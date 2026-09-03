@@ -13,6 +13,8 @@ import InsightsLevel2 from './components/InsightsLevel2';
 import InsightsLevel3 from './components/InsightsLevel3';
 import { InvoiceEngine } from './utils/InvoiceEngine';
 import { InventoryEngine } from './utils/InventoryEngine';
+import { LedgerEngine } from './utils/LedgerEngine';
+import { SupabaseRepository } from './utils/SupabaseRepository';
 import { supabase } from './supabaseClient';
 import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale, Landmark, TrendingUp, BarChart2, Activity } from 'lucide-react';
 import Auth from './components/Auth';
@@ -25,6 +27,7 @@ function App() {
   const [demoMode, setDemoMode] = useState(false);
 
   const [ledgerVersion, setLedgerVersion] = useState(0);
+  const [dataReady, setDataReady] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -38,11 +41,37 @@ function App() {
     const handleLedgerUpdate = () => setLedgerVersion(v => v + 1);
     window.addEventListener('ledger-updated', handleLedgerUpdate);
 
-    // Ensure invoices are seeded (idempotent if handled, but we run once here)
-    if (InvoiceEngine.invoices.length === 0) {
-      InventoryEngine.seedPurchases();
-      InvoiceEngine.seedInvoices();
+    // Hydration & Idempotent Seed
+    async function initializePersistence() {
+      try {
+        const isSeeded = await SupabaseRepository.isSeeded();
+        if (!isSeeded) {
+          console.log('[Meso AI] Database is not seeded or offline. Seeding demo dataset...');
+          // Seed in memory first
+          if (InvoiceEngine.invoices.length === 0) {
+            InventoryEngine.seedPurchases();
+            InvoiceEngine.seedInvoices();
+          }
+          // Seed to Supabase in background
+          SupabaseRepository.seedAccounts().catch(() => {});
+          SupabaseRepository.seedTransactionsBatch(LedgerEngine.transactions).catch(() => {});
+          InvoiceEngine.invoices.forEach(inv => SupabaseRepository.saveInvoice(inv));
+        } else {
+          console.log('[Meso AI] Hydrating from Supabase database...');
+          await Promise.all([
+            LedgerEngine.hydrate(),
+            InvoiceEngine.hydrate(),
+            InventoryEngine.hydrate()
+          ]);
+        }
+      } catch (err) {
+        console.warn('[Meso AI] Initialization warning:', err.message);
+      } finally {
+        setDataReady(true);
+      }
     }
+
+    initializePersistence();
 
     return () => {
       subscription.unsubscribe();
@@ -52,6 +81,26 @@ function App() {
 
   if (!session && !demoMode) {
     return <Auth onDemoLogin={() => setDemoMode(true)} />;
+  }
+
+  if (!dataReady) {
+    return (
+      <div style={{
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--bg-app)',
+        color: 'var(--text-primary)',
+        gap: '16px'
+      }}>
+        <img src={logoImg} alt="Meso" style={{ width: '48px', height: '48px', borderRadius: '12px' }} />
+        <div style={{ fontSize: '14px', fontWeight: 600, letterSpacing: '0.5px' }}>
+          Loading Books of Accounts...
+        </div>
+      </div>
+    );
   }
 
   const renderContent = () => {

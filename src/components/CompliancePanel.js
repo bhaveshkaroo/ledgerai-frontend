@@ -524,8 +524,10 @@ const CompliancePanel = ({ isOpen, onClose }) => {
 
     // Sync to Supabase audit log in background (fire and forget — never blocks UI)
     supabase.from('audit_logs').insert([{
+      company_id: '00000000-0000-0000-0000-000000000001',
+      role: 'assistant',
       action,
-      timestamp: new Date().toISOString(),
+      message: proposal.title || `Action: ${action}`,
       details: proposal
     }]).then(() => {
       console.log('[MESO AI] Audit log synced to Supabase');
