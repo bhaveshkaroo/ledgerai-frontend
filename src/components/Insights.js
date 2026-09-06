@@ -7,8 +7,7 @@ import {
   Send, Bot, RefreshCw, Layers, Calendar
 } from 'lucide-react';
 
-const getGeminiKey = () => localStorage.getItem('MESO_GEMINI_API_KEY') || process.env.REACT_APP_GEMINI_API_KEY || '';
-const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash'];
+import { getGeminiApiKey, callGeminiDirect, API_KEY_MISSING_MSG, hasGeminiApiKey } from '../utils/aiConfig';
 
 const cleanTextFormatting = (text) => {
   if (!text) return '';
@@ -100,32 +99,58 @@ ${monthlyData.map(m => `• ${m.month}: Revenue Rs. ${m.revenue.toLocaleString('
     setIsAiLoading(true);
 
     try {
-      const res = await fetch('http://localhost:8000/api/insights/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          question: q,
-          financial_context: {
-             metrics: metrics,
-             monthlyData: monthlyData,
-             forecast: forecast
-          }
-        })
-      });
+      if (!hasGeminiApiKey()) {
+        setAiChat(prev => [...prev, { role: 'assistant', text: `⚠️ ${API_KEY_MISSING_MSG}` }]);
+        setIsAiLoading(false);
+        return;
+      }
 
-      if (res.ok) {
-        const data = await res.json();
-        const answer = data.answer;
+      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      let answer = null;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/insights/analyze`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Gemini-API-Key': getGeminiApiKey()
+          },
+          body: JSON.stringify({
+            question: q,
+            financial_context: {
+               metrics: metrics,
+               monthlyData: monthlyData,
+               forecast: forecast
+            }
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          answer = data.answer;
+        } else {
+          throw new Error('Backend insights returned error');
+        }
+      } catch (backendErr) {
+        console.warn('[Insights] Calling direct Gemini client fallback:', backendErr.message);
+        const contextStr = buildContextForAI();
+        const sysPrompt = `You are a senior financial analyst and CFO for an Indian MSME.
+Your role is to analyze the user's financial context and provide strategic, actionable insights answering their question.
+Format your answer clearly using bullet points and appropriate financial terminology.
+Always use the financial data provided in the context to support your analysis.
+Always format currency figures in Indian Rupees with the standard ₹ symbol and INR numbering.
+Always append this exact disclaimer at the very end of your response: "⚠️ This is an AI-generated analysis based on current ledger data. Please consult a qualified financial advisor before making strategic decisions."`;
+        answer = await callGeminiDirect(`User Question: ${q}\n\nFinancial Context:\n${contextStr}`, sysPrompt);
+      }
+
+      if (answer) {
         setAiChat(prev => [...prev, { role: 'assistant', text: cleanTextFormatting(answer) }]);
       } else {
-        const errorData = await res.json().catch(() => ({}));
-        setAiChat(prev => [...prev, { role: 'assistant', text: errorData.detail || "Error communicating with the backend Insights service." }]);
+        setAiChat(prev => [...prev, { role: 'assistant', text: "Unable to complete AI analysis. Please check your API key." }]);
       }
     } catch (err) {
-      console.warn("Backend insights call failed", err);
-      setAiChat(prev => [...prev, { role: 'assistant', text: "Unable to complete AI analysis. Ensure the backend server is running." }]);
+      console.error('[Insights] Error:', err);
+      setAiChat(prev => [...prev, { role: 'assistant', text: `⚠️ ${err.message || 'Error communicating with AI service.'}` }]);
     } finally {
       setIsAiLoading(false);
     }

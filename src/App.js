@@ -11,6 +11,8 @@ import BankReconciliation from './components/BankReconciliation';
 import Insights from './components/Insights';
 import InsightsLevel2 from './components/InsightsLevel2';
 import InsightsLevel3 from './components/InsightsLevel3';
+import JournalDetail from './components/JournalDetail';
+import SettingsPage from './components/Settings';
 import { InvoiceEngine } from './utils/InvoiceEngine';
 import { InventoryEngine } from './utils/InventoryEngine';
 import { LedgerEngine } from './utils/LedgerEngine';
@@ -25,6 +27,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isBotOpen, setIsBotOpen] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
+  const [selectedJournalRef, setSelectedJournalRef] = useState(null);
 
   const [ledgerVersion, setLedgerVersion] = useState(0);
   const [dataReady, setDataReady] = useState(false);
@@ -40,6 +43,17 @@ function App() {
 
     const handleLedgerUpdate = () => setLedgerVersion(v => v + 1);
     window.addEventListener('ledger-updated', handleLedgerUpdate);
+
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      const journalMatch = hash.match(/#\/journal\/(.+)/);
+      if (journalMatch) {
+        setSelectedJournalRef(decodeURIComponent(journalMatch[1]));
+        setActiveTab('journal-detail');
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    handleHashChange();
 
     // Hydration & Idempotent Seed
     async function initializePersistence() {
@@ -76,6 +90,7 @@ function App() {
     return () => {
       subscription.unsubscribe();
       window.removeEventListener('ledger-updated', handleLedgerUpdate);
+      window.removeEventListener('hashchange', handleHashChange);
     };
   }, []);
 
@@ -115,6 +130,8 @@ function App() {
       case 'insights': return <Insights key={ledgerVersion} />;
       case 'insights-level2': return <InsightsLevel2 key={ledgerVersion} />;
       case 'insights-level3': return <InsightsLevel3 key={ledgerVersion} />;
+      case 'journal-detail': return <JournalDetail key={selectedJournalRef} journalRef={selectedJournalRef} onBack={() => { window.location.hash = ''; setActiveTab('transactions'); setSelectedJournalRef(null); }} />;
+      case 'settings': return <SettingsPage key="settings" />;
       default: return <Dashboard key={ledgerVersion} />;
     }
   };
@@ -209,7 +226,7 @@ function App() {
           </div>
 
           <div className="sidebar-nav">
-            <div className="sidebar-item" onClick={() => {}}>
+            <div className={`sidebar-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
               <Settings className="icon" size={16} /> Settings
             </div>
             <div className="sidebar-item" onClick={async () => {

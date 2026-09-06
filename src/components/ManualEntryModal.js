@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Sparkles, ArrowRight, CheckCircle2, X } from 'lucide-react';
+import { getGeminiApiKey, callGeminiDirect, API_KEY_MISSING_MSG, hasGeminiApiKey } from '../utils/aiConfig';
 
 const ManualEntryModal = ({ isOpen, onClose, onConfirm }) => {
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [suggestion, setSuggestion] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [saving, setSaving] = useState(false);
 
   // Editable fields for override
   const [editDebit, setEditDebit] = useState('');
@@ -17,37 +19,49 @@ const ManualEntryModal = ({ isOpen, onClose, onConfirm }) => {
 
   const handleSuggest = async () => {
     if (!description.trim()) return;
+    if (!hasGeminiApiKey()) {
+      setErrorMsg(API_KEY_MISSING_MSG);
+      return;
+    }
     setLoading(true);
     setErrorMsg('');
     
     const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://ledgerai-backend-production-a992.up.railway.app';
+    let data = null;
     try {
       const res = await fetch(`${BACKEND_URL}/api/ai/suggest-entry`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Gemini-API-Key': getGeminiApiKey()
+        },
         body: JSON.stringify({ description })
       });
 
-      if (!res.ok) {
-        let errDetail = 'AI classification unavailable — please enter manually.';
-        try {
-          const errJson = await res.json();
-          if (errJson && errJson.detail) errDetail = errJson.detail;
-        } catch (_) {}
-        throw new Error(errDetail);
+      if (res.ok) {
+        data = await res.json();
+      } else {
+        throw new Error('Backend AI unavailable');
       }
+    } catch (backendErr) {
+      try {
+        const directPrompt = `Analyze this transaction description and output ONLY a JSON object with this schema: { "transaction_type": "Payment"|"Receipt"|"Journal"|"Contra", "debit_account": string, "credit_account": string, "amount": number, "narration": string, "confidence": number, "is_ambiguous": boolean, "clarification_needed": string|null }.\nDescription: "${description}"`;
+        const directSys = `You are an expert Indian Chartered Accountant for Meso Books of Accounts. Output valid JSON only. Golden rules: Debit what comes in / receiver / expenses, Credit what goes out / giver / incomes.`;
+        const raw = await callGeminiDirect(directPrompt, directSys, { responseMimeType: 'application/json' });
+        data = JSON.parse(raw);
+      } catch (directErr) {
+        console.warn('[ManualEntryModal] Direct Gemini call fallback error:', directErr.message);
+      }
+    }
 
-      const data = await res.json();
+    if (data) {
       setSuggestion(data);
       setEditDebit(data.debit_account || '');
       setEditCredit(data.credit_account || '');
       setEditAmount(data.amount ? data.amount.toString() : '');
       setEditNarration(data.narration || description);
-      
-    } catch (err) {
-      console.error(err);
-      setErrorMsg(err.message || 'AI classification unavailable — please enter manually.');
-      // Graceful fallback to manual entry mode with empty fields
+    } else {
+      setErrorMsg('AI classification unavailable — please enter accounts manually.');
       setSuggestion({
         transaction_type: 'Journal',
         debit_account: '',
@@ -62,22 +76,29 @@ const ManualEntryModal = ({ isOpen, onClose, onConfirm }) => {
       setEditCredit('');
       setEditAmount('');
       setEditNarration(description);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
-  const handleConfirm = () => {
-    onConfirm({
-      debit: editDebit,
-      credit: editCredit,
-      amount: parseFloat(editAmount),
-      narration: editNarration,
-      type: suggestion.transaction_type
-    });
-    setSuggestion(null);
-    setDescription('');
-    onClose();
+  const handleConfirm = async () => {
+    setSaving(true);
+    try {
+      await onConfirm({
+        debit: editDebit,
+        credit: editCredit,
+        amount: parseFloat(editAmount),
+        narration: editNarration,
+        type: suggestion.transaction_type
+      });
+      setSuggestion(null);
+      setDescription('');
+      setErrorMsg('');
+      onClose();
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to save entry.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -180,9 +201,10 @@ const ManualEntryModal = ({ isOpen, onClose, onConfirm }) => {
               </button>
               <button 
                 onClick={handleConfirm}
+                disabled={saving}
                 style={{ flex: 2, padding: '10px', borderRadius: '6px', backgroundColor: 'var(--text-primary)', color: 'var(--bg-card)', border: 'none', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
-                <CheckCircle2 size={16} /> Confirm & Post
+                <CheckCircle2 size={16} /> {saving ? 'Saving...' : 'Confirm & Post'}
               </button>
             </div>
           </div>

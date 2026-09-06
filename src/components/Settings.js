@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getGeminiApiKey, setGeminiApiKey, clearGeminiApiKey, hasGeminiApiKey } from '../utils/aiConfig';
 
 const ToggleSwitch = ({ checked, onChange }) => (
   <label className="toggle-switch">
@@ -8,6 +9,10 @@ const ToggleSwitch = ({ checked, onChange }) => (
 );
 
 function Settings() {
+  const [apiKeyInput, setApiKeyInput] = useState(getGeminiApiKey());
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiKeySaved, setApiKeySaved] = useState(false);
+
   const [displayFullNames, setDisplayFullNames] = useState(true);
   const [firstDay, setFirstDay] = useState('Sunday');
   const [convertEmojis, setConvertEmojis] = useState(true);
@@ -118,6 +123,69 @@ function Settings() {
       <div className="settings-section">
         <div className="settings-section-title">AI and Compliance</div>
         <div className="settings-card">
+          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}>
+            <div className="settings-row-info">
+              <div className="settings-row-label">Gemini AI API Key</div>
+              <div className="settings-row-desc">Single centralized API key used across all AI features (AI Manual Entry, AI Audit Assistant, Insights &amp; Forecasting)</div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type={showApiKey ? 'text' : 'password'}
+                value={apiKeyInput}
+                onChange={e => setApiKeyInput(e.target.value)}
+                placeholder="Paste your Gemini API key (AIzaSy...)"
+                style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'var(--font-mono)' }}
+              />
+              <button 
+                type="button"
+                className="settings-btn" 
+                onClick={() => setShowApiKey(!showApiKey)}
+                style={{ cursor: 'pointer', padding: '8px 14px' }}
+              >
+                {showApiKey ? 'Hide' : 'Show'}
+              </button>
+              <button
+                type="button"
+                className="settings-btn"
+                style={{ 
+                  background: apiKeyInput.trim() ? 'rgba(16,185,129,0.15)' : undefined, 
+                  color: apiKeyInput.trim() ? '#10b981' : undefined,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  padding: '8px 16px'
+                }}
+                onClick={() => {
+                  if (apiKeyInput.trim()) {
+                    setGeminiApiKey(apiKeyInput.trim());
+                    setApiKeySaved(true);
+                    setTimeout(() => setApiKeySaved(false), 2000);
+                  }
+                }}
+              >
+                {apiKeySaved ? '✓ Saved' : 'Save Key'}
+              </button>
+              {hasGeminiApiKey() && (
+                <button 
+                  type="button"
+                  className="settings-btn" 
+                  style={{ color: '#ef4444', cursor: 'pointer', padding: '8px 14px' }} 
+                  onClick={() => {
+                    clearGeminiApiKey();
+                    setApiKeyInput('');
+                  }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: hasGeminiApiKey() ? '#10b981' : '#ef4444' }}></div>
+              <span style={{ fontSize: '12px', color: hasGeminiApiKey() ? '#10b981' : '#ef4444', fontWeight: 600 }}>
+                {hasGeminiApiKey() ? 'API Key Configured & Active' : 'API Key Missing — AI features unavailable until configured'}
+              </span>
+            </div>
+          </div>
+
           <div className="settings-row">
             <div className="settings-row-info">
               <div className="settings-row-label">AI-powered insights</div>

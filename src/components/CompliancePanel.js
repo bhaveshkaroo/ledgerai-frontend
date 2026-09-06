@@ -5,8 +5,7 @@ import { InventoryEngine } from '../utils/InventoryEngine';
 import { InvoiceEngine } from '../utils/InvoiceEngine';
 import { supabase } from '../supabaseClient';
 
-const getGeminiKey = () => localStorage.getItem('MESO_GEMINI_API_KEY') || process.env.REACT_APP_GEMINI_API_KEY || '';
-const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash'];
+import { getGeminiApiKey as getGeminiKey, GEMINI_MODELS, API_KEY_MISSING_MSG } from '../utils/aiConfig';
 
 const COA_NAMES = CHART_OF_ACCOUNTS.map(a => a.name).join(', ');
 
@@ -376,7 +375,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     const currentKey = getGeminiKey();
     if (!currentKey) {
       setShowKeyInput(true);
-      setMessages(prev => [...prev, { role: 'bot', text: '⚠️ Please enter a valid Gemini API Key above to activate the AI Assistant.' }]);
+      setMessages(prev => [...prev, { role: 'bot', text: `⚠️ ${API_KEY_MISSING_MSG}` }]);
       setIsTyping(false);
       return;
     }
@@ -424,7 +423,7 @@ const CompliancePanel = ({ isOpen, onClose }) => {
     const currentKey = getGeminiKey();
     if (!currentKey) {
       setShowKeyInput(true);
-      setMessages(prev => [...prev, { role: 'bot', text: '⚠️ Please enter a valid Gemini API Key above to activate the AI Assistant.' }]);
+      setMessages(prev => [...prev, { role: 'bot', text: `⚠️ ${API_KEY_MISSING_MSG}` }]);
       setIsTyping(false);
       return;
     }

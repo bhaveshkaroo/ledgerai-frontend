@@ -4,12 +4,13 @@ import { Search, ChevronLeft, ChevronRight, Download, MoreHorizontal, Filter, Pl
 import { exportToPDF } from '../utils/exportUtils';
 import ManualEntryModal from './ManualEntryModal';
 
-function TransactionList({ period = 'Full Year' }) {
-  const [selectedPeriod, setSelectedPeriod] = useState(period);
+function TransactionList({ period }) {
+  const [selectedPeriod, setSelectedPeriod] = useState(period || LedgerEngine.getCurrentFiscalYear());
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [localTransactions, setLocalTransactions] = useState(LedgerEngine.getFilteredTransactions(selectedPeriod));
   const pageSize = 25;
 
@@ -44,14 +45,26 @@ function TransactionList({ period = 'Full Year' }) {
   const totalPages = Math.ceil(filteredTransactions.length / pageSize) || 1;
   const paginatedTxs = filteredTransactions.slice((page - 1) * pageSize, page * pageSize);
 
-  const handleManualEntry = (entry) => {
+  const handleManualEntry = async (entry) => {
     const date = new Date().toISOString().split('T')[0];
-    LedgerEngine.postTransaction(date, entry.narration, entry.debit, entry.credit, Number(entry.amount), entry.type);
-    window.dispatchEvent(new Event('ledger-updated'));
+    setSaveError(null);
+    try {
+      await LedgerEngine.postTransaction(date, entry.narration, entry.debit, entry.credit, Number(entry.amount), entry.type);
+      window.dispatchEvent(new Event('ledger-updated'));
+    } catch (err) {
+      setSaveError(err.message || 'Failed to save transaction to database.');
+      console.error('[Meso] Manual entry save failed:', err);
+    }
   };
 
   return (
     <div className="tab-content" style={{ maxWidth: '1100px', margin: '0 auto' }}>
+      {saveError && (
+        <div style={{ padding: '12px 16px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>⚠️ {saveError}</span>
+          <button onClick={() => setSaveError(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 600 }}>✕</button>
+        </div>
+      )}
       {/* Toolbar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -63,7 +76,7 @@ function TransactionList({ period = 'Full Year' }) {
             <option value="Full Year">All 3 Years</option>
             <option value="FY 2024-25">FY 2024-25</option>
             <option value="FY 2025-26">FY 2025-26</option>
-            <option value="FY 2026-27">FY 2026-27</option>
+            <option value={LedgerEngine.getCurrentFiscalYear()}>{LedgerEngine.getCurrentFiscalYear()} (Current)</option>
           </select>
           <div style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 8px' }}></div>
           {['All', 'Revenue', 'Expenses'].map(f => (
@@ -122,7 +135,13 @@ function TransactionList({ period = 'Full Year' }) {
           </thead>
           <tbody>
             {paginatedTxs.map((t) => (
-              <tr key={t.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }} className="table-row-hover">
+              <tr 
+                key={t.id} 
+                style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s', cursor: 'pointer' }} 
+                className="table-row-hover"
+                onClick={() => { window.location.hash = `#/journal/${encodeURIComponent(t.ref)}`; }}
+                title="Click to view journal voucher detail"
+              >
                 <td style={{ padding: '16px 24px', fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
                   {t.date}
                 </td>

@@ -2,8 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine.js';
 import { AlertCircle, FileText, CheckCircle2, Calculator } from 'lucide-react';
 
-const GSTCompliance = ({ period = 'Full Year' }) => {
-  const [selectedPeriod, setSelectedPeriod] = useState(period);
+const GSTCompliance = ({ period }) => {
+  const [selectedPeriod, setSelectedPeriod] = useState(period || LedgerEngine.getCurrentFiscalYear());
   const [activeTab, setActiveTab] = useState('GSTR-3B');
 
   // Compute GST slabs based on period-filtered transactions
@@ -65,7 +65,7 @@ const GSTCompliance = ({ period = 'Full Year' }) => {
             <option value="Full Year">All 3 Years (FY 2024-27)</option>
             <option value="FY 2024-25">FY 2024-25</option>
             <option value="FY 2025-26">FY 2025-26</option>
-            <option value="FY 2026-27">FY 2026-27</option>
+            <option value={LedgerEngine.getCurrentFiscalYear()}>{LedgerEngine.getCurrentFiscalYear()} (Current)</option>
           </select>
           <div style={{
             padding: '6px 14px', borderRadius: 'var(--radius-pill)', fontSize: '12px', fontWeight: 600,

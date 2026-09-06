@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Clock, AlertTriangle, BarChart2, PieChart, ArrowUpRight, ArrowDownRight, CreditCard, Wallet, Target, X, CheckCircle2, ChevronRight, Info } from 'lucide-react';
+import LiveClock from './LiveClock';
 
 const CustomBarTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -36,7 +37,7 @@ const CustomBarTooltip = ({ active, payload, label }) => {
 };
 
 const Dashboard = () => {
-  const [period, setPeriod] = useState('All 3 Years');
+  const [period, setPeriod] = useState(LedgerEngine.getCurrentFiscalYear());
   const [selectedDeadline, setSelectedDeadline] = useState(null);
   const [, setTick] = useState(0);
 
@@ -223,9 +224,12 @@ const Dashboard = () => {
   return (
     <div className="animate-fade" style={{ maxWidth: '1200px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '32px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
         <div>
-          <h1 style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.5px' }}>Financial Overview</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <h1 style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.5px', margin: 0 }}>Financial Overview</h1>
+            <LiveClock />
+          </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>{LedgerEngine.getPeriodDateRange(period).name}</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -237,7 +241,7 @@ const Dashboard = () => {
             <option value="All 3 Years">All 3 Years (FY 2024-27)</option>
             <option value="FY 2024-25">FY 2024-25</option>
             <option value="FY 2025-26">FY 2025-26</option>
-            <option value="FY 2026-27">FY 2026-27</option>
+            <option value={LedgerEngine.getCurrentFiscalYear()}>{LedgerEngine.getCurrentFiscalYear()} (Current)</option>
           </select>
           <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: 'var(--radius-pill)', background: netProfit > 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: netProfit > 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>
             {netProfit > 0 ? 'Profitable' : 'Loss-making'}

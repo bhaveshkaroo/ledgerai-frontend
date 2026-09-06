@@ -58,7 +58,7 @@ export const SupabaseRepository = {
     try {
       const { data: jvs, error: jvError } = await supabase
         .from('journal_vouchers')
-        .select('id, ref, date, narration, category, source, transactions (id, account_name, amount, type)')
+        .select('id, ref, date, narration, category, source, created_at, transactions (id, account_name, amount, type)')
         .eq('company_id', DEMO_COMPANY_ID)
         .order('date', { ascending: false });
 
@@ -79,13 +79,18 @@ export const SupabaseRepository = {
               type: t.type,
               narration: jv.narration,
               ref: jv.ref,
-              category: jv.category
+              category: jv.category,
+              createdAt: jv.created_at
             });
           });
         }
       });
 
-      flatTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+      flatTransactions.sort((a, b) => {
+        const dateDiff = new Date(b.date) - new Date(a.date);
+        if (dateDiff !== 0) return dateDiff;
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      });
       return flatTransactions;
     } catch (e) {
       console.warn('[Meso Persistence] loadTransactions exception:', e.message);
@@ -97,52 +102,49 @@ export const SupabaseRepository = {
    * Post a single 2-legged or multi-legged double-entry transaction to Supabase
    */
   async saveTransaction(date, narration, debitAccount, creditAccount, amount, category, ref) {
-    try {
-      // 1. Insert Journal Voucher header
-      const { data: jv, error: jvError } = await supabase
-        .from('journal_vouchers')
-        .insert([{
-          company_id: DEMO_COMPANY_ID,
-          ref,
-          date,
-          narration,
-          category,
-          source: 'MANUAL'
-        }])
-        .select('id')
-        .single();
+    // 1. Insert Journal Voucher header
+    const { data: jv, error: jvError } = await supabase
+      .from('journal_vouchers')
+      .insert([{
+        company_id: DEMO_COMPANY_ID,
+        ref,
+        date,
+        narration,
+        category,
+        source: 'MANUAL'
+      }])
+      .select('id')
+      .single();
 
-      if (jvError || !jv) {
-        console.warn('[Meso Persistence] saveTransaction JV error:', jvError?.message);
-        return;
-      }
-
-      // 2. Insert debit and credit legs
-      const { error: txError } = await supabase
-        .from('transactions')
-        .insert([
-          {
-            company_id: DEMO_COMPANY_ID,
-            journal_voucher_id: jv.id,
-            account_name: debitAccount,
-            amount,
-            type: 'Debit'
-          },
-          {
-            company_id: DEMO_COMPANY_ID,
-            journal_voucher_id: jv.id,
-            account_name: creditAccount,
-            amount,
-            type: 'Credit'
-          }
-        ]);
-
-      if (txError) {
-        console.warn('[Meso Persistence] saveTransaction legs error:', txError.message);
-      }
-    } catch (e) {
-      console.warn('[Meso Persistence] saveTransaction exception:', e.message);
+    if (jvError || !jv) {
+      throw new Error(`Failed to save journal voucher: ${jvError?.message || 'Unknown error'}`);
     }
+
+    // 2. Insert debit and credit legs
+    const { error: txError } = await supabase
+      .from('transactions')
+      .insert([
+        {
+          company_id: DEMO_COMPANY_ID,
+          journal_voucher_id: jv.id,
+          account_name: debitAccount,
+          amount,
+          type: 'Debit'
+        },
+        {
+          company_id: DEMO_COMPANY_ID,
+          journal_voucher_id: jv.id,
+          account_name: creditAccount,
+          amount,
+          type: 'Credit'
+        }
+      ]);
+
+    if (txError) {
+      throw new Error(`Failed to save transaction legs: ${txError.message}`);
+    }
+
+    return { success: true, jvId: jv.id, ref };
   },
 
   /**

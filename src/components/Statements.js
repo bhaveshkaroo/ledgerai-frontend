@@ -8,8 +8,8 @@ import { Download, FileText } from 'lucide-react';
 import { exportToPDF } from '../utils/exportUtils';
 import { LedgerEngine } from '../utils/LedgerEngine';
 
-function Statements({ period = 'Full Year', currency }) {
-  const [selectedPeriod, setSelectedPeriod] = useState(period);
+function Statements({ period, currency }) {
+  const [selectedPeriod, setSelectedPeriod] = useState(period || LedgerEngine.getCurrentFiscalYear());
   const [activeTab, setActiveTab] = useState('Profit & Loss');
   const [, setTick] = useState(0);
 
@@ -73,7 +73,7 @@ function Statements({ period = 'Full Year', currency }) {
             <option value="Full Year">All 3 Years</option>
             <option value="FY 2024-25">FY 2024-25</option>
             <option value="FY 2025-26">FY 2025-26</option>
-            <option value="FY 2026-27">FY 2026-27</option>
+            <option value={LedgerEngine.getCurrentFiscalYear()}>{LedgerEngine.getCurrentFiscalYear()} (Current)</option>
           </select>
 
           <button 

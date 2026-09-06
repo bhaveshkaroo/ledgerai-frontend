@@ -7,7 +7,7 @@ function Invoicing() {
   const [invoices, setInvoices] = useState([...InvoiceEngine.invoices]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [selectedPeriod, setSelectedPeriod] = useState('Full Year');
+  const [selectedPeriod, setSelectedPeriod] = useState(LedgerEngine.getCurrentFiscalYear());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState(null);
 
@@ -126,7 +126,7 @@ function Invoicing() {
             <option value="Full Year">All 3 Years</option>
             <option value="FY 2024-25">FY 2024-25</option>
             <option value="FY 2025-26">FY 2025-26</option>
-            <option value="FY 2026-27">FY 2026-27</option>
+            <option value={LedgerEngine.getCurrentFiscalYear()}>{LedgerEngine.getCurrentFiscalYear()} (Current)</option>
           </select>
           <div style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 8px' }}></div>
           {['All', 'Finalized', 'Draft', 'Void'].map(status => (

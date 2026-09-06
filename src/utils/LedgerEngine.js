@@ -137,20 +137,30 @@ export const LedgerEngine = {
     return false;
   },
 
-  postTransaction(date, narration, debitAccount, creditAccount, amount, category, ref = null) {
+  async postTransaction(date, narration, debitAccount, creditAccount, amount, category, ref = null) {
     const idNum = this.transactions.length > 0 ? parseInt(this.transactions[0].id) + 1 : 1000;
     const txRef = ref || `MNL-${idNum}`;
+    const createdAt = new Date().toISOString();
     
-    this.transactions.push({ id: idNum + 'A', date, account: debitAccount, amount, type: 'Debit', narration, ref: txRef, category });
-    this.transactions.push({ id: idNum + 'B', date, account: creditAccount, amount, type: 'Credit', narration, ref: txRef, category });
+    this.transactions.push({ id: idNum + 'A', date, account: debitAccount, amount, type: 'Debit', narration, ref: txRef, category, createdAt });
+    this.transactions.push({ id: idNum + 'B', date, account: creditAccount, amount, type: 'Credit', narration, ref: txRef, category, createdAt });
     
-    // Maintain descending sort
-    this.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Maintain descending sort (date first, then createdAt tiebreaker)
+    this.transactions.sort((a, b) => {
+      const dateDiff = new Date(b.date) - new Date(a.date);
+      if (dateDiff !== 0) return dateDiff;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
 
-    // Async persist to Supabase
-    import('./SupabaseRepository.js').then(({ SupabaseRepository }) => {
-      SupabaseRepository.saveTransaction(date, narration, debitAccount, creditAccount, amount, category, txRef);
-    }).catch(() => {});
+    // Persist to Supabase — await and propagate errors
+    try {
+      const { SupabaseRepository } = await import('./SupabaseRepository.js');
+      return await SupabaseRepository.saveTransaction(date, narration, debitAccount, creditAccount, amount, category, txRef);
+    } catch (err) {
+      // Rollback from memory on save failure
+      this.transactions = this.transactions.filter(t => t.ref !== txRef);
+      throw err;
+    }
   },
 
   reverseTransaction(targetRef, reason = 'Correction of error') {
@@ -160,6 +170,8 @@ export const LedgerEngine = {
     const date = new Date().toISOString().split('T')[0];
     const idNum = this.transactions.length > 0 ? parseInt(this.transactions[0].id) + 1 : 1000;
     const revRef = `REV-${targetRef}`;
+
+    const createdAt = new Date().toISOString();
 
     legsToReverse.forEach((leg, idx) => {
       const oppositeType = leg.type === 'Debit' ? 'Credit' : 'Debit';
@@ -171,11 +183,16 @@ export const LedgerEngine = {
         type: oppositeType,
         narration: `Contra Reversal of ${targetRef}: ${reason}`,
         ref: revRef,
-        category: leg.category || 'Adjustment'
+        category: leg.category || 'Adjustment',
+        createdAt
       });
     });
 
-    this.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    this.transactions.sort((a, b) => {
+      const dateDiff = new Date(b.date) - new Date(a.date);
+      if (dateDiff !== 0) return dateDiff;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
 
     // Async persist reversal legs to Supabase
     import('./SupabaseRepository.js').then(({ SupabaseRepository }) => {
@@ -223,18 +240,29 @@ export const LedgerEngine = {
     return updated;
   },
   
+  getCurrentFiscalYear(d = new Date()) {
+    const month = d.getMonth(); // 0-indexed: 0=Jan, 3=Apr
+    const year = d.getFullYear();
+    if (month >= 3) { // April onwards
+      return `FY ${year}-${(year + 1).toString().slice(2)}`;
+    } else {
+      return `FY ${year - 1}-${year.toString().slice(2)}`;
+    }
+  },
+
   getPeriodDateRange(period = 'Full Year') {
-    if (period === 'FY 2024-25' || period === '2024-25') {
-      return { start: '2024-01-01', end: '2025-03-31', name: 'FY 2024-25' };
+    // Dynamic FY pattern match: 'FY 2026-27' or '2026-27'
+    const fyMatch = (period || '').match(/(?:FY\s*)?(\d{4})-(\d{2})/i);
+    if (fyMatch) {
+      const startYear = parseInt(fyMatch[1]);
+      const endYear2 = parseInt(fyMatch[2]);
+      const endYear = startYear + 1;
+      // Special case: FY 2024-25 starts Jan 2024 in seed data
+      const startDay = startYear === 2024 ? '2024-01-01' : `${startYear}-04-01`;
+      return { start: startDay, end: `${endYear}-03-31`, name: `FY ${startYear}-${endYear2}` };
     }
-    if (period === 'FY 2025-26' || period === '2025-26') {
-      return { start: '2025-04-01', end: '2026-03-31', name: 'FY 2025-26' };
-    }
-    if (period === 'FY 2026-27' || period === '2026-27') {
-      return { start: '2026-04-01', end: '2026-12-31', name: 'FY 2026-27' };
-    }
-    // Default: All 3 Years (2024 to 2026)
-    return { start: '2024-01-01', end: '2026-12-31', name: 'All 3 Years (FY 2024-27)' };
+    // Default: All 3 Years (2024 to 2027)
+    return { start: '2024-01-01', end: '2027-03-31', name: 'All 3 Years (FY 2024-27)' };
   },
 
   getFilteredTransactions(period = 'Full Year', filters = {}) {
