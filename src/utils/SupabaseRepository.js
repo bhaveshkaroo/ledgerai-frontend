@@ -1,5 +1,5 @@
-import { supabase } from '../supabaseClient';
-import { CHART_OF_ACCOUNTS } from './LedgerEngine';
+import { supabase } from '../supabaseClient.js';
+import { CHART_OF_ACCOUNTS } from './LedgerEngine.js';
 
 export const DEMO_COMPANY_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -58,20 +58,7 @@ export const SupabaseRepository = {
     try {
       const { data: jvs, error: jvError } = await supabase
         .from('journal_vouchers')
-        .select(
-          id,
-          ref,
-          date,
-          narration,
-          category,
-          source,
-          transactions (
-            id,
-            account_name,
-            amount,
-            type
-          )
-        )
+        .select('id, ref, date, narration, category, source, transactions (id, account_name, amount, type)')
         .eq('company_id', DEMO_COMPANY_ID)
         .order('date', { ascending: false });
 
@@ -242,34 +229,7 @@ export const SupabaseRepository = {
     try {
       const { data: invs, error } = await supabase
         .from('invoices')
-        .select(
-          id,
-          invoice_number,
-          date,
-          party_name,
-          place_of_supply,
-          status,
-          subtotal,
-          cgst_total,
-          sgst_total,
-          igst_total,
-          tax_amount,
-          total,
-          invoice_items (
-            id,
-            description,
-            hsn_sac,
-            quantity,
-            rate,
-            gst_rate,
-            subtotal,
-            cgst,
-            sgst,
-            igst,
-            tax_amount,
-            line_total
-          )
-        )
+        .select('id, invoice_number, date, party_name, place_of_supply, status, subtotal, cgst_total, sgst_total, igst_total, tax_amount, total, invoice_items (id, description, hsn_sac, quantity, rate, gst_rate, subtotal, cgst, sgst, igst, tax_amount, line_total)')
         .eq('company_id', DEMO_COMPANY_ID)
         .order('date', { ascending: false });
 
