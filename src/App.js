@@ -26,7 +26,7 @@ function App() {
   const [session, setSession] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isBotOpen, setIsBotOpen] = useState(false);
-  const [demoMode, setDemoMode] = useState(false);
+  const [demoMode, setDemoMode] = useState(() => localStorage.getItem('MESO_DEMO_MODE') === 'true');
   const [selectedJournalRef, setSelectedJournalRef] = useState(null);
 
   const [ledgerVersion, setLedgerVersion] = useState(0);
@@ -95,7 +95,10 @@ function App() {
   }, []);
 
   if (!session && !demoMode) {
-    return <Auth onDemoLogin={() => setDemoMode(true)} />;
+    return <Auth onDemoLogin={() => {
+      localStorage.setItem('MESO_DEMO_MODE', 'true');
+      setDemoMode(true);
+    }} />;
   }
 
   if (!dataReady) {
@@ -231,6 +234,7 @@ function App() {
             </div>
             <div className="sidebar-item" onClick={async () => {
               await supabase.auth.signOut();
+              localStorage.removeItem('MESO_DEMO_MODE');
               setDemoMode(false);
             }}>
               <LogOut className="icon" size={16} /> Log Out

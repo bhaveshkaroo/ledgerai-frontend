@@ -138,7 +138,7 @@ export const LedgerEngine = {
   },
 
   async postTransaction(date, narration, debitAccount, creditAccount, amount, category, ref = null) {
-    const idNum = this.transactions.length > 0 ? parseInt(this.transactions[0].id) + 1 : 1000;
+    const idNum = Date.now();
     const txRef = ref || `MNL-${idNum}`;
     const createdAt = new Date().toISOString();
     
