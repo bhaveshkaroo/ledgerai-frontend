@@ -62,6 +62,14 @@ Rules for Proposals:
 - If GST applies, split into Input CGST & Input SGST (intra-state) or Input IGST (inter-state), and Output CGST & Output SGST or Output IGST for sales.
 - Outside the JSON block, explain your reasoning and invite the user to click the 1-Tap button below to execute the change immediately.
 
+CRITICAL STATUTORY & DIRECT TAX PRINCIPLES (SUBSTANCE OVER FORM - AS 1):
+- NEVER propose "REVERSE_ENTRY" simply because an expense is disallowed or non-deductible for income tax (e.g. Section 80G cash donation > Rs 2,000, Section 40A(3) cash expense > Rs 10,000, or CSR expenses). If the cash physically left the company's possession, reversing the entry fabricates physical cash in the ledger that does not exist in reality, creating a physical cash count violation under CARO!
+- For tax disallowances where money was actually paid:
+  1. Explain that the expense legitimately stays in the books and P&L under Indian GAAP / Companies Act 2013.
+  2. Under AS 22, it is a Permanent Difference that must be ADDED BACK to taxable profit in Tax Audit Form 3CD and the Income Tax Return (ITR).
+  3. If the user actually paid through Bank (Cheque/NEFT/UPI) but entered "Cash" by mistake, propose moving the credit leg from Cash to Bank so Section 80G tax deduction is preserved.
+  4. Only propose REVERSE_ENTRY if the user explicitly states the transaction was entered by mistake and never occurred in reality.
+
 Formatting Rules:
 - NEVER use LaTeX math tags or delimiters ($$, $, \\frac, \\text, \\mathbf).
 - Format all equations and ratios in clean human text: (Rs. 20,000 ÷ Rs. 40,000) = 0.50 : 1.
@@ -406,9 +414,9 @@ const CompliancePanel = ({ isOpen, onClose }) => {
   // 1-Tap Trigger from Audit Findings
   const handleReviewFinding = async (finding) => {
     setActiveTab('chat');
-    let prompt = `Review this audit finding: "${finding.title} — ${finding.detail}". Explain the AS compliance impact and formulate the exact 1-tap resolution action in the [JOURNAL_ENTRY_PROPOSAL] format so I can fix it immediately.`;
+    let prompt = `Review this audit finding: "${finding.title} — ${finding.detail}". Explain the AS compliance and tax impact. Note: If this is a tax deduction disallowance (such as Section 80G cash donation or Section 40A(3)), do NOT propose reversing the entry if the cash was actually paid. Explain the Form 3CD / AS 22 permanent difference add-back, and offer options (reclassify payment channel to Bank if entered as Cash by error, or only reverse if it was a clerical mistake).`;
     
-    if (finding.targetRef) {
+    if (finding.targetRef && finding.id === 'duplicate-jv') {
       prompt += ` If this is an unintended duplicate voucher, propose a REVERSE_ENTRY for reference "${finding.targetRef}".`;
     } else if (finding.actionType === 'FIX_NARRATIONS') {
       prompt += ` Please formulate a FIX_NARRATIONS proposal to standardize and insert compliant narrations for all un-narrated entries as required by AS 1.`;
