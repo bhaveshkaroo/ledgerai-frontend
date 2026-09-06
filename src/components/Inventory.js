@@ -3,8 +3,8 @@ import { InventoryEngine } from '../utils/InventoryEngine';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
 import { Package, ArrowDownLeft, ArrowUpRight, Search, Layers, RefreshCw } from 'lucide-react';
 
-function Inventory({ period = 'Full Year' }) {
-  const [selectedPeriod, setSelectedPeriod] = useState(period);
+function Inventory({ period }) {
+  const [selectedPeriod, setSelectedPeriod] = useState(period || LedgerEngine.getCurrentFiscalYear());
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -64,7 +64,7 @@ function Inventory({ period = 'Full Year' }) {
             <option value="Full Year">All 3 Years (FY 2024-27)</option>
             <option value="FY 2024-25">FY 2024-25</option>
             <option value="FY 2025-26">FY 2025-26</option>
-            <option value="FY 2026-27">FY 2026-27</option>
+            <option value={LedgerEngine.getCurrentFiscalYear()}>{LedgerEngine.getCurrentFiscalYear()} (Current)</option>
           </select>
         </div>
       </div>

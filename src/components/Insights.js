@@ -105,34 +105,38 @@ ${monthlyData.map(m => `• ${m.month}: Revenue Rs. ${m.revenue.toLocaleString('
         return;
       }
 
-      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || (isHttps ? '' : 'http://localhost:8000');
       let answer = null;
 
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/insights/analyze`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Gemini-API-Key': getGeminiApiKey()
-          },
-          body: JSON.stringify({
-            question: q,
-            financial_context: {
-               metrics: metrics,
-               monthlyData: monthlyData,
-               forecast: forecast
-            }
-          })
-        });
+      if (BACKEND_URL) {
+        try {
+          const res = await fetch(`${BACKEND_URL}/api/insights/analyze`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Gemini-API-Key': getGeminiApiKey()
+            },
+            body: JSON.stringify({
+              question: q,
+              financial_context: {
+                 metrics: metrics,
+                 monthlyData: monthlyData,
+                 forecast: forecast
+              }
+            })
+          });
 
-        if (res.ok) {
-          const data = await res.json();
-          answer = data.answer;
-        } else {
-          throw new Error('Backend insights returned error');
+          if (res.ok) {
+            const data = await res.json();
+            answer = data.answer;
+          }
+        } catch (backendErr) {
+          console.warn('[Insights] Backend unavailable, using direct Gemini client:', backendErr.message);
         }
-      } catch (backendErr) {
-        console.warn('[Insights] Calling direct Gemini client fallback:', backendErr.message);
+      }
+
+      if (!answer) {
         const contextStr = buildContextForAI();
         const sysPrompt = `You are a senior financial analyst and CFO for an Indian MSME.
 Your role is to analyze the user's financial context and provide strategic, actionable insights answering their question.

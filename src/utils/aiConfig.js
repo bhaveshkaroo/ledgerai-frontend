@@ -9,17 +9,21 @@ export const GEMINI_MODELS = [
 ];
 
 export function getGeminiApiKey() {
-  return localStorage.getItem(STORAGE_KEY) || process.env.REACT_APP_GEMINI_API_KEY || '';
+  const raw = localStorage.getItem(STORAGE_KEY) || process.env.REACT_APP_GEMINI_API_KEY || '';
+  return raw.replace(/['"]/g, '').trim();
 }
 
 export function setGeminiApiKey(key) {
   if (key && key.trim()) {
-    localStorage.setItem(STORAGE_KEY, key.trim());
+    const cleaned = key.replace(/['"]/g, '').trim();
+    localStorage.setItem(STORAGE_KEY, cleaned);
+    window.dispatchEvent(new Event('meso-api-key-updated'));
   }
 }
 
 export function clearGeminiApiKey() {
   localStorage.removeItem(STORAGE_KEY);
+  window.dispatchEvent(new Event('meso-api-key-updated'));
 }
 
 export function hasGeminiApiKey() {
@@ -64,9 +68,11 @@ export async function callGeminiDirect(prompt, systemInstruction = '', options =
         const errData = await res.json().catch(() => ({}));
         const code = errData?.error?.code || res.status;
         lastError = errData?.error?.message || `HTTP ${res.status}`;
-        if (code === 429 || code === 503) continue; // High demand spike, fallback to next model
-        if (code === 404) continue;
-        throw new Error(lastError);
+        if (lastError.includes('API_KEY_INVALID') || lastError.includes('API key not valid')) {
+          throw new Error('Invalid Gemini API Key. Please verify and update your key in Settings.');
+        }
+        // If 429, 503, 404, or 400 on specific model, try the next model in fallback list
+        continue;
       }
 
       const data = await res.json();

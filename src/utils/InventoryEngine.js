@@ -68,6 +68,15 @@ export const InventoryEngine = {
 
     // Async persist to Supabase
     import('./SupabaseRepository.js').then(({ SupabaseRepository }) => {
+      SupabaseRepository.saveTransaction(
+        date,
+        `Purchase of ${qty} ${itemCode} @ ${unitCost} from ${supplier}`,
+        'Inventory',
+        'Accounts Payable',
+        baseCost,
+        'Purchases',
+        ref
+      );
       SupabaseRepository.saveStockRecord(itemCode, this.stock[itemCode], {
         date,
         type: 'IN',

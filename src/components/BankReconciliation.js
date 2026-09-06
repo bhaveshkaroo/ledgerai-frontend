@@ -3,13 +3,33 @@ import { BRSEngine } from '../utils/BRSEngine';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
 import { Landmark, CheckCircle2, AlertTriangle, ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, Upload, FileText, Check } from 'lucide-react';
 
+const availableMonths = [
+  { value: '2026-09-30', label: 'September 2026 (Current)' },
+  { value: '2026-08-31', label: 'August 2026' },
+  { value: '2026-07-31', label: 'July 2026' },
+  { value: '2026-06-30', label: 'June 2026' },
+  { value: '2026-05-31', label: 'May 2026' },
+  { value: '2026-04-30', label: 'April 2026' },
+  { value: '2026-03-31', label: 'March 2026 (FY 2025-26 Year End)' },
+  { value: '2025-12-31', label: 'December 2025' },
+  { value: '2025-09-30', label: 'September 2025' },
+  { value: '2025-03-31', label: 'March 2025' }
+];
+
 function BankReconciliation() {
-  const [asOfDate, setAsOfDate] = useState('2026-03-31');
-  const [bankEntries, setBankEntries] = useState(() => BRSEngine.getSampleBankStatement());
+  const [asOfDate, setAsOfDate] = useState('2026-09-30');
+  const [bankEntries, setBankEntries] = useState(() => BRSEngine.getSampleBankStatement('2026-09-30'));
   const [activeTab, setActiveTab] = useState('summary');
   const [feedbackMsg, setFeedbackMsg] = useState(null);
   const [pasteText, setPasteText] = useState('');
   const [showPasteModal, setShowPasteModal] = useState(false);
+
+  const handleMonthChange = (date) => {
+    setAsOfDate(date);
+    setBankEntries(BRSEngine.getSampleBankStatement(date));
+    setFeedbackMsg({ type: 'success', text: `Reconciliation recalculated as at ${availableMonths.find(m => m.value === date)?.label || date}.` });
+    setTimeout(() => setFeedbackMsg(null), 3000);
+  };
 
   // Compute bank balance directly from statement
   const currentBankBalance = useMemo(() => {
@@ -68,21 +88,41 @@ function BankReconciliation() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
         <div>
-          <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Bank Reconciliation (BRS)</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Automated matching, timing differences &amp; unbooked items</p>
+          <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Bank Reconciliation Statement (BRS)</h2>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            Reconciliation as at {availableMonths.find(m => m.value === asOfDate)?.label || asOfDate} &middot; AS 3 / Cash &amp; Bank
+          </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <select
+            value={asOfDate}
+            onChange={(e) => handleMonthChange(e.target.value)}
+            style={{
+              padding: '7px 12px',
+              borderRadius: '6px',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-primary)',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            {availableMonths.map(m => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
           <button 
             className="sidebar-btn" 
             style={{ width: 'auto', padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
             onClick={() => {
-              setBankEntries(BRSEngine.getSampleBankStatement());
-              setFeedbackMsg({ type: 'success', text: 'Loaded fresh sample bank statement.' });
+              setBankEntries(BRSEngine.getSampleBankStatement(asOfDate));
+              setFeedbackMsg({ type: 'success', text: `Loaded fresh sample bank statement for ${availableMonths.find(m => m.value === asOfDate)?.label || asOfDate}.` });
               setTimeout(() => setFeedbackMsg(null), 3000);
             }}
           >
-            <RefreshCw size={14} /> Reset Sample Data
+            <RefreshCw size={14} /> Reset
           </button>
           <button 
             className="action-btn" 

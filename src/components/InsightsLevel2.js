@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { InsightsEngine } from '../utils/InsightsEngine.js';
 import { formatINR } from '../utils/LedgerEngine.js';
+import { getGeminiApiKey, hasGeminiApiKey, callGeminiDirect, API_KEY_MISSING_MSG } from '../utils/aiConfig.js';
 import { 
   ResponsiveContainer, LineChart, Line, BarChart, Bar, 
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, AreaChart, Area, Cell
@@ -54,34 +55,66 @@ const InsightsLevel2 = () => {
     setIsAiLoading(true);
 
     try {
-      const res = await fetch('http://localhost:8000/api/insights/level2', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: q,
-          computed_data: {
-            regression: {
-              revenueSlope: revRegression.slope,
-              rSquared: revRegression.rSquared,
-              method: revRegression.method
-            },
-            recentTrailingPeriods: historicalSeries.slice(-6),
-            projections: revRegression.projections,
-            cashProjections: cashRegression.projections
-          }
-        })
-      });
+      if (!hasGeminiApiKey()) {
+        setAiChat(prev => [...prev, { role: 'assistant', text: `⚠️ ${API_KEY_MISSING_MSG}` }]);
+        setIsAiLoading(false);
+        return;
+      }
 
-      if (res.ok) {
-        const resJson = await res.json();
-        setAiChat(prev => [...prev, { role: 'assistant', text: cleanTextFormatting(resJson.answer) }]);
+      const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || (isHttps ? '' : 'http://localhost:8000');
+      let answer = null;
+
+      if (BACKEND_URL) {
+        try {
+          const res = await fetch(`${BACKEND_URL}/api/insights/level2`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Gemini-API-Key': getGeminiApiKey()
+            },
+            body: JSON.stringify({
+              question: q,
+              computed_data: {
+                regression: {
+                  revenueSlope: revRegression.slope,
+                  rSquared: revRegression.rSquared,
+                  method: revRegression.method
+                },
+                recentTrailingPeriods: historicalSeries.slice(-6),
+                projections: revRegression.projections,
+                cashProjections: cashRegression.projections
+              }
+            })
+          });
+
+          if (res.ok) {
+            const resJson = await res.json();
+            answer = resJson.answer;
+          }
+        } catch (backendErr) {
+          console.warn('[InsightsLevel2] Backend unavailable, using direct Gemini client:', backendErr.message);
+        }
+      }
+
+      if (!answer) {
+        const sysPrompt = `You are a CFA Level II Quantitative Financial Analyst. 
+Analyze the provided regression models, historical periods, and trend projections. 
+Answer the user question rigorously with statistical confidence, slope interpretations, and actionable financial commentary.
+Always format currency figures in Indian Rupees (₹).
+Always append this exact disclaimer: "⚠️ This is an AI-generated quantitative forecast based on linear regression. Actual future performance may vary."`;
+        const contextPayload = `User Question: ${q}\n\nQuantitative Financial Models:\n- Revenue Slope: ₹${Math.round(revRegression.slope || 0).toLocaleString('en-IN')}/month (R²: ${revRegression.rSquared})\n- Method: ${revRegression.method}\n- Recent 6-Month Data: ${JSON.stringify(historicalSeries.slice(-6))}\n- Projected Revenue Next 6 Months: ${JSON.stringify(revRegression.projections)}\n- Projected Cash Balance Next 6 Months: ${JSON.stringify(cashRegression.projections)}`;
+        answer = await callGeminiDirect(contextPayload, sysPrompt);
+      }
+
+      if (answer) {
+        setAiChat(prev => [...prev, { role: 'assistant', text: cleanTextFormatting(answer) }]);
       } else {
-        const err = await res.json().catch(() => ({}));
-        setAiChat(prev => [...prev, { role: 'assistant', text: err.detail || "Error connecting to Level 2 Insights engine." }]);
+        setAiChat(prev => [...prev, { role: 'assistant', text: 'Unable to complete Level 2 AI analysis. Please verify your API key in Settings.' }]);
       }
     } catch (err) {
-      console.warn("Level 2 call failed", err);
-      setAiChat(prev => [...prev, { role: 'assistant', text: "Unable to complete Level 2 AI analysis. Please verify that the backend server is active." }]);
+      console.warn('Level 2 call failed', err);
+      setAiChat(prev => [...prev, { role: 'assistant', text: `⚠️ ${err.message || 'Error communicating with AI service.'}` }]);
     } finally {
       setIsAiLoading(false);
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });

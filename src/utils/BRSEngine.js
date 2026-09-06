@@ -177,28 +177,34 @@ export const BRSEngine = {
   },
 
   /**
-   * Generates a sample bank statement based on current book transactions with timing differences
+   * Generates a sample bank statement based on current book transactions with timing differences for a specific month
    */
-  getSampleBankStatement() {
-    const bookTxs = LedgerEngine.transactions.filter(t => t.account === 'Cash and Bank');
+  getSampleBankStatement(asOfDate = '2026-09-30') {
+    const bookTxs = LedgerEngine.transactions.filter(t => 
+      t.account === 'Cash and Bank' && new Date(t.date) <= new Date(asOfDate)
+    );
     
-    // Copy all transactions except the very latest AR collection (Deposit in Transit) 
-    // and latest supplier payment (Outstanding Cheque)
-    const base = bookTxs.map((b, idx) => ({
-      id: `BNK-${idx + 100}`,
-      date: b.date,
-      description: b.narration,
-      ref: b.ref,
-      amount: b.amount,
-      type: b.type === 'Debit' ? 'Deposit' : 'Withdrawal'
-    }));
+    // Leave out the latest receipt (Deposit in Transit) and latest payment (Outstanding Cheque)
+    const latestDeposit = bookTxs.find(t => t.type === 'Debit');
+    const latestPayment = bookTxs.find(t => t.type === 'Credit');
 
-    // Add 1 unbooked bank charge
+    const base = bookTxs
+      .filter(t => t !== latestDeposit && t !== latestPayment)
+      .map((b, idx) => ({
+        id: `BNK-${idx + 100}`,
+        date: b.date,
+        description: b.narration,
+        ref: b.ref,
+        amount: b.amount,
+        type: b.type === 'Debit' ? 'Deposit' : 'Withdrawal'
+      }));
+
+    // Add 1 unbooked bank charge for this month
     base.push({
-      id: `BNK-CHG-999`,
-      date: '2026-03-31',
-      description: 'Quarterly Bank Service Charges',
-      ref: 'CHG-HDFC-01',
+      id: `BNK-CHG-${asOfDate.slice(0, 7)}`,
+      date: asOfDate,
+      description: 'Monthly Bank Service & Maintenance Charges',
+      ref: `CHG-${asOfDate.slice(0, 7)}`,
       amount: 750,
       type: 'Withdrawal'
     });

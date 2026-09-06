@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { InsightsEngine } from '../utils/InsightsEngine.js';
 import { formatINR } from '../utils/LedgerEngine.js';
+import { getGeminiApiKey, hasGeminiApiKey, callGeminiDirect, API_KEY_MISSING_MSG } from '../utils/aiConfig.js';
 import { 
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell 
 } from 'recharts';
@@ -53,39 +54,71 @@ const InsightsLevel3 = () => {
     setIsAiLoading(true);
 
     try {
-      const res = await fetch('http://localhost:8000/api/insights/level3', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: q,
-          scenario_params: {
-            revenueDeltaPct: sliders.revenueDeltaPct,
-            expenseDeltaPct: sliders.expenseDeltaPct,
-            dsoSlipDays: sliders.dsoSlipDays,
-            baselineCash: baseline.cash,
-            recalculatedCash: recalculated.cashBalance,
-            stressRunwayMonths: recalculated.runwayMonths,
-            delayedCashCollection: recalculated.delayedCashCollection
-          },
-          computed_risk_data: {
-            concentration,
-            volatility,
-            activeRedFlags: redFlags,
-            cccFlow
-          }
-        })
-      });
+      if (!hasGeminiApiKey()) {
+        setAiChat(prev => [...prev, { role: 'assistant', text: `⚠️ ${API_KEY_MISSING_MSG}` }]);
+        setIsAiLoading(false);
+        return;
+      }
 
-      if (res.ok) {
-        const resJson = await res.json();
-        setAiChat(prev => [...prev, { role: 'assistant', text: cleanTextFormatting(resJson.answer) }]);
+      const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || (isHttps ? '' : 'http://localhost:8000');
+      let answer = null;
+
+      if (BACKEND_URL) {
+        try {
+          const res = await fetch(`${BACKEND_URL}/api/insights/level3`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Gemini-API-Key': getGeminiApiKey()
+            },
+            body: JSON.stringify({
+              question: q,
+              scenario_params: {
+                revenueDeltaPct: sliders.revenueDeltaPct,
+                expenseDeltaPct: sliders.expenseDeltaPct,
+                dsoSlipDays: sliders.dsoSlipDays,
+                baselineCash: baseline.cash,
+                recalculatedCash: recalculated.cashBalance,
+                stressRunwayMonths: recalculated.runwayMonths,
+                delayedCashCollection: recalculated.delayedCashCollection
+              },
+              computed_risk_data: {
+                concentration,
+                volatility,
+                activeRedFlags: redFlags,
+                cccFlow
+              }
+            })
+          });
+
+          if (res.ok) {
+            const resJson = await res.json();
+            answer = resJson.answer;
+          }
+        } catch (backendErr) {
+          console.warn('[InsightsLevel3] Backend unavailable, using direct Gemini client:', backendErr.message);
+        }
+      }
+
+      if (!answer) {
+        const sysPrompt = `You are a CFA Level III Corporate Financial Strategist & FRM Certified Risk Manager.
+Analyze the provided stress-testing scenario parameters, cash runway recalculations, revenue volatility, and working capital delays.
+Answer the user's question with strategic, actionable recommendations for corporate governance, liquidity preservation, and risk mitigation.
+Always format currency figures in Indian Rupees (₹).
+Always append this exact disclaimer: "⚠️ This is an AI-generated scenario stress-test simulation. Consult professional risk advisors before executing capital interventions."`;
+        const contextPayload = `User Question: ${q}\n\nStress Testing Scenario Parameters:\n- Revenue Shift: ${sliders.revenueDeltaPct}%\n- OPEX Shift: ${sliders.expenseDeltaPct}%\n- DSO Slippage: +${sliders.dsoSlipDays} days\n- Baseline Cash: ₹${Math.round(baseline.cash || 0).toLocaleString('en-IN')}\n- Recalculated Stressed Cash: ₹${Math.round(recalculated.cashBalance || 0).toLocaleString('en-IN')}\n- Stressed Runway: ${recalculated.runwayMonths} months\n- Delayed Receivables Cash: ₹${Math.round(recalculated.delayedCashCollection || 0).toLocaleString('en-IN')}\n- Risk Signals: ${JSON.stringify(redFlags)}`;
+        answer = await callGeminiDirect(contextPayload, sysPrompt);
+      }
+
+      if (answer) {
+        setAiChat(prev => [...prev, { role: 'assistant', text: cleanTextFormatting(answer) }]);
       } else {
-        const err = await res.json().catch(() => ({}));
-        setAiChat(prev => [...prev, { role: 'assistant', text: err.detail || "Error connecting to Level 3 Insights engine." }]);
+        setAiChat(prev => [...prev, { role: 'assistant', text: 'Unable to complete Level 3 AI analysis. Please verify your API key in Settings.' }]);
       }
     } catch (err) {
-      console.warn("Level 3 call failed", err);
-      setAiChat(prev => [...prev, { role: 'assistant', text: "Unable to complete Level 3 AI analysis. Please verify that the backend server is active." }]);
+      console.warn('Level 3 call failed', err);
+      setAiChat(prev => [...prev, { role: 'assistant', text: `⚠️ ${err.message || 'Error communicating with AI service.'}` }]);
     } finally {
       setIsAiLoading(false);
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });

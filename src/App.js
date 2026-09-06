@@ -121,14 +121,16 @@ function App() {
     );
   }
 
+  const currentFY = LedgerEngine.getCurrentFiscalYear();
+
   const renderContent = () => {
     switch(activeTab) {
       case 'dashboard': return <Dashboard key={ledgerVersion} />;
-      case 'transactions': return <TransactionList key={ledgerVersion} period="Full Year" />;
-      case 'invoicing': return <Invoicing key={ledgerVersion} />;
-      case 'inventory': return <Inventory key={ledgerVersion} />;
-      case 'reports': return <Statements key={ledgerVersion} period="Full Year" />;
-      case 'gst-compliance': return <GSTCompliance key={ledgerVersion} period="Full Year" />;
+      case 'transactions': return <TransactionList key={ledgerVersion} period={currentFY} />;
+      case 'invoicing': return <Invoicing key={ledgerVersion} period={currentFY} />;
+      case 'inventory': return <Inventory key={ledgerVersion} period={currentFY} />;
+      case 'reports': return <Statements key={ledgerVersion} period={currentFY} />;
+      case 'gst-compliance': return <GSTCompliance key={ledgerVersion} period={currentFY} />;
       case 'brs': return <BankReconciliation key={ledgerVersion} />;
       case 'insights': return <Insights key={ledgerVersion} />;
       case 'insights-level2': return <InsightsLevel2 key={ledgerVersion} />;
