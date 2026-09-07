@@ -2,7 +2,7 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://bhaveshkaroo.github.io/ledgerai-frontend/",
+  "homepage": ".",
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
     "@testing-library/dom": "^10.4.1",
