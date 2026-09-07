@@ -4,18 +4,18 @@ import { formatINR } from '../utils/LedgerEngine';
 import { Receipt, FileText, Calculator, Download, Plus, CheckCircle, AlertTriangle, Calendar, IndianRupee } from 'lucide-react';
 
 const cardStyle = {
-  background: 'white', borderRadius: '12px', padding: '20px',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.06)'
+  background: 'var(--bg-card)', borderRadius: '12px', padding: '20px',
+  boxShadow: 'var(--shadow-soft)', border: '1px solid var(--border)'
 };
 const btnPrimary = {
   background: '#06402b', color: 'white', borderRadius: '8px', padding: '10px 20px',
   border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px'
 };
 const inputStyle = {
-  width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border, rgba(0,0,0,0.1))',
-  fontSize: '14px', outline: 'none', boxSizing: 'border-box', background: 'var(--bg-secondary, #f9fafb)'
+  width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border)',
+  fontSize: '14px', outline: 'none', boxSizing: 'border-box', background: 'var(--bg-surface)', color: 'var(--text-primary)'
 };
-const labelStyle = { fontSize: '12px', fontWeight: 600, color: 'var(--text-muted, #6b7280)', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' };
+const labelStyle = { fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' };
 
 const TDSManager = () => {
   const [activeSubTab, setActiveSubTab] = useState('register');

@@ -19,7 +19,9 @@ import { InventoryEngine } from './utils/InventoryEngine';
 import { LedgerEngine } from './utils/LedgerEngine';
 import { SupabaseRepository } from './utils/SupabaseRepository';
 import { supabase } from './supabaseClient';
-import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale, Landmark, TrendingUp, BarChart2, Activity, IndianRupee } from 'lucide-react';
+import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale, Landmark, TrendingUp, BarChart2, Activity, IndianRupee, Sun, Moon, DollarSign } from 'lucide-react';
+import { ThemeEngine, getTheme, toggleTheme } from './utils/ThemeEngine';
+import { CurrencyEngine, getCurrency, toggleCurrency } from './utils/CurrencyEngine';
 import Auth from './components/Auth';
 import logoImg from './assets/logo.png';
 
@@ -32,8 +34,12 @@ function App() {
 
   const [ledgerVersion, setLedgerVersion] = useState(0);
   const [dataReady, setDataReady] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState(() => ThemeEngine.initTheme());
+  const [currentCurrency, setCurrentCurrency] = useState(() => getCurrency());
 
   useEffect(() => {
+    ThemeEngine.initTheme();
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
@@ -43,7 +49,15 @@ function App() {
     });
 
     const handleLedgerUpdate = () => setLedgerVersion(v => v + 1);
+    const handleThemeChange = (e) => setCurrentTheme(e.detail?.theme || getTheme());
+    const handleCurrencyChange = () => {
+      setCurrentCurrency(getCurrency());
+      setLedgerVersion(v => v + 1);
+    };
+
     window.addEventListener('ledger-updated', handleLedgerUpdate);
+    window.addEventListener('theme-changed', handleThemeChange);
+    window.addEventListener('currency-changed', handleCurrencyChange);
 
     const handleHashChange = () => {
       const hash = window.location.hash;
@@ -92,6 +106,8 @@ function App() {
       subscription.unsubscribe();
       window.removeEventListener('ledger-updated', handleLedgerUpdate);
       window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('theme-changed', handleThemeChange);
+      window.removeEventListener('currency-changed', handleCurrencyChange);
     };
   }, []);
 
@@ -176,6 +192,75 @@ function App() {
           </div>
         </div>
 
+        {/* 1-Click Quick Controls: Theme & Currency */}
+        <div style={{
+          display: 'flex',
+          gap: '6px',
+          background: 'var(--bg-surface)',
+          padding: '4px',
+          borderRadius: '10px',
+          marginBottom: '16px',
+          border: '1px solid var(--border)'
+        }}>
+          {/* 1-Click Theme Switch */}
+          <button
+            type="button"
+            onClick={() => {
+              const next = toggleTheme();
+              setCurrentTheme(next);
+            }}
+            title={`Switch to ${currentTheme === 'dark' ? 'Light' : 'Dark'} Mode`}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '6px 8px',
+              borderRadius: '7px',
+              border: 'none',
+              background: 'var(--bg-card)',
+              color: 'var(--text-primary)',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+            }}
+          >
+            {currentTheme === 'dark' ? <Sun size={13} color="#f59e0b" /> : <Moon size={13} color="#38bdf8" />}
+            <span>{currentTheme === 'dark' ? 'Light' : 'Dark'}</span>
+          </button>
+
+          {/* 1-Click INR ⇄ USD Currency Switch */}
+          <button
+            type="button"
+            onClick={() => {
+              const next = toggleCurrency();
+              setCurrentCurrency(next);
+            }}
+            title={`Switch reporting currency to ${currentCurrency === 'INR' ? 'USD ($)' : 'INR (₹)'}`}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              padding: '6px 8px',
+              borderRadius: '7px',
+              border: 'none',
+              background: 'var(--bg-card)',
+              color: 'var(--text-primary)',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+            }}
+          >
+            <span style={{ color: '#10b981', fontWeight: 700 }}>{currentCurrency === 'INR' ? '₹' : '$'}</span>
+            <span>{currentCurrency === 'INR' ? 'INR ⇄ USD' : 'USD ⇄ INR'}</span>
+          </button>
+        </div>
+
         <div className="sidebar-section-title" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>
           Books of Accounts
         </div>
@@ -200,7 +285,7 @@ function App() {
             <Scale className="icon" size={16} /> GST Compliance
           </div>
           <div className={`sidebar-item ${activeTab === 'tds' ? 'active' : ''}`} onClick={() => setActiveTab('tds')}>
-            <IndianRupee className="icon" size={16} /> TDS & Withholding
+            <IndianRupee className="icon" size={16} /> TDS &amp; Withholding
           </div>
           <div className={`sidebar-item ${activeTab === 'brs' ? 'active' : ''}`} onClick={() => setActiveTab('brs')}>
             <Landmark className="icon" size={16} /> Bank Reconciliation
@@ -222,6 +307,13 @@ function App() {
           <div className="sidebar-item" onClick={() => setIsBotOpen(true)}>
             <Bot className="icon" size={16} /> AI Audit Assistant
             <span className="badge" style={{ marginLeft: 'auto', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>Live</span>
+          </div>
+
+          <div className="sidebar-section-title" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', fontWeight: 600, marginTop: '16px', marginBottom: '8px' }}>
+            Preferences &amp; System
+          </div>
+          <div className={`sidebar-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
+            <Settings className="icon" size={16} /> Settings &amp; API Key
           </div>
         </nav>
 

@@ -1,29 +1,30 @@
 @import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=Inter:wght@400;500;600;700&display=swap');
 
-:root {
-  /* Rafion AI Aesthetic Color Palette */
-  --bg-page: #e8ebf0; /* Soft cool gray background */
-  --bg-sidebar: rgba(255, 255, 255, 0.4); /* Frosted sidebar */
+:root, [data-theme="light"] {
+  /* Meso AI Light Palette */
+  --bg-page: #f1f4f8;
+  --bg-sidebar: #ffffff;
   --bg-card: #ffffff;
-  --bg-surface: #f4f5f7;
-  --bg-surface-hover: #ebeef2;
+  --bg-surface: #f8fafc;
+  --bg-surface-hover: #edf2f7;
   
-  --text-primary: #1a1c20;
-  --text-secondary: #4a5568;
-  --text-muted: #8c97a8;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
   
-  --border: rgba(0, 0, 0, 0.05);
-  --border-light: rgba(0, 0, 0, 0.03);
+  --border: rgba(0, 0, 0, 0.08);
+  --border-light: rgba(0, 0, 0, 0.04);
   
-  /* Accent & Gradients matching screenshots */
-  --accent-lime: #c4f000; /* Go Pro button color */
-  --grad-green: radial-gradient(circle at 30% 70%, #06402b, #10b981 70%, #c4f000);
-  --grad-orange: radial-gradient(circle at 50% 50%, #f97316, #fbbf24);
-  --grad-pink: radial-gradient(circle at center, #e11d48, #f43f5e);
+  /* Accent & Gradients */
+  --accent-lime: #10b981;
+  --accent-emerald: #059669;
+  --grad-green: radial-gradient(circle at 30% 70%, #06402b, #10b981 70%, #34d399);
+  --grad-orange: radial-gradient(circle at 50% 50%, #ea580c, #f59e0b);
+  --grad-pink: radial-gradient(circle at center, #be123c, #e11d48);
   
   /* Typography */
   --font-sans: 'Inter', -apple-system, sans-serif;
-  --font-mono: 'DotGothic16', monospace; /* Used for the digital dotted numbers */
+  --font-mono: 'DotGothic16', monospace;
   
   /* Radius & Effects */
   --radius-sm: 8px;
@@ -31,11 +32,30 @@
   --radius-lg: 24px;
   --radius-pill: 9999px;
   
-  --shadow-soft: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+  --shadow-soft: 0 10px 30px -10px rgba(0, 0, 0, 0.06);
   --shadow-inner: inset 0 2px 4px 0 rgba(255, 255, 255, 0.3);
   
   /* Layout */
   --sidebar-width: 260px;
+}
+
+[data-theme="dark"] {
+  /* Meso AI Dark Palette */
+  --bg-page: #0b0d13;
+  --bg-sidebar: #12151c;
+  --bg-card: #181c26;
+  --bg-surface: #1e2430;
+  --bg-surface-hover: #262d3d;
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #8b99ad;
+  
+  --border: rgba(255, 255, 255, 0.09);
+  --border-light: rgba(255, 255, 255, 0.05);
+  
+  --shadow-soft: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.4);
 }
 
 * {
@@ -50,6 +70,7 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Base Layout */
@@ -57,6 +78,7 @@ body {
   display: flex;
   height: 100vh;
   overflow: hidden;
+  background-color: var(--bg-page);
 }
 
 /* Sidebar (Rafion AI Style) */
@@ -66,10 +88,15 @@ body {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-right: 1px solid var(--border);
-  padding: 24px 16px;
+  padding: 20px 14px;
   display: flex;
   flex-direction: column;
   z-index: 10;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100vh;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .sidebar-logo {
@@ -357,3 +384,183 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* Settings Page Styling */
+.settings-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.settings-page h1 {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  color: var(--text-primary);
+}
+
+.settings-section {
+  margin-bottom: 32px;
+}
+
+.settings-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.settings-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 20px;
+  box-shadow: var(--shadow-soft);
+}
+
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-row-info {
+  flex: 1;
+  padding-right: 24px;
+}
+
+.settings-row-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.settings-row-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.settings-select {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  min-width: 140px;
+}
+
+.settings-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-btn:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border);
+}
+
+/* Quick Option Group (Theme / Currency 1-click pills) */
+.option-pill-group {
+  display: flex;
+  gap: 6px;
+  background: var(--bg-surface);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.option-pill {
+  padding: 7px 14px;
+  border-radius: 7px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  background: transparent;
+  transition: all 0.15s ease;
+}
+
+.option-pill:hover {
+  color: var(--text-primary);
+}
+
+.option-pill.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-surface-hover);
+  border: 1px solid var(--border);
+  transition: .2s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .2s;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+input:checked + .toggle-slider {
+  background-color: #10b981;
+  border-color: #10b981;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+

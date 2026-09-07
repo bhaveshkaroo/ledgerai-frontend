@@ -1,4 +1,5 @@
 import { ASValidationEngine } from './ASComplianceEngine.js';
+import { formatCurrency as formatCur } from './CurrencyEngine.js';
 
 export const CHART_OF_ACCOUNTS = [
   { name: "Sales Revenue", type: "Revenue", classification: "P&L", section: "Revenue from Operations" },
@@ -38,16 +39,11 @@ export const CHART_OF_ACCOUNTS = [
 ];
 
 export const formatINR = (amount) => {
-  if (amount === null || amount === undefined) return '';
-  return "₹" + Number(amount).toLocaleString('en-IN', {
-    maximumFractionDigits: 0,
-    minimumFractionDigits: 0
-  });
+  return formatCur(amount);
 };
 
-export const formatCurrency = (amount, currency = 'INR') => {
-  if (amount === null || amount === undefined) return '';
-  return formatINR(amount); // Stubbed to INR for simplicity
+export const formatCurrency = (amount, currency) => {
+  return formatCur(amount, currency);
 };
 
 // Generates STRICTLY BALANCED double-entry transactions across 3 full years (2024 to 2026)
