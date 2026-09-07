@@ -14,19 +14,29 @@ import InsightsLevel3 from './components/InsightsLevel3';
 import JournalDetail from './components/JournalDetail';
 import TDSManager from './components/TDSManager';
 import SettingsPage from './components/Settings';
+import BusinessHub from './components/BusinessHub';
 import { InvoiceEngine } from './utils/InvoiceEngine';
 import { InventoryEngine } from './utils/InventoryEngine';
 import { LedgerEngine } from './utils/LedgerEngine';
 import { SupabaseRepository } from './utils/SupabaseRepository';
 import { supabase } from './supabaseClient';
-import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale, Landmark, TrendingUp, BarChart2, Activity, IndianRupee, Sun, Moon, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale, Landmark, TrendingUp, BarChart2, Activity, IndianRupee, Sun, Moon, DollarSign, Building2 } from 'lucide-react';
 import { ThemeEngine, getTheme, toggleTheme } from './utils/ThemeEngine';
 import { CurrencyEngine, getCurrency, toggleCurrency } from './utils/CurrencyEngine';
+import { getBusinessProfile } from './utils/BusinessEngine';
 import Auth from './components/Auth';
 import logoImg from './assets/logo.png';
 
 function App() {
   const [session, setSession] = useState(null);
+  const [authUser, setAuthUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('MESO_AUTH_USER'));
+    } catch (_) {
+      return null;
+    }
+  });
+  const [businessProfile, setBusinessProfileState] = useState(() => getBusinessProfile());
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isBotOpen, setIsBotOpen] = useState(false);
   const [demoMode, setDemoMode] = useState(() => localStorage.getItem('MESO_DEMO_MODE') === 'true');
@@ -55,9 +65,12 @@ function App() {
       setLedgerVersion(v => v + 1);
     };
 
+    const handleProfileUpdate = (e) => setBusinessProfileState(e.detail?.profile || getBusinessProfile());
+
     window.addEventListener('ledger-updated', handleLedgerUpdate);
     window.addEventListener('theme-changed', handleThemeChange);
     window.addEventListener('currency-changed', handleCurrencyChange);
+    window.addEventListener('business-profile-updated', handleProfileUpdate);
 
     const handleHashChange = () => {
       const hash = window.location.hash;
@@ -108,14 +121,21 @@ function App() {
       window.removeEventListener('hashchange', handleHashChange);
       window.removeEventListener('theme-changed', handleThemeChange);
       window.removeEventListener('currency-changed', handleCurrencyChange);
+      window.removeEventListener('business-profile-updated', handleProfileUpdate);
     };
   }, []);
 
-  if (!session && !demoMode) {
-    return <Auth onDemoLogin={() => {
-      localStorage.setItem('MESO_DEMO_MODE', 'true');
-      setDemoMode(true);
-    }} />;
+  if (!session && !demoMode && !authUser) {
+    return <Auth 
+      onDemoLogin={() => {
+        localStorage.setItem('MESO_DEMO_MODE', 'true');
+        setDemoMode(true);
+      }} 
+      onLoginSuccess={(user) => {
+        setAuthUser(user);
+        setDemoMode(false);
+      }}
+    />;
   }
 
   if (!dataReady) {
@@ -155,6 +175,7 @@ function App() {
       case 'journal-detail': return <JournalDetail key={selectedJournalRef} journalRef={selectedJournalRef} onBack={() => { window.location.hash = ''; setActiveTab('transactions'); setSelectedJournalRef(null); }} />;
       case 'settings': return <SettingsPage key="settings" />;
       case 'tds': return <TDSManager key={ledgerVersion} />;
+      case 'business-hub': return <BusinessHub key={ledgerVersion} />;
       default: return <Dashboard key={ledgerVersion} />;
     }
   };
@@ -165,9 +186,9 @@ function App() {
       <aside className="sidebar">
         <div 
           className="sidebar-logo" 
-          onClick={() => setActiveTab('dashboard')}
+          onClick={() => setActiveTab('business-hub')}
           style={{ display: 'flex', alignItems: 'center', gap: '12px' }}
-          title="Go to Dashboard"
+          title="Business Hub & Setup"
         >
           <img 
             src={logoImg} 
@@ -182,13 +203,20 @@ function App() {
               flexShrink: 0
             }}
           />
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '0.6px', color: 'var(--text-primary)', lineHeight: 1.1 }}>
-              MESO<span style={{ color: '#10b981', marginLeft: '3px' }}>AI</span>
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <span style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '0.4px', color: 'var(--text-primary)', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {businessProfile?.businessName || 'MESO AI'}
             </span>
-            <span style={{ fontSize: '9px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.6px', marginTop: '2px' }}>
-              BOOKS OF ACCOUNTS
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+              <span style={{ fontSize: '9px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.6px' }}>
+                BOOKS OF ACCOUNTS
+              </span>
+              {authUser && (
+                <span style={{ fontSize: '8px', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '1px 5px', borderRadius: '4px', letterSpacing: '0.3px' }}>
+                  LIVE
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -292,6 +320,13 @@ function App() {
           </div>
 
           <div className="sidebar-section-title" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', fontWeight: 600, marginTop: '16px', marginBottom: '8px' }}>
+            Business Setup
+          </div>
+          <div className={`sidebar-item ${activeTab === 'business-hub' ? 'active' : ''}`} onClick={() => setActiveTab('business-hub')}>
+            <Building2 className="icon" size={16} /> Business Hub & Setup
+          </div>
+
+          <div className="sidebar-section-title" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', fontWeight: 600, marginTop: '16px', marginBottom: '8px' }}>
             Advisory &amp; Insights
           </div>
 
@@ -319,12 +354,19 @@ function App() {
 
         <div style={{ marginTop: 'auto' }}>
           <div style={{ padding: '16px', background: 'var(--bg-surface)', borderRadius: '16px', marginBottom: '16px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Meso AI</div>
+            <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>
+              {businessProfile?.businessName || 'Meso AI'}
+            </div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Schedule III &amp; AS Compliant</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }}></div>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Double-Entry Verified</span>
             </div>
+            {(authUser?.email || session?.user?.email) && (
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                👤 {authUser?.email || session?.user?.email}
+              </div>
+            )}
           </div>
 
           <div className="sidebar-nav">
@@ -333,8 +375,11 @@ function App() {
             </div>
             <div className="sidebar-item" onClick={async () => {
               await supabase.auth.signOut();
+              localStorage.removeItem('MESO_AUTH_USER');
               localStorage.removeItem('MESO_DEMO_MODE');
+              setAuthUser(null);
               setDemoMode(false);
+              setSession(null);
             }}>
               <LogOut className="icon" size={16} /> Log Out
             </div>
