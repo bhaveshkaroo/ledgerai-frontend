@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
+import { CurrencyEngine, getCurrency } from '../utils/CurrencyEngine';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Clock, AlertTriangle, BarChart2, PieChart, ArrowUpRight, ArrowDownRight, CreditCard, Wallet, Target, X, CheckCircle2, ChevronRight, Info } from 'lucide-react';
 import LiveClock from './LiveClock';
@@ -44,7 +45,11 @@ const Dashboard = () => {
   useEffect(() => {
     const handleUpdate = () => setTick(t => t + 1);
     window.addEventListener('ledger-updated', handleUpdate);
-    return () => window.removeEventListener('ledger-updated', handleUpdate);
+    window.addEventListener('currency-changed', handleUpdate);
+    return () => {
+      window.removeEventListener('ledger-updated', handleUpdate);
+      window.removeEventListener('currency-changed', handleUpdate);
+    };
   }, []);
   const kpis = LedgerEngine.calcKPIs(period);
   const is = LedgerEngine.calcIncomeStatement(period);
@@ -137,10 +142,10 @@ const Dashboard = () => {
       category: 'Statutory Tax',
       details: {
         description: 'Monthly return for outward taxable supplies and input tax credit offset under Section 39 of CGST Act.',
-        taxableSupplies: '₹41,47,220',
-        outwardTax: '₹4,95,040',
-        eligibleITC: '₹3,25,448',
-        netCashPayable: '₹1,69,592',
+        taxableSupplies: formatINR(4147220),
+        outwardTax: formatINR(495040),
+        eligibleITC: formatINR(325448),
+        netCashPayable: formatINR(169592),
         challanRef: 'PMT-06/2026/09',
         status: 'Pending Filing'
       }
@@ -156,7 +161,7 @@ const Dashboard = () => {
         description: 'Monthly interest installment for Machinery & Working Capital Term Loan.',
         lender: 'State Bank of India (SME Branch)',
         facilityAccount: 'TL-3982049182',
-        principalOutstanding: '₹30,00,000',
+        principalOutstanding: formatINR(3000000),
         interestRate: '9.25% p.a.',
         autoDebitAccount: 'Current A/c (SBI - 8812)',
         status: 'Scheduled for Auto-Debit'
@@ -172,7 +177,7 @@ const Dashboard = () => {
       details: {
         description: 'Second installment (45% cumulative) of estimated Corporate Income Tax.',
         assessmentYear: 'AY 2027-28',
-        pbtEstimate: '₹25,00,000',
+        pbtEstimate: formatINR(2500000),
         applicableRate: '25% + Surcharge',
         challanType: 'ITNS-280 (Major Head 0020)',
         status: 'Challan Generated'
@@ -188,10 +193,10 @@ const Dashboard = () => {
       details: {
         description: 'Outstanding invoices for raw material textile deliveries on 35-day credit terms.',
         vendorBreakdown: [
-          { vendor: 'Gujarat Cotton Mills', item: 'Cotton Fabric 60s', amount: '₹1,55,200', terms: 'Due in 12 days' },
-          { vendor: 'Surat Silk Suppliers', item: 'Silk Crepe Fabric', amount: '₹2,10,400', terms: 'Due in 8 days' },
-          { vendor: 'Vardhman Textiles', item: 'Denim Weave 12oz', amount: '₹1,48,500', terms: 'Due in 15 days' },
-          { vendor: 'Arvind Weaves', item: 'Organic Dyed Rayon', amount: '₹2,22,267', terms: 'Due in 5 days' }
+          { vendor: 'Gujarat Cotton Mills', item: 'Cotton Fabric 60s', amount: formatINR(155200), terms: 'Due in 12 days' },
+          { vendor: 'Surat Silk Suppliers', item: 'Silk Crepe Fabric', amount: formatINR(210400), terms: 'Due in 8 days' },
+          { vendor: 'Vardhman Textiles', item: 'Denim Weave 12oz', amount: formatINR(148500), terms: 'Due in 15 days' },
+          { vendor: 'Arvind Weaves', item: 'Organic Dyed Rayon', amount: formatINR(222267), terms: 'Due in 5 days' }
         ],
         status: 'Within 35-Day Payment Window'
       }
@@ -206,7 +211,7 @@ const Dashboard = () => {
       details: {
         description: 'Minimum Alternate Tax (MAT under Section 115JB) calculated on book profit.',
         applicableRate: '15% on Book Profits',
-        dtaAssetRecognized: '₹45,000 (AS 22)',
+        dtaAssetRecognized: `${formatINR(45000)} (AS 22)`,
         status: 'Accrued in Balance Sheet'
       }
     },
@@ -333,7 +338,7 @@ const Dashboard = () => {
             <div>
               <div style={{ fontSize: '15px', fontWeight: 600 }}>Monthly Revenue &amp; Cost Trend</div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                {LedgerEngine.getPeriodDateRange(period).name} • Hover bars for exact ₹ amounts
+                {LedgerEngine.getPeriodDateRange(period).name} • Hover bars for exact amounts
               </div>
             </div>
             <BarChart2 size={18} color="var(--text-muted)" />
@@ -355,7 +360,10 @@ const Dashboard = () => {
                   fontSize={10} 
                   tickLine={false} 
                   axisLine={{ stroke: 'var(--border)' }}
-                  tickFormatter={(val) => `₹${(val / 100000).toFixed(1)}L`}
+                  tickFormatter={(val) => {
+                    const isUSD = getCurrency() === 'USD';
+                    return isUSD ? `$${(val / (86.5 * 1000)).toFixed(0)}k` : `₹${(val / 100000).toFixed(1)}L`;
+                  }}
                 />
                 <Tooltip content={<CustomBarTooltip />} />
                 <Legend 

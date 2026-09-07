@@ -8,15 +8,20 @@ const CURRENCY_KEY = 'MESO_CURRENCY';
 export const USD_EXCHANGE_RATE = 86.50; // 1 USD = 86.50 INR
 
 export function getCurrency() {
+  if (typeof window === 'undefined' || !window.localStorage) return 'INR';
   return localStorage.getItem(CURRENCY_KEY) || 'INR';
 }
 
 export function setCurrency(currency) {
   const code = (currency || 'INR').toUpperCase();
   const valid = code === 'USD' ? 'USD' : 'INR';
-  localStorage.setItem(CURRENCY_KEY, valid);
-  window.dispatchEvent(new Event('currency-changed'));
-  window.dispatchEvent(new Event('ledger-updated'));
+  if (typeof window !== 'undefined' && window.localStorage) {
+    localStorage.setItem(CURRENCY_KEY, valid);
+  }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('currency-changed', { detail: { currency: valid } }));
+    window.dispatchEvent(new Event('ledger-updated'));
+  }
   return valid;
 }
 
@@ -42,7 +47,7 @@ export function formatCurrency(amount, targetCurrency) {
     const isNegative = usdVal < 0;
     const absVal = Math.abs(usdVal);
     
-    // For smaller amounts show 2 decimals, for larger amounts round to nearest dollar
+    // Format according to standard US currency conventions
     const formatted = absVal.toLocaleString('en-US', {
       maximumFractionDigits: absVal < 100 && absVal > 0 ? 2 : 0,
       minimumFractionDigits: 0
