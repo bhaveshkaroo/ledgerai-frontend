@@ -12,13 +12,14 @@ import Insights from './components/Insights';
 import InsightsLevel2 from './components/InsightsLevel2';
 import InsightsLevel3 from './components/InsightsLevel3';
 import JournalDetail from './components/JournalDetail';
+import TDSManager from './components/TDSManager';
 import SettingsPage from './components/Settings';
 import { InvoiceEngine } from './utils/InvoiceEngine';
 import { InventoryEngine } from './utils/InventoryEngine';
 import { LedgerEngine } from './utils/LedgerEngine';
 import { SupabaseRepository } from './utils/SupabaseRepository';
 import { supabase } from './supabaseClient';
-import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale, Landmark, TrendingUp, BarChart2, Activity } from 'lucide-react';
+import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, LogOut, ChevronRight, BookOpen, Scale, Landmark, TrendingUp, BarChart2, Activity, IndianRupee } from 'lucide-react';
 import Auth from './components/Auth';
 import logoImg from './assets/logo.png';
 
@@ -137,6 +138,7 @@ function App() {
       case 'insights-level3': return <InsightsLevel3 key={ledgerVersion} />;
       case 'journal-detail': return <JournalDetail key={selectedJournalRef} journalRef={selectedJournalRef} onBack={() => { window.location.hash = ''; setActiveTab('transactions'); setSelectedJournalRef(null); }} />;
       case 'settings': return <SettingsPage key="settings" />;
+      case 'tds': return <TDSManager key={ledgerVersion} />;
       default: return <Dashboard key={ledgerVersion} />;
     }
   };
@@ -196,6 +198,9 @@ function App() {
           </div>
           <div className={`sidebar-item ${activeTab === 'gst-compliance' ? 'active' : ''}`} onClick={() => setActiveTab('gst-compliance')}>
             <Scale className="icon" size={16} /> GST Compliance
+          </div>
+          <div className={`sidebar-item ${activeTab === 'tds' ? 'active' : ''}`} onClick={() => setActiveTab('tds')}>
+            <IndianRupee className="icon" size={16} /> TDS & Withholding
           </div>
           <div className={`sidebar-item ${activeTab === 'brs' ? 'active' : ''}`} onClick={() => setActiveTab('brs')}>
             <Landmark className="icon" size={16} /> Bank Reconciliation
