@@ -54,12 +54,19 @@ const Dashboard = () => {
   const kpis = LedgerEngine.calcKPIs(period);
   const is = LedgerEngine.calcIncomeStatement(period);
 
-  // Extract real financial data
-  const cashBalance = LedgerEngine.getAccountBalance('Cash and Bank');
+  const dateRange = LedgerEngine.getPeriodDateRange(period);
+  const startD = new Date(dateRange.start);
+  const endD = new Date(dateRange.end);
+  const monthCount = (endD.getFullYear() - startD.getFullYear()) * 12 + endD.getMonth() - startD.getMonth() + 1;
+  const totalOperatingDays = Math.max(365, monthCount * 30.4167);
+
+  // Extract real financial data scoped to period
+  const cashBalance = LedgerEngine.getAccountBalance('Cash and Bank', dateRange.end);
   const totalRevenue = kpis.totalRevenue;
   const totalExpenses = kpis.totalExpenses;
   const netProfit = kpis.netProfit;
-  const grossProfit = totalRevenue - LedgerEngine.getAccountBalance('Cost of Goods Sold');
+  const cogs = LedgerEngine.getAccountBalance('Cost of Goods Sold', dateRange.end, dateRange.start);
+  const grossProfit = totalRevenue - cogs;
   const grossMargin = totalRevenue > 0 ? ((grossProfit / totalRevenue) * 100).toFixed(1) : 0;
   const netMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0;
 
@@ -81,18 +88,11 @@ const Dashboard = () => {
   // Working Capital
   const workingCapital = currentAssets - currentLiabilities;
 
-  const dateRange = LedgerEngine.getPeriodDateRange(period);
-  const startD = new Date(dateRange.start);
-  const endD = new Date(dateRange.end);
-  const monthCount = (endD.getFullYear() - startD.getFullYear()) * 12 + endD.getMonth() - startD.getMonth() + 1;
-  const totalOperatingDays = Math.max(365, monthCount * 30.4167);
-
   // Days Sales Outstanding (DSO)
   const avgDailySales = totalRevenue / totalOperatingDays;
   const dso = avgDailySales > 0 ? Math.round(accountsReceivable / avgDailySales) : 0;
 
   // Days Payable Outstanding (DPO)
-  const cogs = LedgerEngine.getAccountBalance('Cost of Goods Sold');
   const avgDailyCOGS = cogs / totalOperatingDays;
   const dpo = avgDailyCOGS > 0 ? Math.round(accountsPayable / avgDailyCOGS) : 0;
 
@@ -119,7 +119,7 @@ const Dashboard = () => {
     if (tx.account === 'Sales Revenue' && tx.type === 'Credit') {
       monthlyDataMap[key].revenue += tx.amount;
     }
-    if (['Salary Expense', 'Rent Expense', 'Finance Cost', 'Other Expenses', 'Bank Charges', 'Depreciation Expense'].includes(tx.account) && tx.type === 'Debit') {
+    if (['Cost of Goods Sold', 'Salary Expense', 'Rent Expense', 'Finance Cost', 'Other Expenses', 'Bank Charges', 'Depreciation Expense'].includes(tx.account) && tx.type === 'Debit') {
       monthlyDataMap[key].expenses += tx.amount;
     }
   });
@@ -217,14 +217,30 @@ const Dashboard = () => {
     },
   ];
 
-  // Expense breakdown for pie-like visual
-  const expenseBreakdown = [
-    { name: 'COGS', value: cogs, color: '#f97316', pct: ((cogs / totalExpenses) * 100).toFixed(0) },
-    { name: 'Salaries', value: LedgerEngine.getAccountBalance('Salary Expense'), color: '#3b82f6', pct: ((LedgerEngine.getAccountBalance('Salary Expense') / totalExpenses) * 100).toFixed(0) },
-    { name: 'Rent', value: LedgerEngine.getAccountBalance('Rent Expense'), color: '#8b5cf6', pct: ((LedgerEngine.getAccountBalance('Rent Expense') / totalExpenses) * 100).toFixed(0) },
-    { name: 'Depreciation', value: LedgerEngine.getAccountBalance('Depreciation Expense'), color: '#ec4899', pct: ((LedgerEngine.getAccountBalance('Depreciation Expense') / totalExpenses) * 100).toFixed(0) },
-    { name: 'Finance', value: LedgerEngine.getAccountBalance('Finance Cost'), color: '#14b8a6', pct: ((LedgerEngine.getAccountBalance('Finance Cost') / totalExpenses) * 100).toFixed(0) },
-  ];
+  // Comprehensive period-scoped expense breakdown
+  const salaryExp = LedgerEngine.getAccountBalance('Salary Expense', dateRange.end, dateRange.start);
+  const rentExp = LedgerEngine.getAccountBalance('Rent Expense', dateRange.end, dateRange.start);
+  const depExp = LedgerEngine.getAccountBalance('Depreciation Expense', dateRange.end, dateRange.start);
+  const finExp = LedgerEngine.getAccountBalance('Finance Cost', dateRange.end, dateRange.start);
+  const otherExp = LedgerEngine.getAccountBalance('Other Expenses', dateRange.end, dateRange.start) + LedgerEngine.getAccountBalance('Bank Charges', dateRange.end, dateRange.start);
+  const taxExp = LedgerEngine.getAccountBalance('Tax Expense', dateRange.end, dateRange.start);
+
+  const rawExpenseItems = [
+    { name: 'COGS', value: cogs, color: '#f97316' },
+    { name: 'Salaries', value: salaryExp, color: '#3b82f6' },
+    { name: 'Rent', value: rentExp, color: '#8b5cf6' },
+    { name: 'Depreciation', value: depExp, color: '#ec4899' },
+    { name: 'Finance Cost', value: finExp, color: '#14b8a6' },
+    { name: 'Other & Power', value: otherExp, color: '#eab308' },
+    { name: 'Tax Provision', value: taxExp, color: '#06b6d4' }
+  ].filter(item => item.value > 0);
+
+  const totalExpCalc = rawExpenseItems.reduce((s, x) => s + x.value, 0) || totalExpenses || 1;
+
+  const expenseBreakdown = rawExpenseItems.map(item => ({
+    ...item,
+    pct: totalExpCalc > 0 ? Number(((item.value / totalExpCalc) * 100).toFixed(1)) : 0
+  }));
 
   return (
     <div className="animate-fade" style={{ maxWidth: '1200px' }}>
@@ -570,27 +586,36 @@ const Dashboard = () => {
       <div className="card" style={{ padding: '24px', marginBottom: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>Expense Breakdown</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Total: {formatINR(totalExpenses)}</div>
-          </div>
-          <PieChart size={16} color="var(--text-muted)" />
-        </div>
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-          {expenseBreakdown.map((e, i) => (
-            <div key={i} style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'var(--bg-surface)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: e.color }}></div>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{e.name}</span>
-              </div>
-              <div style={{ fontSize: '16px', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>{e.pct}%</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{formatINR(e.value)}</div>
+            <div style={{ fontSize: '15px', fontWeight: 600 }}>Expense Breakdown</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              Total Operating &amp; Tax Expenses: <span style={{ fontWeight: 600, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{formatINR(totalExpenses)}</span>
             </div>
+          </div>
+          <PieChart size={18} color="var(--text-muted)" />
+        </div>
+        
+        {/* Stacked Percentage Progress Bar */}
+        <div style={{ display: 'flex', height: '10px', borderRadius: '5px', overflow: 'hidden', marginBottom: '18px', background: 'var(--bg-surface)' }}>
+          {expenseBreakdown.map((e, i) => (
+            <div 
+              key={i} 
+              style={{ width: `${e.pct}%`, background: e.color }} 
+              title={`${e.name}: ${e.pct}% (${formatINR(e.value)})`}
+            />
           ))}
         </div>
-        {/* Stacked bar */}
-        <div style={{ display: 'flex', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
+
+        {/* Expense Category Metric Tiles */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
           {expenseBreakdown.map((e, i) => (
-            <div key={i} style={{ width: e.pct + '%', background: e.color }}></div>
+            <div key={i} style={{ padding: '12px 14px', borderRadius: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: e.color, flexShrink: 0 }}></div>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</span>
+              </div>
+              <div style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{e.pct}%</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>{formatINR(e.value)}</div>
+            </div>
           ))}
         </div>
       </div>
