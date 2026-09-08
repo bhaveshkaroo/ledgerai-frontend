@@ -130,13 +130,13 @@ const GSTCompliance = ({ period }) => {
             <tbody>
               <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
                 <td style={{ padding: '14px 24px', fontSize: '13px', fontWeight: 500 }}>3.1(a) Outward Taxable Supplies</td>
-                <td style={{ padding: '14px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>{formatINR(gstData.sales.s18 + gstData.sales.s12)}</td>
+                <td style={{ padding: '14px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>{formatINR(gstData.sales.total)}</td>
                 <td style={{ padding: '14px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>{formatINR(gstData.output.cgst)}</td>
                 <td style={{ padding: '14px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>{formatINR(gstData.output.sgst)}</td>
               </tr>
               <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
                 <td style={{ padding: '14px 24px', fontSize: '13px', fontWeight: 500 }}>3.1(c) Nil Rated / Exempted</td>
-                <td style={{ padding: '14px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>{formatINR(gstData.sales.sNil)}</td>
+                <td style={{ padding: '14px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>-</td>
                 <td style={{ padding: '14px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>-</td>
                 <td style={{ padding: '14px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>-</td>
               </tr>

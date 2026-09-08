@@ -516,9 +516,20 @@ export const LedgerEngine = {
     const incInv = this.getAccountBalance('Inventory');
     const incAP = this.getAccountBalance('Accounts Payable');
     
+    // Other Current Assets (Input GST / ITC) & Other Current Liabilities / Provisions (Output GST)
+    const inCGST = this.getAccountBalance('Input CGST');
+    const inSGST = this.getAccountBalance('Input SGST');
+    const inIGST = this.getAccountBalance('Input IGST');
+    const incOtherCA = inCGST + inSGST + inIGST;
+
+    const outCGST = this.getAccountBalance('Output CGST');
+    const outSGST = this.getAccountBalance('Output SGST');
+    const outIGST = this.getAccountBalance('Output IGST');
+    const incOtherCL = outCGST + outSGST + outIGST;
+    
     // Add provisions to operating cash flow before WC changes
     const opCFBeforeWC = pbt + dep + finCost + provEmployee + stProv;
-    const opCF = opCFBeforeWC - incAR - incInv + incAP - actualTaxPaid;
+    const opCF = opCFBeforeWC - incAR - incInv + incAP - incOtherCA + incOtherCL - actualTaxPaid;
     
     const faPurchase = -this.getAccountBalance('Fixed Assets (Gross)');
     const intPurchase = -this.getAccountBalance('Intangible Assets (Gross)');
