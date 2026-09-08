@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { getGeminiApiKey, setGeminiApiKey, clearGeminiApiKey, hasGeminiApiKey } from '../utils/aiConfig';
 import { ThemeEngine, getTheme, setTheme } from '../utils/ThemeEngine';
-import { CurrencyEngine, getCurrency, setCurrency, USD_EXCHANGE_RATE } from '../utils/CurrencyEngine';
+import { CurrencyEngine, getCurrency, setCurrency, getExchangeRate, getRateMetadata, syncExchangeRate } from '../utils/CurrencyEngine';
 import { 
   Sun, Moon, Key, Check, AlertCircle, RefreshCw, Sparkles, 
-  DollarSign, IndianRupee, Save, RotateCcw, ShieldCheck 
+  DollarSign, IndianRupee, Save, RotateCcw, ShieldCheck, Globe 
 } from 'lucide-react';
 
 const ToggleSwitch = ({ checked, onChange }) => (
@@ -280,7 +280,7 @@ function Settings() {
               <div className="settings-row-desc">
                 Select your reporting currency. When you click <strong>Save Changes</strong>, all figures across Dashboard KPIs, Revenue, Net Profit, Day Book, Balance Sheet, Invoicing, Inventory, TDS, and Insights instantly convert.
                 <span style={{ display: 'block', marginTop: '6px', color: 'var(--text-muted)', fontSize: '12px' }}>
-                  Live exchange rate: <strong>1 USD = ₹{USD_EXCHANGE_RATE.toFixed(2)} INR</strong>
+                  Live exchange rate: <strong>1 USD = ₹{getExchangeRate().toFixed(2)} INR</strong>
                 </span>
               </div>
             </div>
@@ -305,6 +305,58 @@ function Settings() {
                 <span>$ USD (US Dollar)</span>
               </button>
             </div>
+          </div>
+
+          {/* Live Forex Exchange Rate Indicator */}
+          <div style={{
+            marginTop: '14px',
+            padding: '10px 14px',
+            borderRadius: '8px',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '10px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Globe size={14} color="#3b82f6" />
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                Exchange Rate: <strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>1 USD = ₹{getExchangeRate().toFixed(2)}</strong>
+                <span style={{ marginLeft: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                  ({getRateMetadata().provider} • {getRateMetadata().lastUpdated})
+                </span>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                const res = await syncExchangeRate(true);
+                setSaveToast({
+                  type: 'success',
+                  message: `✓ Exchange rate updated: 1 USD = ₹${res.rate.toFixed(2)} (${res.cached ? 'cached' : 'live'})`
+                });
+                setTimeout(() => setSaveToast(null), 3500);
+              }}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                padding: '4px 10px',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title="Refresh Forex rate from open exchange rates API"
+            >
+              <RefreshCw size={11} />
+              <span>Refresh Rate</span>
+            </button>
           </div>
         </div>
       </div>

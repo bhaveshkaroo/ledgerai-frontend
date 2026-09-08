@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
-import { CurrencyEngine, getCurrency } from '../utils/CurrencyEngine';
+import { CurrencyEngine, getCurrency, getExchangeRate } from '../utils/CurrencyEngine';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Clock, AlertTriangle, BarChart2, PieChart, ArrowUpRight, ArrowDownRight, CreditCard, Wallet, Target, X, CheckCircle2, ChevronRight, Info } from 'lucide-react';
 import LiveClock from './LiveClock';
@@ -378,7 +378,8 @@ const Dashboard = () => {
                   axisLine={{ stroke: 'var(--border)' }}
                   tickFormatter={(val) => {
                     const isUSD = getCurrency() === 'USD';
-                    return isUSD ? `$${(val / (86.5 * 1000)).toFixed(0)}k` : `₹${(val / 100000).toFixed(1)}L`;
+                    const rate = getExchangeRate();
+                    return isUSD ? `$${(val / (rate * 1000)).toFixed(0)}k` : `₹${(val / 100000).toFixed(1)}L`;
                   }}
                 />
                 <Tooltip content={<CustomBarTooltip />} />

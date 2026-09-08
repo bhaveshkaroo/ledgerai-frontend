@@ -83,8 +83,11 @@ function App() {
     window.addEventListener('hashchange', handleHashChange);
     handleHashChange();
 
-    // Hydration & Idempotent Seed
+    // Hydration & Idempotent Seed & Currency Rate Sync
     async function initializePersistence() {
+      // Background sync of live USD/INR exchange rate (cached 24h)
+      CurrencyEngine.syncExchangeRate().catch(() => {});
+
       try {
         const isSeeded = await SupabaseRepository.isSeeded();
         if (!isSeeded) {
