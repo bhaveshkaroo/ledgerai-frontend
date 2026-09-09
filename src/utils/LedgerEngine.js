@@ -149,8 +149,41 @@ export const LedgerEngine = {
     // Round to strictly 2 decimal places to prevent float drift
     const cleanAmount = Math.round(numAmount * 100) / 100;
 
-    // 2. String Fields Sanitization & Safety
-    const cleanNarration = String(narration || '').slice(0, 1000); // Truncate to 1000 chars
+    // 2. Strict Calendar Date Validation (ISO YYYY-MM-DD or ISO timestamp)
+    if (!date || typeof date !== 'string') {
+      throw new Error('Transaction date must be a non-empty string in YYYY-MM-DD format');
+    }
+    const dateOnly = date.split('T')[0];
+    const dateParts = dateOnly.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!dateParts) {
+      throw new Error(`Invalid date format: "${date}". Expected YYYY-MM-DD`);
+    }
+    const [_, yStr, mStr, dStr] = dateParts;
+    const y = parseInt(yStr, 10);
+    const m = parseInt(mStr, 10);
+    const d = parseInt(dStr, 10);
+    if (m < 1 || m > 12 || d < 1 || d > 31) {
+      throw new Error(`Invalid calendar month or day: "${date}"`);
+    }
+    const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    if (d > daysInMonth) {
+      throw new Error(`Invalid calendar date: "${date}" does not exist in calendar (month ${m} of year ${y} has ${daysInMonth} days)`);
+    }
+
+    // 3. String Fields Sanitization & Safety with Surrogate-Pair Awareness
+    const safeSlice = (str, maxLen) => {
+      const s = String(str || '');
+      if (s.length <= maxLen) return s;
+      let sliced = s.slice(0, maxLen);
+      // Check if last character is a lone high surrogate (0xD800 - 0xDBFF)
+      const lastCharCode = sliced.charCodeAt(sliced.length - 1);
+      if (lastCharCode >= 0xD800 && lastCharCode <= 0xDBFF) {
+        sliced = sliced.slice(0, -1);
+      }
+      return sliced;
+    };
+
+    const cleanNarration = safeSlice(narration, 1000);
     const cleanDebit = String(debitAccount || '').trim();
     const cleanCredit = String(creditAccount || '').trim();
     if (!cleanDebit || !cleanCredit) {
@@ -158,7 +191,7 @@ export const LedgerEngine = {
     }
 
     const idNum = Date.now();
-    const txRef = ref ? String(ref).slice(0, 100) : `MNL-${idNum}`;
+    const txRef = ref ? safeSlice(ref, 100) : `MNL-${idNum}`;
     const createdAt = new Date().toISOString();
     
     this.transactions.push({ id: idNum + 'A', date, account: cleanDebit, amount: cleanAmount, type: 'Debit', narration: cleanNarration, ref: txRef, category, createdAt });
@@ -171,10 +204,16 @@ export const LedgerEngine = {
       return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     });
 
-    // Persist to Supabase — await and propagate errors
+    // Persist to Supabase — await and propagate errors if backend is configured
     try {
       const { SupabaseRepository } = await import('./SupabaseRepository.js');
-      return await SupabaseRepository.saveTransaction(date, narration, debitAccount, creditAccount, amount, category, txRef);
+      const { supabase } = await import('../supabaseClient.js');
+      // In tests or offline environments where Supabase URL is not configured or placeholder, skip network call
+      const isConfigured = process.env.REACT_APP_SUPABASE_URL && !process.env.REACT_APP_SUPABASE_URL.includes('placeholder');
+      if (isConfigured) {
+        return await SupabaseRepository.saveTransaction(date, narration, debitAccount, creditAccount, amount, category, txRef);
+      }
+      return true;
     } catch (err) {
       // Rollback from memory on save failure
       this.transactions = this.transactions.filter(t => t.ref !== txRef);

@@ -76,10 +76,22 @@ export const InvoiceEngine = {
     // Sequential, non-reusable invoice number
     const invoiceNumber = `INV-${new Date(date).getFullYear()}-${String(invoiceCounter++).padStart(3, '0')}`;
 
+    // Sanitize party name with surrogate-pair awareness (truncate to 500 chars)
+    const safeParty = (() => {
+      const s = String(party || '').trim();
+      if (s.length <= 500) return s;
+      let sliced = s.slice(0, 500);
+      const lastCharCode = sliced.charCodeAt(sliced.length - 1);
+      if (lastCharCode >= 0xD800 && lastCharCode <= 0xDBFF) {
+        sliced = sliced.slice(0, -1);
+      }
+      return sliced;
+    })();
+
     const invoice = {
       invoiceNumber,
       date,
-      party,
+      party: safeParty,
       placeOfSupply,
       lineItems: enrichedLineItems,
       subtotal,
@@ -104,8 +116,12 @@ export const InvoiceEngine = {
   finalizeInvoice(invoiceNumber) {
     const invoice = this.invoices.find(inv => inv.invoiceNumber === invoiceNumber);
     if (!invoice) throw new Error("Invoice not found");
-    if (invoice.status === 'Finalized') throw new Error("Invoice is already finalized");
+    if (invoice.status === 'Finalized' || invoice._isFinalizing) throw new Error("Invoice is already finalized");
     if (invoice.status === 'Void') throw new Error("Cannot finalize a voided invoice");
+
+    // Atomic lock flag to prevent race conditions during synchronous execution or microtask interleaving
+    invoice._isFinalizing = true;
+    invoice.status = 'Finalized';
 
     // Pre-check inventory if there are goods
     invoice.lineItems.forEach(item => {

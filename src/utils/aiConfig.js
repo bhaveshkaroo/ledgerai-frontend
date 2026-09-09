@@ -1,4 +1,4 @@
-import { captureError } from './sentryConfig';
+import { captureError } from './sentryConfig.js';
 const STORAGE_KEY = 'MESO_GEMINI_API_KEY';
 
 export const GEMINI_MODELS = [

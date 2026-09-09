@@ -152,12 +152,22 @@ export const BRSEngine = {
     const desc = (bankEntry.description || '').toLowerCase();
     const targetRef = bankEntry.ref || (bankEntry.type === 'Withdrawal' ? `BANK-W-${bankEntry.id}` : `BANK-D-${bankEntry.id}`);
 
-    // Idempotency guard: verify if entry was already posted to ledger
+    if (!this._postingLocks) {
+      this._postingLocks = new Set();
+    }
+
+    // Idempotency & Concurrency guard: verify if entry was already posted or is currently being posted
+    if (this._postingLocks.has(targetRef)) {
+      console.warn(`[BRSEngine] Bank item ${targetRef} currently in-flight. Skipping concurrent duplicate post.`);
+      return false;
+    }
     const existing = LedgerEngine.transactions.find(t => t.ref === targetRef);
     if (existing) {
       console.warn(`[BRSEngine] Bank item ${targetRef} already posted to ledger. Skipping duplicate post.`);
       return false;
     }
+
+    this._postingLocks.add(targetRef);
     
     if (bankEntry.type === 'Withdrawal') {
       // Typically Bank Charges
