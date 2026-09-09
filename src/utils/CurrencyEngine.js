@@ -76,7 +76,7 @@ export function getRateMetadata() {
  * Falls back gracefully to cached rate or DEFAULT_USD_RATE if offline/error.
  */
 export async function syncExchangeRate(force = false) {
-  const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+  const CACHE_TTL_MS = 1 * 60 * 60 * 1000; // 1 hour (hourly polling)
   const now = Date.now();
 
   if (typeof window !== 'undefined' && window.localStorage && !force) {
@@ -115,7 +115,17 @@ export async function syncExchangeRate(force = false) {
     console.warn('[CurrencyEngine] Live rate fetch failed, using fallback:', err.message);
   }
 
-  return { rate: currentExchangeRate, cached: true, fallback: true };
+  // Fallback: check localStorage, otherwise statutory baseline
+  if (typeof window !== 'undefined' && window.localStorage) {
+    const cached = parseFloat(localStorage.getItem(RATE_CACHE_KEY));
+    if (!isNaN(cached) && cached > 50 && cached < 200) {
+      currentExchangeRate = cached;
+      return { rate: cached, cached: true, fallback: true };
+    }
+  }
+
+  currentExchangeRate = DEFAULT_USD_RATE;
+  return { rate: DEFAULT_USD_RATE, cached: false, fallback: true };
 }
 
 export function formatCurrency(amount, targetCurrency) {
