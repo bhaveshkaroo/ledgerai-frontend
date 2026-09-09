@@ -32,8 +32,27 @@ export function hasGeminiApiKey() {
 
 export const API_KEY_MISSING_MSG = 'Gemini API key is not configured. Please go to Settings to add your Gemini API key.';
 
+// Client-side rate limiter for Gemini endpoints: max 15 requests per rolling minute per session
+const AI_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const AI_RATE_LIMIT_MAX_REQUESTS = 15;
+const requestTimestamps = [];
+
+export function checkAiRateLimit() {
+  const now = Date.now();
+  // Prune timestamps older than window
+  while (requestTimestamps.length > 0 && requestTimestamps[0] <= now - AI_RATE_LIMIT_WINDOW_MS) {
+    requestTimestamps.shift();
+  }
+  if (requestTimestamps.length >= AI_RATE_LIMIT_MAX_REQUESTS) {
+    const oldest = requestTimestamps[0];
+    const retryAfterSec = Math.ceil((oldest + AI_RATE_LIMIT_WINDOW_MS - now) / 1000);
+    throw new Error(`AI rate limit exceeded (${AI_RATE_LIMIT_MAX_REQUESTS} requests/min). Please wait ${retryAfterSec} seconds before asking another question.`);
+  }
+  requestTimestamps.push(now);
+}
+
 /**
- * Direct client-side Gemini call with model fallback.
+ * Direct client-side Gemini call with model fallback, timeout, and rate-limiting.
  * Used across AI Manual Entry, AI Audit Assistant, and Insights & Forecasting.
  */
 export async function callGeminiDirect(prompt, systemInstruction = '', options = {}) {
@@ -42,8 +61,17 @@ export async function callGeminiDirect(prompt, systemInstruction = '', options =
     throw new Error(API_KEY_MISSING_MSG);
   }
 
+  // 1. Input Validation
+  const cleanPrompt = String(prompt || '').trim();
+  if (!cleanPrompt) {
+    throw new Error('Please enter a valid, non-empty financial description or question.');
+  }
+
+  // 2. Enforce Session Rate Limiting
+  checkAiRateLimit();
+
   const payload = {
-    contents: [{ parts: [{ text: prompt }] }],
+    contents: [{ parts: [{ text: cleanPrompt }] }],
     generationConfig: {
       responseMimeType: options.responseMimeType || 'text/plain',
       temperature: options.temperature ?? 0.3
@@ -55,23 +83,35 @@ export async function callGeminiDirect(prompt, systemInstruction = '', options =
   }
 
   let lastError = '';
+  const timeoutMs = options.timeoutMs || 15000; // 15 second network timeout
+
   for (const model of GEMINI_MODELS) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         const code = errData?.error?.code || res.status;
-        lastError = errData?.error?.message || `HTTP ${res.status}`;
-        if (lastError.includes('API_KEY_INVALID') || lastError.includes('API key not valid')) {
-          throw new Error('Invalid Gemini API Key. Please verify and update your key in Settings.');
+        const rawMsg = errData?.error?.message || `HTTP ${res.status}`;
+        lastError = rawMsg;
+
+        if (rawMsg.includes('API_KEY_INVALID') || rawMsg.includes('API key not valid') || code === 400 && rawMsg.includes('key')) {
+          throw new Error('Invalid or expired Gemini API key. Please check your key in the Settings tab.');
         }
-        // If 429, 503, 404, or 400 on specific model, try the next model in fallback list
+        if (code === 429) {
+          throw new Error('Gemini API quota exhausted or rate limited upstream. Please wait a moment.');
+        }
+        // Fall back to next model on other HTTP errors
         continue;
       }
 
@@ -82,8 +122,15 @@ export async function callGeminiDirect(prompt, systemInstruction = '', options =
       }
       lastError = 'Empty response from model';
     } catch (err) {
-      lastError = err.message || 'Unknown error';
-      if (err.message === API_KEY_MISSING_MSG) throw err;
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        lastError = `Request timed out after ${timeoutMs / 1000}s. Please check your internet connection.`;
+      } else {
+        lastError = err.message || 'Unknown error';
+      }
+      if (err.message.includes('Invalid or expired Gemini API key') || err.message.includes('AI rate limit exceeded')) {
+        throw err;
+      }
     }
   }
   throw new Error(lastError || 'All verified Gemini models failed to respond.');

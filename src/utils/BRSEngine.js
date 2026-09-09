@@ -146,9 +146,18 @@ export const BRSEngine = {
 
   /**
    * Post a Bank-only item (e.g., Bank Charges or Interest) to the ledger
+   * Strictly idempotent: prevents posting the same bank entry twice.
    */
   postBankItem(bankEntry) {
     const desc = (bankEntry.description || '').toLowerCase();
+    const targetRef = bankEntry.ref || (bankEntry.type === 'Withdrawal' ? `BANK-W-${bankEntry.id}` : `BANK-D-${bankEntry.id}`);
+
+    // Idempotency guard: verify if entry was already posted to ledger
+    const existing = LedgerEngine.transactions.find(t => t.ref === targetRef);
+    if (existing) {
+      console.warn(`[BRSEngine] Bank item ${targetRef} already posted to ledger. Skipping duplicate post.`);
+      return false;
+    }
     
     if (bankEntry.type === 'Withdrawal') {
       // Typically Bank Charges
@@ -159,8 +168,9 @@ export const BRSEngine = {
         'Cash and Bank',
         bankEntry.amount,
         'Finance',
-        bankEntry.ref || `BANK-W-${Date.now()}`
+        targetRef
       );
+      return true;
     } else if (bankEntry.type === 'Deposit') {
       // Typically Interest Received or direct transfer
       const account = desc.includes('interest') ? 'Other Income' : 'Sales Revenue'; // Fallback
@@ -171,9 +181,11 @@ export const BRSEngine = {
         account,
         bankEntry.amount,
         'Receipts',
-        bankEntry.ref || `BANK-D-${Date.now()}`
+        targetRef
       );
+      return true;
     }
+    return false;
   },
 
   /**

@@ -134,12 +134,35 @@ export const LedgerEngine = {
   },
 
   async postTransaction(date, narration, debitAccount, creditAccount, amount, category, ref = null) {
+    // 1. Amount Validation
+    const numAmount = Number(amount);
+    if (isNaN(numAmount) || !isFinite(numAmount)) {
+      throw new Error(`Invalid transaction amount: ${amount} (must be a finite number)`);
+    }
+    if (numAmount <= 0) {
+      throw new Error(`Transaction amount must be strictly positive (> 0), received: ${numAmount}`);
+    }
+    if (numAmount > 999999999999) { // 1 Lakh Crore threshold
+      throw new Error(`Transaction amount exceeds maximum allowable ledger ceiling (₹999,99,99,99,999)`);
+    }
+    
+    // Round to strictly 2 decimal places to prevent float drift
+    const cleanAmount = Math.round(numAmount * 100) / 100;
+
+    // 2. String Fields Sanitization & Safety
+    const cleanNarration = String(narration || '').slice(0, 1000); // Truncate to 1000 chars
+    const cleanDebit = String(debitAccount || '').trim();
+    const cleanCredit = String(creditAccount || '').trim();
+    if (!cleanDebit || !cleanCredit) {
+      throw new Error('Both debit and credit accounts must be non-empty strings');
+    }
+
     const idNum = Date.now();
-    const txRef = ref || `MNL-${idNum}`;
+    const txRef = ref ? String(ref).slice(0, 100) : `MNL-${idNum}`;
     const createdAt = new Date().toISOString();
     
-    this.transactions.push({ id: idNum + 'A', date, account: debitAccount, amount, type: 'Debit', narration, ref: txRef, category, createdAt });
-    this.transactions.push({ id: idNum + 'B', date, account: creditAccount, amount, type: 'Credit', narration, ref: txRef, category, createdAt });
+    this.transactions.push({ id: idNum + 'A', date, account: cleanDebit, amount: cleanAmount, type: 'Debit', narration: cleanNarration, ref: txRef, category, createdAt });
+    this.transactions.push({ id: idNum + 'B', date, account: cleanCredit, amount: cleanAmount, type: 'Credit', narration: cleanNarration, ref: txRef, category, createdAt });
     
     // Maintain descending sort (date first, then createdAt tiebreaker)
     this.transactions.sort((a, b) => {

@@ -72,21 +72,23 @@ const Insights = () => {
 • Total Equity (Share Capital + Reserves + PAT): Rs. ${financials.totalEquity.toLocaleString('en-IN')}
 • Total Assets: Rs. ${financials.totalAssets.toLocaleString('en-IN')}
 
---- CFA RATIOS ---
+--- CFA & ICAI FINANCIAL DIAGNOSTICS & RATIOS ---
 • Liquidity: Current Ratio = ${ratios.liquidity.currentRatio}x, Quick Ratio = ${ratios.liquidity.quickRatio}x, Cash Ratio = ${ratios.liquidity.cashRatio}x
 • Operating Efficiency: Days Sales Outstanding (DSO) = ${ratios.efficiency.dso} days, Days Payable Outstanding (DPO) = ${ratios.efficiency.dpo} days, Days Inventory Outstanding (DIO) = ${ratios.efficiency.dio} days, Cash Conversion Cycle (CCC) = ${ratios.efficiency.ccc} days, Inventory Turnover = ${ratios.efficiency.inventoryTurnover}x, Total Asset Turnover = ${ratios.efficiency.assetTurnover}x
-• Solvency: Debt-to-Equity = ${ratios.solvency.debtToEquity}x, Debt-to-Assets = ${ratios.solvency.debtToAssets}x, Financial Leverage Multiplier = ${ratios.solvency.equityMultiplier}x, Interest Coverage = ${ratios.solvency.interestCoverage}x
+• Solvency & Capital Structure: Debt-to-Equity = ${ratios.solvency.debtToEquity}x, Debt-to-Assets = ${ratios.solvency.debtToAssets}x, Financial Leverage Multiplier = ${ratios.solvency.equityMultiplier}x, Interest Coverage = ${ratios.solvency.interestCoverage}x
 • Profitability & Return: Gross Margin = ${ratios.profitability.grossMargin}%, Operating Margin = ${ratios.profitability.operatingMargin}%, Net Margin = ${ratios.profitability.netMargin}%, ROA = ${ratios.profitability.roa}%, ROE = ${ratios.profitability.roe}%
 • DuPont 3-Step ROE Decomposition: Net Profit Margin (${ratios.dupont.netProfitMarginPct}%) × Asset Turnover (${ratios.dupont.assetTurnover}x) × Equity Multiplier (${ratios.dupont.equityMultiplier}x) = ROE (${ratios.dupont.roeResult}%)
+• Altman Z-Score (Emerging Market / Unlisted Private Entity Model): Score = ${ratios.altmanZ?.score} (${ratios.altmanZ?.zone})
+  - Interpretation: ${ratios.altmanZ?.interpretation}
+  - Components: X1 (WC/TA)=${ratios.altmanZ?.components?.x1_workingCapital_to_totalAssets}, X2 (RE/TA)=${ratios.altmanZ?.components?.x2_retainedEarnings_to_totalAssets}, X3 (EBIT/TA)=${ratios.altmanZ?.components?.x3_ebit_to_totalAssets}, X4 (Equity/TL)=${ratios.altmanZ?.components?.x4_equity_to_totalLiabilities}, X5 (Sales/TA)=${ratios.altmanZ?.components?.x5_sales_to_totalAssets}
+  - Note on Equity: ${ratios.altmanZ?.equityBasis}
 
---- MONTHLY HISTORICAL TREND (FY 2025-26) ---
-${monthlyData.map(m => `• ${m.month}: Revenue Rs. ${m.revenue.toLocaleString('en-IN')}, Expenses Rs. ${m.expenses.toLocaleString('en-IN')}, Net Cashflow Rs. ${m.netCashFlow.toLocaleString('en-IN')}`).join('\n')}
-
---- STATISTICAL FORECAST (12-Month Run-Rate Estimate) ---
-• Basis: ${forecast.basis}
-• Next Month (${forecast.nextMonth.period}): Estimated Revenue Rs. ${forecast.nextMonth.estimatedRevenue.toLocaleString('en-IN')}, Estimated Expenses Rs. ${forecast.nextMonth.estimatedExpenses.toLocaleString('en-IN')}, Estimated Cash Balance Rs. ${forecast.nextMonth.estimatedCashBalance.toLocaleString('en-IN')}
-• Next Quarter (${forecast.nextQuarter.period}): Estimated Revenue Rs. ${forecast.nextQuarter.estimatedRevenue.toLocaleString('en-IN')}, Estimated Expenses Rs. ${forecast.nextQuarter.estimatedExpenses.toLocaleString('en-IN')}, Estimated Cash Balance Rs. ${forecast.nextQuarter.estimatedCashBalance.toLocaleString('en-IN')}
-• Disclaimer: ${forecast.disclaimer}
+--- STATUTORY & REGULATORY REFERENCE CONTEXT ---
+• Regulatory Jurisdiction: Companies Act 2013 (Ministry of Corporate Affairs, India) & ICAI Accounting Standards (AS).
+• Section 129 / Schedule III: General instructions for preparation of Balance Sheet and Statement of Profit and Loss.
+• Section 134(5): Directors' Responsibility Statement regarding maintenance of adequate accounting records and going concern assumption.
+• Section 186: Loans, guarantees, and investments limits relative to paid-up capital and free reserves.
+• ICAI Standards: AS 1 (Disclosure), AS 2 (Inventories), AS 3 (Cash Flow), AS 9 (Revenue), AS 10 (PPE), AS 22 (Taxes on Income).
 `;
   };
 
@@ -138,12 +140,15 @@ ${monthlyData.map(m => `• ${m.month}: Revenue Rs. ${m.revenue.toLocaleString('
 
       if (!answer) {
         const contextStr = buildContextForAI();
-        const sysPrompt = `You are a senior financial analyst and CFO for an Indian MSME.
-Your role is to analyze the user's financial context and provide strategic, actionable insights answering their question.
-Format your answer clearly using bullet points and appropriate financial terminology.
-Always use the financial data provided in the context to support your analysis.
-Always format currency figures in Indian Rupees with the standard ₹ symbol and INR numbering.
-Always append this exact disclaimer at the very end of your response: "⚠️ This is an AI-generated analysis based on current ledger data. Please consult a qualified financial advisor before making strategic decisions."`;
+        const sysPrompt = `You are a senior financial analyst and Chartered Accountant (FCA) operating with joint CFA Institute and Institute of Chartered Accountants of India (ICAI) professional frameworks.
+Your mandate is to provide rigorous financial statement analysis, ratio diagnostics, and corporate governance insights grounded in the Indian Companies Act 2013 and ICAI Accounting Standards (AS).
+
+When answering:
+1. Ground every conclusion strictly in the provided financial context (including Altman Z-Score, DuPont breakdown, liquidity, and solvency).
+2. Reference applicable provisions of the Companies Act 2013 (e.g., Section 129 Schedule III presentation, Section 134 Directors' Responsibility, Section 186 loan/solvency limits) and relevant ICAI Accounting Standards (AS 1, 2, 3, 9, 22) when relevant.
+3. Structure your response clearly using bullet points and appropriate ICAI/CFA financial terminology.
+4. Format all currency figures in Indian Rupees with the standard ₹ symbol and Indian numbering (e.g. ₹2,01,24,000, ₹33.88 Lakh, ₹2.01 Cr).
+5. Always append this exact statutory disclaimer at the very end: "⚠️ This is an AI-generated analysis based on current ledger data under ICAI/CFA guidelines. Please consult a qualified Chartered Accountant before taking statutory decisions."`;
         answer = await callGeminiDirect(`User Question: ${q}\n\nFinancial Context:\n${contextStr}`, sysPrompt);
       }
 

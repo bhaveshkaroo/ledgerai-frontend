@@ -107,6 +107,42 @@ export const FinancialAnalysisEngine = {
     const dupontLeverage = equityMultiplier;
     const dupontCalculatedROE = (dupontNetMargin * dupontAssetTurnover * dupontLeverage) * 100;
 
+    // 5. ALTMAN Z-SCORE (EMERGING MARKET / PRIVATE MANUFACTURING & NON-PUBLIC ENTITY MODEL)
+    // Z = 1.2*X1 + 1.4*X2 + 3.3*X3 + 0.6*X4 + 0.999*X5
+    // Note on X4: Book Value of Equity is explicitly substituted for Market Value of Equity because Meso is an unlisted private MSME.
+    const x1_wc_ta = totalAssets > 0 ? (netWorkingCapital / totalAssets) : 0;
+    const priorRetained = LedgerEngine.getAccountBalance('Retained Earnings');
+    const cumulativeRetained = priorRetained + netProfit;
+    const x2_re_ta = totalAssets > 0 ? (cumulativeRetained / totalAssets) : 0;
+    const x3_ebit_ta = totalAssets > 0 ? (ebit / totalAssets) : 0;
+    const x4_bve_tl = currentLiabilities + totalDebt > 0 ? (totalEquity / (currentLiabilities + totalDebt)) : 0;
+    const x5_sales_ta = totalAssets > 0 ? (annualizedRevenue / totalAssets) : 0;
+
+    const zScore = (1.2 * x1_wc_ta) + (1.4 * x2_re_ta) + (3.3 * x3_ebit_ta) + (0.6 * x4_bve_tl) + (0.999 * x5_sales_ta);
+    
+    let zZone = 'Safe Zone';
+    let zInterpretation = 'Strong financial health; very low probability of financial distress within 2 years.';
+    if (zScore < 1.81) {
+      zZone = 'Distress Zone';
+      zInterpretation = 'Elevated probability of insolvency/distress within 2 years; requires immediate working capital & debt restructuring.';
+    } else if (zScore <= 2.99) {
+      zZone = 'Grey Zone';
+      zInterpretation = 'Moderate credit risk; operational vigilance required to improve liquidity and solvency margins.';
+    }
+
+    const altmanZ = {
+      score: Number(zScore.toFixed(3)),
+      zone: zZone,
+      interpretation: zInterpretation,
+      components: {
+        x1_workingCapital_to_totalAssets: Number(x1_wc_ta.toFixed(4)),
+        x2_retainedEarnings_to_totalAssets: Number(x2_re_ta.toFixed(4)),
+        x3_ebit_to_totalAssets: Number(x3_ebit_ta.toFixed(4)),
+        x4_equity_to_totalLiabilities: Number(x4_bve_tl.toFixed(4)),
+        x5_sales_to_totalAssets: Number(x5_sales_ta.toFixed(4))
+      },
+      equityBasis: 'Book Value of Equity (Statutory substitution for unlisted private entity)'
+    };
 
     // 6. FORECASTING (Next Month & Next Quarter Projections)
     const forecast = this.generateForecast(monthlyData, cash, revenue, totalExpenses);
@@ -169,7 +205,8 @@ export const FinancialAnalysisEngine = {
           assetTurnover: Number(dupontAssetTurnover.toFixed(2)),
           equityMultiplier: Number(dupontLeverage.toFixed(2)),
           roeResult: Number(dupontCalculatedROE.toFixed(2))
-        }
+        },
+        altmanZ
       },
       monthlyData,
       forecast
