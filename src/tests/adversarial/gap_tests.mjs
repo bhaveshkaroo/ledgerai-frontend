@@ -1,4 +1,4 @@
-﻿/**
+/**
  * MESO LEDGER AI — Focused Adversarial Gaps Regression Test Suite
  * Closes the 5 specific gaps:
  *   Gap 1: 10,000+ & 100,000+ character string payload truncation & boundary preservation
@@ -298,6 +298,54 @@ await runTest('GAP5-04', 'Non-Leap Year 2025-02-29 strictly rejected as invalid 
   assert(errorMsg.includes('does not exist in calendar'), `Error specifically identified calendar invalidity: "${errorMsg}"`);
   assertEqual(LedgerEngine.transactions.length, 0, 'No transactions created for invalid calendar date');
   console.log(`    Rejected 2025-02-29 with: "${errorMsg}"`);
+});
+
+// ==================== STRUCTURAL FIX: CHART OF ACCOUNTS WHITELIST AT WRITE TIME ====================
+console.log('\n--- STRUCTURAL FIX: Chart of Accounts Whitelist Validation at Point of Write ---\n');
+
+await runTest('GAP-COA-01', 'Unmapped debit account strictly rejected at write time (prevents silent reporting gaps)', async () => {
+  LedgerEngine.transactions = [];
+  let thrown = false;
+  let errorMsg = '';
+  try {
+    await LedgerEngine.postTransaction('2026-09-01', 'Test unmapped debit', 'Electricity Expense', 'Cash and Bank', 45000, 'Expense', 'UNMAPPED-DR');
+  } catch (err) {
+    thrown = true;
+    errorMsg = err.message;
+  }
+  
+  assert(thrown, 'Transaction with unmapped debit account was rejected');
+  assert(errorMsg.includes('Invalid debit account: "Electricity Expense"'), `Error message clearly flags unmapped account: "${errorMsg}"`);
+  assert(errorMsg.includes('CHART_OF_ACCOUNTS'), 'Error message cites CHART_OF_ACCOUNTS requirement');
+  assertEqual(LedgerEngine.transactions.length, 0, 'Zero transactions written to memory');
+  console.log(`    Rejected unmapped debit with: "${errorMsg.slice(0, 110)}..."`);
+});
+
+await runTest('GAP-COA-02', 'Unmapped credit account strictly rejected at write time', async () => {
+  LedgerEngine.transactions = [];
+  let thrown = false;
+  let errorMsg = '';
+  try {
+    await LedgerEngine.postTransaction('2026-09-01', 'Test unmapped credit', 'Cash and Bank', 'Cash Account', 500, 'Payment', 'UNMAPPED-CR');
+  } catch (err) {
+    thrown = true;
+    errorMsg = err.message;
+  }
+  
+  assert(thrown, 'Transaction with unmapped credit account was rejected');
+  assert(errorMsg.includes('Invalid credit account: "Cash Account"'), `Error message clearly flags unmapped credit: "${errorMsg}"`);
+  assertEqual(LedgerEngine.transactions.length, 0, 'Zero transactions written to memory');
+  console.log(`    Rejected unmapped credit with: "${errorMsg.slice(0, 110)}..."`);
+});
+
+await runTest('GAP-COA-03', 'Falsification: registered accounts in CHART_OF_ACCOUNTS accepted cleanly', async () => {
+  LedgerEngine.transactions = [];
+  await LedgerEngine.postTransaction('2026-09-01', 'Valid registered account entry', 'Other Expenses', 'Cash and Bank', 4500, 'Expense', 'VALID-COA');
+  
+  assertEqual(LedgerEngine.transactions.length, 2, 'Exactly 2 legs created for registered accounts');
+  const tx = LedgerEngine.transactions.find(t => t.ref === 'VALID-COA');
+  assertEqual(tx.account, 'Other Expenses', 'Stored account name matches registered account');
+  console.log(`    Registered accounts "Other Expenses" and "Cash and Bank" accepted cleanly.`);
 });
 
 // ==================== SUMMARY ====================

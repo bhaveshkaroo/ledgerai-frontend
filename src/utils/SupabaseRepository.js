@@ -102,6 +102,13 @@ export const SupabaseRepository = {
    * Post a single 2-legged or multi-legged double-entry transaction to Supabase
    */
   async saveTransaction(date, narration, debitAccount, creditAccount, amount, category, ref) {
+    // Defense-in-depth: Ensure accounts are in CHART_OF_ACCOUNTS before database write
+    const validAccounts = new Set(CHART_OF_ACCOUNTS.map(a => a.name));
+    if (!validAccounts.has(debitAccount) || !validAccounts.has(creditAccount)) {
+      const invalidAcc = !validAccounts.has(debitAccount) ? debitAccount : creditAccount;
+      throw new Error(`Cannot persist transaction to database: "${invalidAcc}" is not registered in CHART_OF_ACCOUNTS.`);
+    }
+
     // 1. Insert Journal Voucher header
     const { data: jv, error: jvError } = await supabase
       .from('journal_vouchers')

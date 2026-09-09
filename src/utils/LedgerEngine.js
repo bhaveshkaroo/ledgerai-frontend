@@ -190,6 +190,15 @@ export const LedgerEngine = {
       throw new Error('Both debit and credit accounts must be non-empty strings');
     }
 
+    // 4. Strict Chart of Accounts Whitelist Validation (Reject unmapped accounts at point of write)
+    const validAccounts = new Set(CHART_OF_ACCOUNTS.map(a => a.name));
+    if (!validAccounts.has(cleanDebit)) {
+      throw new Error(`Invalid debit account: "${cleanDebit}". Account must be registered in CHART_OF_ACCOUNTS to maintain financial statement integrity.`);
+    }
+    if (!validAccounts.has(cleanCredit)) {
+      throw new Error(`Invalid credit account: "${cleanCredit}". Account must be registered in CHART_OF_ACCOUNTS to maintain financial statement integrity.`);
+    }
+
     const idNum = Date.now();
     const txRef = ref ? safeSlice(ref, 100) : `MNL-${idNum}`;
     const createdAt = new Date().toISOString();
