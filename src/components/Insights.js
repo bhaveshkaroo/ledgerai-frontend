@@ -3,7 +3,7 @@ import { FinancialAnalysisEngine } from '../utils/FinancialAnalysisEngine.js';
 import { formatINR } from '../utils/LedgerEngine.js';
 import { 
   TrendingUp, Activity, PieChart, BarChart2, 
-  Sparkles, ShieldCheck, 
+  Sparkles, ShieldCheck, ShieldAlert,
   Send, Bot, RefreshCw, Layers, Calendar
 } from 'lucide-react';
 
@@ -482,6 +482,115 @@ When answering:
               </div>
             </div>
           </div>
+
+          {/* Altman Z-Score Section */}
+          {ratios?.altmanZ && (() => {
+            const z = ratios.altmanZ;
+            const zoneStyles = {
+              'Safe Zone': {
+                color: '#10b981',
+                bg: 'rgba(16,185,129,0.1)',
+                border: '1px solid rgba(16,185,129,0.25)',
+                alertBg: 'rgba(16,185,129,0.06)'
+              },
+              'Grey Zone': {
+                color: '#f59e0b',
+                bg: 'rgba(245,158,11,0.1)',
+                border: '1px solid rgba(245,158,11,0.25)',
+                alertBg: 'rgba(245,158,11,0.06)'
+              },
+              'Distress Zone': {
+                color: '#ef4444',
+                bg: 'rgba(239,68,68,0.1)',
+                border: '1px solid rgba(239,68,68,0.25)',
+                alertBg: 'rgba(239,68,68,0.06)'
+              }
+            };
+            const currentStyle = zoneStyles[z.zone] || zoneStyles['Grey Zone'];
+
+            return (
+              <div className="card" style={{ padding: '20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', gridColumn: 'span 2' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <ShieldAlert size={18} color={currentStyle.color} />
+                    <span>Altman Z-Score & Insolvency Risk Analysis</span>
+                  </h3>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    background: currentStyle.bg,
+                    color: currentStyle.color,
+                    border: currentStyle.border
+                  }}>
+                    {z.zone}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '24px', padding: '16px', background: 'var(--bg-surface)', borderRadius: '10px', marginBottom: '14px' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>
+                      Overall Z-Score
+                    </div>
+                    <div style={{ fontSize: '32px', fontWeight: 800, color: currentStyle.color, lineHeight: 1.1, marginTop: '4px' }}>
+                      {z.score.toFixed(2)}
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, borderLeft: '1px solid var(--border)', paddingLeft: '20px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      <strong>Zone Diagnostic:</strong> {z.interpretation}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                      Model: Emerging Market / Private Entity (Z = 1.2·X₁ + 1.4·X₂ + 3.3·X₃ + 0.6·X₄ + 0.999·X₅) • <em>{z.equityBasis}</em>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
+                  <div style={{ padding: '10px', background: 'var(--bg-surface)', borderRadius: '8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>X₁: WC / Assets</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, margin: '4px 0', color: 'var(--text-primary)' }}>
+                      {(z.components?.x1_workingCapital_to_totalAssets ?? 0).toFixed(3)}
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Working Capital</div>
+                  </div>
+
+                  <div style={{ padding: '10px', background: 'var(--bg-surface)', borderRadius: '8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>X₂: RE / Assets</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, margin: '4px 0', color: 'var(--text-primary)' }}>
+                      {(z.components?.x2_retainedEarnings_to_totalAssets ?? 0).toFixed(3)}
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Retained Earnings</div>
+                  </div>
+
+                  <div style={{ padding: '10px', background: 'var(--bg-surface)', borderRadius: '8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>X₃: EBIT / Assets</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, margin: '4px 0', color: 'var(--text-primary)' }}>
+                      {(z.components?.x3_ebit_to_totalAssets ?? 0).toFixed(3)}
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Operating Returns</div>
+                  </div>
+
+                  <div style={{ padding: '10px', background: 'var(--bg-surface)', borderRadius: '8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>X₄: Equity / Liab</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, margin: '4px 0', color: 'var(--text-primary)' }}>
+                      {(z.components?.x4_equity_to_totalLiabilities ?? 0).toFixed(3)}
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Book Leverage</div>
+                  </div>
+
+                  <div style={{ padding: '10px', background: 'var(--bg-surface)', borderRadius: '8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>X₅: Sales / Assets</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, margin: '4px 0', color: 'var(--text-primary)' }}>
+                      {(z.components?.x5_sales_to_totalAssets ?? 0).toFixed(3)}
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Asset Velocity</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
         </div>
       )}
