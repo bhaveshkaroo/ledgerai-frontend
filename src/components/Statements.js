@@ -6,7 +6,7 @@ import CashFlowStatement from './CashFlowStatement';
 import TrialBalance from './TrialBalance';
 import { Download, FileText } from 'lucide-react';
 import { exportToPDF } from '../utils/exportUtils';
-import { LedgerEngine } from '../utils/LedgerEngine';
+import { LedgerEngine, CHART_OF_ACCOUNTS } from '../utils/LedgerEngine';
 
 function Statements({ period, currency }) {
   const [selectedPeriod, setSelectedPeriod] = useState(period || LedgerEngine.getCurrentFiscalYear());
@@ -23,6 +23,8 @@ function Statements({ period, currency }) {
   const handleExport = () => {
     let data = [];
     let title = '';
+    let exportOptions = {};
+
     if (activeTab === 'Trading A/c') {
       data = LedgerEngine.calcTradingAccount(selectedPeriod);
       title = `Trading Account - ${selectedPeriod}`;
@@ -35,12 +37,57 @@ function Statements({ period, currency }) {
     } else if (activeTab === 'Cash Flow') {
       data = LedgerEngine.calcCashFlow(selectedPeriod);
       title = `Statement of Cash Flows - ${selectedPeriod}`;
-    } else {
-      alert("PDF export is currently only supported for main financial statements.");
-      return;
+      exportOptions.isCashFlow = true;
+    } else if (activeTab === 'Trial Balance') {
+      const tbAccounts = CHART_OF_ACCOUNTS.map(acc => {
+        const balance = LedgerEngine.getAccountBalance(acc.name);
+        const isDebitNormal = ['Asset', 'Expense'].includes(acc.type);
+        return {
+          name: acc.name,
+          type: acc.type,
+          debit: isDebitNormal ? balance : 0,
+          credit: !isDebitNormal ? balance : 0
+        };
+      }).filter(a => a.debit !== 0 || a.credit !== 0);
+
+      const totalDebits = tbAccounts.reduce((sum, a) => sum + a.debit, 0);
+      const totalCredits = tbAccounts.reduce((sum, a) => sum + a.credit, 0);
+
+      data = [
+        ...tbAccounts,
+        {
+          name: 'TOTAL TRIAL BALANCE',
+          type: 'Grand Total',
+          debit: totalDebits,
+          credit: totalCredits,
+          isTotal: true
+        }
+      ];
+      title = `Trial Balance - ${selectedPeriod}`;
+      exportOptions.isTrialBalance = true;
+    } else if (activeTab === 'Notes to Accounts' || activeTab === 'Schedules') {
+      const bs = LedgerEngine.calcBalanceSheet(selectedPeriod);
+      const is = LedgerEngine.calcIncomeStatement(selectedPeriod);
+      data = [
+        { noteNo: '1', name: 'Corporate Information & Summary of Significant Accounting Policies', isHeader: true },
+        { noteNo: '', name: 'Meso AI Platform complies with Companies Act 2013, Schedule III and statutory Accounting Standards (AS).', detail: 'Statutory Note' },
+        { noteNo: '2', name: 'Share Capital & Reserves', isHeader: true },
+        { noteNo: '2.1', name: 'Authorized & Issued Equity Share Capital', value: LedgerEngine.getAccountBalance('Share Capital') },
+        { noteNo: '2.2', name: 'Reserves and Surplus (Retained Earnings)', value: bs.find(r => r.name.toLowerCase().includes('reserves'))?.value || 0 },
+        { noteNo: '3', name: 'Property, Plant & Equipment (PPE - AS 10)', isHeader: true },
+        { noteNo: '3.1', name: 'Gross Block (Fixed Assets)', value: LedgerEngine.getAccountBalance('Fixed Assets (Gross)') },
+        { noteNo: '3.2', name: 'Less: Accumulated Depreciation', value: -LedgerEngine.getAccountBalance('Accumulated Depreciation') },
+        { noteNo: '4', name: 'Revenue from Operations (AS 9)', isHeader: true },
+        { noteNo: '4.1', name: 'Sale of Products / Services', value: LedgerEngine.getAccountBalance('Sales Revenue') },
+        { noteNo: '5', name: 'Direct Costs & Employee Benefit Expenses', isHeader: true },
+        { noteNo: '5.1', name: 'Cost of Materials Consumed / Cost of Goods Sold', value: is.find(r => r.name.toLowerCase().includes('cost of materials'))?.value || 0 },
+        { noteNo: '5.2', name: 'Salaries & Employee Benefits', value: LedgerEngine.getAccountBalance('Salaries Expense') }
+      ];
+      title = `${activeTab} - ${selectedPeriod}`;
+      exportOptions.isNotes = true;
     }
 
-    exportToPDF(title, data, `${activeTab.replace(/ /g, '_')}_${selectedPeriod}.pdf`);
+    exportToPDF(title, data, `${activeTab.replace(/ /g, '_')}_${selectedPeriod}.pdf`, exportOptions);
   };
 
   return (

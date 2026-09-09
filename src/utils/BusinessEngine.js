@@ -4,7 +4,7 @@
  * and existing ledger upload/import engine for Meso AI.
  */
 
-import { LedgerEngine } from './LedgerEngine';
+import { LedgerEngine } from './LedgerEngine.js';
 
 const STORAGE_PROFILE_KEY = 'MESO_BUSINESS_PROFILE';
 const STORAGE_CLIENTS_KEY = 'MESO_BUSINESS_CLIENTS';
@@ -51,16 +51,22 @@ export function setWorkspaceMode(mode) {
 }
 
 export function getBusinessProfile() {
-  const saved = localStorage.getItem(STORAGE_PROFILE_KEY);
-  if (saved) {
-    try { return JSON.parse(saved); } catch (_) {}
+  if (typeof localStorage !== 'undefined') {
+    const saved = localStorage.getItem(STORAGE_PROFILE_KEY);
+    if (saved) {
+      try { return JSON.parse(saved); } catch (_) {}
+    }
   }
   return { ...DEFAULT_PRODUCTION_PROFILE };
 }
 
 export function setBusinessProfile(profile) {
-  localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(profile));
-  window.dispatchEvent(new CustomEvent('business-profile-updated', { detail: { profile } }));
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(profile));
+  }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('business-profile-updated', { detail: { profile } }));
+  }
   return profile;
 }
 
