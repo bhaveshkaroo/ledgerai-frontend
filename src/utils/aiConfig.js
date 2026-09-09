@@ -1,3 +1,4 @@
+import { captureError } from './sentryConfig';
 const STORAGE_KEY = 'MESO_GEMINI_API_KEY';
 
 export const GEMINI_MODELS = [
@@ -133,5 +134,7 @@ export async function callGeminiDirect(prompt, systemInstruction = '', options =
       }
     }
   }
-  throw new Error(lastError || 'All verified Gemini models failed to respond.');
+  const finalError = new Error(lastError || 'All verified Gemini models failed to respond.');
+  captureError(finalError, { component: 'aiConfig', action: 'callGeminiDirect', extra: { modelsAttempted: GEMINI_MODELS.length } });
+  throw finalError;
 }
