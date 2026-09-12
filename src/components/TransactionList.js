@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { LedgerEngine, formatINR, CHART_OF_ACCOUNTS } from '../utils/LedgerEngine';
-import { Search, ChevronLeft, ChevronRight, Download, Plus, BookOpen, Receipt } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Download, Plus, BookOpen, Receipt, Calendar, X } from 'lucide-react';
 import { exportToPDF, exportMultiYearLedgerToPDF } from '../utils/exportUtils';
 import ManualEntryModal from './ManualEntryModal';
 
@@ -42,6 +42,7 @@ function getGroupedAccounts() {
 // ─── Sub-Tab: Day Book (Daily Journal) ───────────────────────────────────────
 function DayBookTab({ period }) {
   const [selectedPeriod, setSelectedPeriod] = useState(period || LedgerEngine.getCurrentFiscalYear());
+  const [selectedDate, setSelectedDate] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
@@ -63,6 +64,9 @@ function DayBookTab({ period }) {
 
   const filteredTransactions = useMemo(() => {
     let txs = localTransactions;
+    if (selectedDate) {
+      txs = txs.filter(t => t.date === selectedDate);
+    }
     if (activeFilter !== 'All') {
       txs = txs.filter(t => t.category === activeFilter || (activeFilter === 'Revenue' && t.type === 'Credit') || (activeFilter === 'Expenses' && t.type === 'Debit'));
     }
@@ -71,7 +75,7 @@ function DayBookTab({ period }) {
       txs = txs.filter(t => (t.narration || '').toLowerCase().includes(q) || (t.ref || '').toLowerCase().includes(q) || (t.account || '').toLowerCase().includes(q));
     }
     return txs;
-  }, [activeFilter, searchTerm, localTransactions]);
+  }, [selectedDate, activeFilter, searchTerm, localTransactions]);
 
   const totalPages = Math.ceil(filteredTransactions.length / pageSize) || 1;
   const paginatedTxs = filteredTransactions.slice((page - 1) * pageSize, page * pageSize);
@@ -143,7 +147,7 @@ function DayBookTab({ period }) {
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <select
             value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value)}
+            onChange={(e) => { setSelectedPeriod(e.target.value); setSelectedDate(''); setPage(1); }}
             style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, outline: 'none' }}
           >
             <option value="Full Year">All 3 Years</option>
@@ -151,6 +155,47 @@ function DayBookTab({ period }) {
             <option value="FY 2025-26">FY 2025-26</option>
             <option value={LedgerEngine.getCurrentFiscalYear()}>{LedgerEngine.getCurrentFiscalYear()} (Current)</option>
           </select>
+
+          {/* Calendar Date-Jump Navigation (Part B2) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '3px 8px' }}>
+            <Calendar size={14} style={{ color: selectedDate ? 'var(--text-primary)' : 'var(--text-muted)' }} />
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => { setSelectedDate(e.target.value); setPage(1); }}
+              title="Jump to specific calendar date"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-primary)',
+                fontSize: '12px',
+                fontWeight: 500,
+                outline: 'none',
+                fontFamily: 'var(--font-sans)',
+                cursor: 'pointer'
+              }}
+            />
+            {selectedDate && (
+              <button
+                type="button"
+                onClick={() => { setSelectedDate(''); setPage(1); }}
+                title="Reset date filter"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '2px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  borderRadius: '4px'
+                }}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
           <div style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 4px' }}></div>
           {['All', 'Revenue', 'Expenses'].map(f => (
             <button
@@ -207,38 +252,62 @@ function DayBookTab({ period }) {
             </tr>
           </thead>
           <tbody>
-            {paginatedTxs.map((t) => (
-              <tr
-                key={t.id}
-                style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s', cursor: 'pointer' }}
-                className="table-row-hover"
-                onClick={() => { window.location.hash = `#/journal/${encodeURIComponent(t.ref)}`; }}
-                title="Click to view journal voucher detail"
-              >
-                <td style={{ padding: '14px 16px', fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                  {t.date}
-                </td>
-                <td style={{ padding: '14px 16px', fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
-                  {t.ref}
-                </td>
-                <td style={{ padding: '14px 16px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{t.account}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{t.narration}</div>
-                </td>
-                <td style={{ padding: '14px 16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className={`status-dot ${t.type === 'Credit' ? 'emerald' : ''}`} style={{ background: t.type === 'Credit' ? '#34c759' : '#e5e5e7', width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0 }}></div>
-                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{t.category}</span>
+            {paginatedTxs.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <Calendar size={28} style={{ margin: '0 auto 10px', opacity: 0.4, display: 'block' }} />
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                    {selectedDate ? `No transactions recorded for ${selectedDate}` : 'No transactions match your search or filter'}
+                  </div>
+                  <div style={{ fontSize: '12px' }}>
+                    {selectedDate ? (
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedDate(''); setPage(1); }}
+                        style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', fontWeight: 600, marginTop: '8px', textDecoration: 'underline' }}
+                      >
+                        Clear date filter and view all entries
+                      </button>
+                    ) : (
+                      'Try adjusting your filter or period selection.'
+                    )}
                   </div>
                 </td>
-                <td style={{ padding: '14px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600 }}>
-                  {t.type === 'Debit' ? formatINR(t.amount) : ''}
-                </td>
-                <td style={{ padding: '14px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: '#34c759' }}>
-                  {t.type === 'Credit' ? formatINR(t.amount) : ''}
-                </td>
               </tr>
-            ))}
+            ) : (
+              paginatedTxs.map((t) => (
+                <tr
+                  key={t.id}
+                  style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s', cursor: 'pointer' }}
+                  className="table-row-hover"
+                  onClick={() => { window.location.hash = `#/journal/${encodeURIComponent(t.ref)}`; }}
+                  title="Click to view journal voucher detail"
+                >
+                  <td style={{ padding: '14px 16px', fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    {t.date}
+                  </td>
+                  <td style={{ padding: '14px 16px', fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+                    {t.ref}
+                  </td>
+                  <td style={{ padding: '14px 16px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{t.account}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{t.narration}</div>
+                  </td>
+                  <td style={{ padding: '14px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div className={`status-dot ${t.type === 'Credit' ? 'emerald' : ''}`} style={{ background: t.type === 'Credit' ? '#34c759' : '#e5e5e7', width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0 }}></div>
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{t.category}</span>
+                    </div>
+                  </td>
+                  <td style={{ padding: '14px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600 }}>
+                    {t.type === 'Debit' ? formatINR(t.amount) : ''}
+                  </td>
+                  <td style={{ padding: '14px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: '#34c759' }}>
+                    {t.type === 'Credit' ? formatINR(t.amount) : ''}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
           {/* Totals Footer */}
           <tfoot>

@@ -170,6 +170,11 @@ export const LedgerEngine = {
       throw new Error(`Invalid calendar date: "${date}" does not exist in calendar (month ${m} of year ${y} has ${daysInMonth} days)`);
     }
 
+    // Future-dated guard: prevent real transactions from exceeding statutory fiscal horizon (2027-03-31)
+    if (dateOnly > '2027-03-31') {
+      throw new Error(`Transaction date "${date}" is unreasonably far in the future. Cannot exceed statutory period boundary (2027-03-31).`);
+    }
+
     // 3. String Fields Sanitization & Safety with Surrogate-Pair Awareness
     const safeSlice = (str, maxLen) => {
       const s = String(str || '');

@@ -176,6 +176,30 @@ for (const accName of testAccounts) {
   });
 }
 
+// ==================== SECTION 5: Future Date Boundary Validation ====================
+console.log('\n--- SECTION 5: Future Date Boundary Validation ---\n');
+
+await runTest('LDG-FUT-01', 'Transactions dated beyond statutory boundary (e.g. 2027-04-01) are strictly rejected', async () => {
+  let thrown = false;
+  let errMsg = '';
+  try {
+    await LedgerEngine.postTransaction('2027-04-01', 'Future-dated beyond statutory scope', 'Cash and Bank', 'Sales Revenue', 10000, 'Sales', 'FUT-ERR-1');
+  } catch (err) {
+    thrown = true;
+    errMsg = err.message;
+  }
+  assert(thrown, 'Transaction beyond 2027-03-31 was rejected');
+  assert(errMsg.includes('unreasonably far in the future'), `Error mentions future boundary: ${errMsg}`);
+  console.log(`    Rejected 2027-04-01 as expected: "${errMsg}"`);
+});
+
+await runTest('LDG-FUT-02', 'Transactions dated within statutory boundary (e.g. 2027-03-31) are accepted', async () => {
+  await LedgerEngine.postTransaction('2027-03-31', 'Valid future boundary entry', 'Rent Expense', 'Cash and Bank', 5000, 'Expense', 'FUT-OK-1');
+  const tx = LedgerEngine.transactions.find(t => t.ref === 'FUT-OK-1');
+  assert(tx, 'Transaction at boundary 2027-03-31 accepted successfully');
+  console.log(`    Boundary transaction 2027-03-31 posted and verified`);
+});
+
 // ==================== SUMMARY ====================
 console.log('\n' + '='.repeat(76));
 console.log(`  RESULTS: ${passed} PASSED, ${failed} FAILED out of ${passed + failed} tests`);
