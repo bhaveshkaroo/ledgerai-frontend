@@ -71,16 +71,22 @@ export function setBusinessProfile(profile) {
 }
 
 export function getClients() {
-  const saved = localStorage.getItem(STORAGE_CLIENTS_KEY);
-  if (saved) {
-    try { return JSON.parse(saved); } catch (_) {}
+  if (typeof localStorage !== 'undefined') {
+    const saved = localStorage.getItem(STORAGE_CLIENTS_KEY);
+    if (saved) {
+      try { return JSON.parse(saved); } catch (_) {}
+    }
   }
   return [...DEFAULT_CLIENTS];
 }
 
 export function saveClients(clients) {
-  localStorage.setItem(STORAGE_CLIENTS_KEY, JSON.stringify(clients));
-  window.dispatchEvent(new Event('clients-updated'));
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(STORAGE_CLIENTS_KEY, JSON.stringify(clients));
+  }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('clients-updated'));
+  }
 }
 
 export function addClient(client) {
@@ -101,16 +107,22 @@ export function deleteClient(id) {
 }
 
 export function getVendors() {
-  const saved = localStorage.getItem(STORAGE_VENDORS_KEY);
-  if (saved) {
-    try { return JSON.parse(saved); } catch (_) {}
+  if (typeof localStorage !== 'undefined') {
+    const saved = localStorage.getItem(STORAGE_VENDORS_KEY);
+    if (saved) {
+      try { return JSON.parse(saved); } catch (_) {}
+    }
   }
   return [...DEFAULT_VENDORS];
 }
 
 export function saveVendors(vendors) {
-  localStorage.setItem(STORAGE_VENDORS_KEY, JSON.stringify(vendors));
-  window.dispatchEvent(new Event('vendors-updated'));
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(STORAGE_VENDORS_KEY, JSON.stringify(vendors));
+  }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('vendors-updated'));
+  }
 }
 
 export function addVendor(vendor) {

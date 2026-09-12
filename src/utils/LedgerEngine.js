@@ -369,6 +369,123 @@ export const LedgerEngine = {
     return balance;
   },
 
+  /**
+   * Computes a full General Ledger account statement for an account over a specific date range.
+   * Includes opening balance, chronological entries with contra particulars, running balance, totals, and closing balance.
+   */
+  getAccountLedger(accountName, period = 'Full Year', customRange = null) {
+    const accConfig = CHART_OF_ACCOUNTS.find(a => a.name === accountName);
+    const isDebitNormal = accConfig ? ['Asset', 'Expense'].includes(accConfig.type) : true;
+    const isPL = accConfig ? accConfig.classification === 'P&L' : false;
+
+    let range = customRange;
+    if (!range) {
+      range = this.getPeriodDateRange(period);
+    }
+    const { start, end, name: periodName } = range;
+
+    // Calculate Opening Balance prior to start date
+    let openingBalance = 0;
+    if (!isPL && start) {
+      // Find day before start date
+      const prevDate = new Date(start);
+      prevDate.setDate(prevDate.getDate() - 1);
+      const prevDateStr = prevDate.toISOString().split('T')[0];
+      openingBalance = this.getAccountBalance(accountName, prevDateStr);
+    }
+
+    // Filter transactions in range for this account
+    const accountTxs = this.transactions
+      .filter(t => {
+        if (t.account !== accountName) return false;
+        if (start && t.date < start) return false;
+        if (end && t.date > end) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(a.date) - new Date(b.date)); // Chronological ascending for ledger book
+
+    // Determine contra account and compute running balance
+    let runningBalance = openingBalance;
+    let totalDebits = 0;
+    let totalCredits = 0;
+
+    const entries = accountTxs.map(tx => {
+      // Find contra leg(s) from same voucher ref
+      const contraLegs = this.transactions.filter(t => t.ref === tx.ref && t.account !== accountName);
+      const contraNames = contraLegs.map(c => c.account).join(', ') || (tx.type === 'Debit' ? 'To Sundries' : 'By Sundries');
+      
+      const debit = tx.type === 'Debit' ? tx.amount : 0;
+      const credit = tx.type === 'Credit' ? tx.amount : 0;
+      totalDebits += debit;
+      totalCredits += credit;
+
+      if (isDebitNormal) {
+        runningBalance += (debit - credit);
+      } else {
+        runningBalance += (credit - debit);
+      }
+
+      return {
+        id: tx.id,
+        date: tx.date,
+        ref: tx.ref,
+        particulars: tx.type === 'Debit' ? `To ${contraNames}` : `By ${contraNames}`,
+        contraAccount: contraNames,
+        narration: tx.narration,
+        category: tx.category,
+        debit,
+        credit,
+        runningBalance,
+        balanceType: runningBalance >= 0 ? (isDebitNormal ? 'Dr.' : 'Cr.') : (isDebitNormal ? 'Cr.' : 'Dr.')
+      };
+    });
+
+    const closingBalance = runningBalance;
+
+    return {
+      accountName,
+      accountType: accConfig ? accConfig.type : 'General',
+      isDebitNormal,
+      periodName: periodName || period,
+      startDate: start,
+      endDate: end,
+      openingBalance,
+      openingBalanceType: openingBalance >= 0 ? (isDebitNormal ? 'Dr.' : 'Cr.') : (isDebitNormal ? 'Cr.' : 'Dr.'),
+      entries,
+      totalDebits,
+      totalCredits,
+      closingBalance,
+      closingBalanceType: closingBalance >= 0 ? (isDebitNormal ? 'Dr.' : 'Cr.') : (isDebitNormal ? 'Cr.' : 'Dr.')
+    };
+  },
+
+  /**
+   * Retrieves full 3-year bifurcated ledger statement (FY 2024-25, FY 2025-26, FY 2026-27).
+   * Guarantees strict carry-forward of closing balances into the next year's opening balance.
+   */
+  getThreeYearLedger(accountName) {
+    const fyList = [
+      { name: 'FY 2024-25', start: '2024-01-01', end: '2025-03-31' },
+      { name: 'FY 2025-26', start: '2025-04-01', end: '2026-03-31' },
+      { name: 'FY 2026-27', start: '2026-04-01', end: '2027-03-31' }
+    ];
+
+    const years = fyList.map(fy => this.getAccountLedger(accountName, fy.name, fy));
+    const grandTotalDebits = years.reduce((sum, y) => sum + y.totalDebits, 0);
+    const grandTotalCredits = years.reduce((sum, y) => sum + y.totalCredits, 0);
+    const finalClosingBalance = years[years.length - 1].closingBalance;
+    const finalClosingBalanceType = years[years.length - 1].closingBalanceType;
+
+    return {
+      accountName,
+      years,
+      grandTotalDebits,
+      grandTotalCredits,
+      finalClosingBalance,
+      finalClosingBalanceType
+    };
+  },
+
   calcKPIs(period = 'Full Year') {
     const { start, end } = this.getPeriodDateRange(period);
     const rev = this.getAccountBalance('Sales Revenue', end, start);
