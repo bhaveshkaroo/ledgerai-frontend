@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { LedgerEngine, formatINR, CHART_OF_ACCOUNTS } from '../utils/LedgerEngine';
+import { useTransactionStream } from "../utils/useTransactionStream";
 import { Search, ChevronLeft, ChevronRight, Download, Plus, BookOpen, Receipt, Calendar, X } from 'lucide-react';
 import { exportToPDF, exportMultiYearLedgerToPDF } from '../utils/exportUtils';
 import ManualEntryModal from './ManualEntryModal';
-
+import AnimatedNumber from './AnimatedNumber';
+import "./TransactionRow.css";
 // ─── Account grouping helper for the Ledger Book dropdown ────────────────────
 const ACCOUNT_GROUPS = [
   { label: 'Cash & Bank', types: ['Asset'], filter: a => a.name === 'Cash and Bank' },
@@ -61,6 +63,12 @@ function DayBookTab({ period }) {
     setLocalTransactions(LedgerEngine.getFilteredTransactions(selectedPeriod));
     setPage(1);
   }, [selectedPeriod]);
+
+  // Subscribe to real‑time transaction stream
+  const addIncomingTx = (tx) => {
+    setLocalTransactions(prev => [{ ...tx, __new: true }, ...prev]);
+  };
+  useTransactionStream(addIncomingTx);
 
   const filteredTransactions = useMemo(() => {
     let txs = localTransactions;
@@ -279,7 +287,12 @@ function DayBookTab({ period }) {
                 <tr
                   key={t.id}
                   style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s', cursor: 'pointer' }}
-                  className="table-row-hover"
+                  className={t.__new ? "new-row" : "table-row-hover"}
+                  onAnimationEnd={() => {
+                    setLocalTransactions(prev =>
+                      prev.map(item => (item.id === t.id ? { ...item, __new: false } : item))
+                    );
+                  }}
                   onClick={() => { window.location.hash = `#/journal/${encodeURIComponent(t.ref)}`; }}
                   title="Click to view journal voucher detail"
                 >
@@ -290,7 +303,10 @@ function DayBookTab({ period }) {
                     {t.ref}
                   </td>
                   <td style={{ padding: '14px 16px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{t.account}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center' }}>
+                      {t.__new && <span className="live-indicator-dot" title="Real-time transaction arrived!"></span>}
+                      {t.account}
+                    </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{t.narration}</div>
                   </td>
                   <td style={{ padding: '14px 16px' }}>
@@ -316,10 +332,10 @@ function DayBookTab({ period }) {
                 Grand Total ({filteredTransactions.length} entries)
               </td>
               <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                {formatINR(totals.dr)}
+                <AnimatedNumber value={totals.dr} format={formatINR} />
               </td>
               <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: '#34c759' }}>
-                {formatINR(totals.cr)}
+                <AnimatedNumber value={totals.cr} format={formatINR} />
               </td>
             </tr>
           </tfoot>
@@ -560,16 +576,16 @@ function GeneralLedgerBookTab({ period }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         <div className="card" style={{ padding: '18px 20px' }}>
           <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Total Debits ({kpis.label})</div>
-          <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{formatINR(kpis.totalDebits)}</div>
+          <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}><AnimatedNumber value={kpis.totalDebits} format={formatINR} /></div>
         </div>
         <div className="card" style={{ padding: '18px 20px' }}>
           <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Total Credits ({kpis.label})</div>
-          <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#34c759' }}>{formatINR(kpis.totalCredits)}</div>
+          <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#34c759' }}><AnimatedNumber value={kpis.totalCredits} format={formatINR} /></div>
         </div>
         <div className="card" style={{ padding: '18px 20px' }}>
           <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Net Current Balance</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{formatINR(Math.abs(kpis.netBalance))}</span>
+            <span style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}><AnimatedNumber value={Math.abs(kpis.netBalance)} format={formatINR} /></span>
             <span style={{
               fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '6px',
               background: kpis.balanceType === 'Dr.' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',

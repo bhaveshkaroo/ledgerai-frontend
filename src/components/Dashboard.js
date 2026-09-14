@@ -4,6 +4,7 @@ import { CurrencyEngine, getCurrency, getExchangeRate } from '../utils/CurrencyE
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Clock, AlertTriangle, BarChart2, PieChart, ArrowUpRight, ArrowDownRight, CreditCard, Wallet, Target, X, CheckCircle2, ChevronRight, Info } from 'lucide-react';
 import LiveClock from './LiveClock';
+import AnimatedNumber from './AnimatedNumber';
 
 const CustomBarTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -279,7 +280,7 @@ const Dashboard = () => {
           </div>
           <div>
             <div className="digital-number" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1, marginBottom: '8px' }}>
-              {formatINR(cashBalance)}
+              <AnimatedNumber value={cashBalance} format={formatINR} />
             </div>
             <div style={{ fontSize: '12px', opacity: 0.8 }}>Liquid funds available for operations</div>
           </div>
@@ -296,7 +297,7 @@ const Dashboard = () => {
           </div>
           <div>
             <div className="digital-number" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1, marginBottom: '8px' }}>
-              {formatINR(netProfit)}
+              <AnimatedNumber value={netProfit} format={formatINR} />
             </div>
             <div style={{ fontSize: '12px', opacity: 0.8 }}>Margin: {netMargin}% | Gross Margin: {grossMargin}%</div>
           </div>
@@ -314,7 +315,7 @@ const Dashboard = () => {
             <ArrowDownRight size={14} color="#f97316" />
             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Accounts Receivable</span>
           </div>
-          <div className="digital-number" style={{ fontSize: '24px', fontWeight: 600 }}>{formatINR(accountsReceivable)}</div>
+          <div className="digital-number" style={{ fontSize: '24px', fontWeight: 600 }}><AnimatedNumber value={accountsReceivable} format={formatINR} /></div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>DSO: {dso} days</div>
         </div>
 
@@ -323,7 +324,7 @@ const Dashboard = () => {
             <ArrowUpRight size={14} color="#ef4444" />
             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Accounts Payable</span>
           </div>
-          <div className="digital-number" style={{ fontSize: '24px', fontWeight: 600 }}>{formatINR(accountsPayable)}</div>
+          <div className="digital-number" style={{ fontSize: '24px', fontWeight: 600 }}><AnimatedNumber value={accountsPayable} format={formatINR} /></div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>DPO: {dpo} days</div>
         </div>
 
@@ -332,7 +333,7 @@ const Dashboard = () => {
             <CreditCard size={14} color="#8b5cf6" />
             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Outstanding Loan</span>
           </div>
-          <div className="digital-number" style={{ fontSize: '24px', fontWeight: 600 }}>{formatINR(bankLoan)}</div>
+          <div className="digital-number" style={{ fontSize: '24px', fontWeight: 600 }}><AnimatedNumber value={bankLoan} format={formatINR} /></div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>D/E Ratio: {debtToEquity}x</div>
         </div>
 
@@ -341,7 +342,7 @@ const Dashboard = () => {
             <DollarSign size={14} color="#10b981" />
             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Inventory Value</span>
           </div>
-          <div className="digital-number" style={{ fontSize: '24px', fontWeight: 600 }}>{formatINR(inventory)}</div>
+          <div className="digital-number" style={{ fontSize: '24px', fontWeight: 600 }}><AnimatedNumber value={inventory} format={formatINR} /></div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Turnover: {cogs > 0 && inventory > 0 ? (((cogs / totalOperatingDays) * 365) / inventory).toFixed(1) : 'N/A'}x</div>
         </div>
       </div>

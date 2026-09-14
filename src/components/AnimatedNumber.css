@@ -1,0 +1,124 @@
+/* AnimatedNumber.css - Real-time animated digits falling down & rolling */
+
+@keyframes digitFallDown {
+  0% {
+    transform: translateY(-28px);
+    opacity: 0.2;
+    filter: blur(1.5px);
+  }
+  55% {
+    transform: translateY(4px);
+    opacity: 0.95;
+    filter: blur(0px);
+  }
+  80% {
+    transform: translateY(-2px);
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes digitRiseUp {
+  0% {
+    transform: translateY(28px);
+    opacity: 0.2;
+    filter: blur(1.5px);
+  }
+  55% {
+    transform: translateY(-4px);
+    opacity: 0.95;
+    filter: blur(0px);
+  }
+  80% {
+    transform: translateY(2px);
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes flashReduction {
+  0% {
+    color: #ef4444;
+    text-shadow: 0 0 16px rgba(239, 68, 68, 0.6);
+  }
+  100% {
+    color: inherit;
+    text-shadow: none;
+  }
+}
+
+@keyframes flashAddition {
+  0% {
+    color: #10b981;
+    text-shadow: 0 0 16px rgba(16, 185, 129, 0.6);
+  }
+  100% {
+    color: inherit;
+    text-shadow: none;
+  }
+}
+
+@keyframes deltaFloat {
+  0% {
+    opacity: 1;
+    transform: translateY(-16px) scale(0.9);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(0) scale(1.05);
+  }
+  80% {
+    opacity: 0.9;
+    transform: translateY(2px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.95);
+  }
+}
+
+.animated-number-container {
+  display: inline-flex;
+  align-items: baseline;
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.anim-falling {
+  display: inline-block;
+  animation: digitFallDown 0.65s cubic-bezier(0.16, 1, 0.3, 1), flashReduction 1.2s ease-out;
+}
+
+.anim-rising {
+  display: inline-block;
+  animation: digitRiseUp 0.65s cubic-bezier(0.16, 1, 0.3, 1), flashAddition 1.2s ease-out;
+}
+
+.delta-badge {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-left: 8px;
+  vertical-align: middle;
+  animation: deltaFloat 2.8s ease-out forwards;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.delta-badge.negative {
+  background: rgba(239, 68, 68, 0.18);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.delta-badge.positive {
+  background: rgba(16, 185, 129, 0.18);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}

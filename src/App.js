@@ -24,6 +24,7 @@ import { LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Setting
 import { ThemeEngine, getTheme, toggleTheme } from './utils/ThemeEngine';
 import { CurrencyEngine, getCurrency, toggleCurrency } from './utils/CurrencyEngine';
 import { getBusinessProfile } from './utils/BusinessEngine';
+import { initRealtimeSync } from './utils/RealtimeSync';
 import Auth from './components/Auth';
 import logoImg from './assets/logo.png';
 
@@ -49,6 +50,7 @@ function App() {
 
   useEffect(() => {
     ThemeEngine.initTheme();
+    initRealtimeSync();
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);

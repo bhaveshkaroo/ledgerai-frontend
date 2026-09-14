@@ -235,6 +235,33 @@ export const LedgerEngine = {
     }
   },
 
+  ingestIncomingTransaction(tx) {
+    if (!tx || !tx.account) return false;
+    const existingIndex = this.transactions.findIndex(t => t.id === tx.id || (t.ref === tx.ref && t.account === tx.account && t.type === tx.type));
+    if (existingIndex >= 0) {
+      return false; // Already ingested
+    }
+    const cleanAmount = Number(tx.amount) || 0;
+    const newTx = {
+      id: tx.id || `TX-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      date: tx.date || new Date().toISOString().split('T')[0],
+      account: tx.account,
+      amount: cleanAmount,
+      type: tx.type || 'Debit',
+      narration: tx.narration || '',
+      ref: tx.ref || `RZP-${Date.now()}`,
+      category: tx.category || 'Receipts',
+      createdAt: tx.createdAt || new Date().toISOString()
+    };
+    this.transactions.unshift(newTx);
+    this.transactions.sort((a, b) => {
+      const dateDiff = new Date(b.date) - new Date(a.date);
+      if (dateDiff !== 0) return dateDiff;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+    return true;
+  },
+
   reverseTransaction(targetRef, reason = 'Correction of error') {
     const legsToReverse = this.transactions.filter(t => t.ref === targetRef);
     if (legsToReverse.length === 0) return false;

@@ -1,0 +1,42 @@
+/* TransactionRow.css - Real-time slide-down and fall-down animation */
+
+@keyframes rowFallDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-28px) scale(0.98);
+    background-color: rgba(16, 185, 129, 0.45);
+  }
+  40% {
+    transform: translateY(4px);
+    background-color: rgba(16, 185, 129, 0.3);
+  }
+  70% {
+    transform: translateY(-1px);
+    background-color: rgba(16, 185, 129, 0.15);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    background-color: transparent;
+  }
+}
+
+.new-row {
+  animation: rowFallDown 1.2s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+.live-indicator-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulseLive 1.5s infinite;
+  margin-right: 6px;
+}
+
+@keyframes pulseLive {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
