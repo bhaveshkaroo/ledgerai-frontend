@@ -315,7 +315,7 @@ function App() {
             <FileBarChart className="icon" size={16} /> Final Accounts
           </div>
           <div className={`sidebar-item ${activeTab === 'gst-compliance' ? 'active' : ''}`} onClick={() => setActiveTab('gst-compliance')}>
-            <Scale className="icon" size={16} /> GST Compliance
+            <Scale className="icon" size={16} /> GST &amp; Statutory Hub
           </div>
           <div className={`sidebar-item ${activeTab === 'tds' ? 'active' : ''}`} onClick={() => setActiveTab('tds')}>
             <IndianRupee className="icon" size={16} /> TDS &amp; Withholding
