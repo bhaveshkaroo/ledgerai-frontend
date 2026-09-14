@@ -120,35 +120,52 @@ export function initRealtimeSync() {
   }
 
   // 3. BACKGROUND SYNC POLLER (Safety Net)
-  // Polls Supabase every 3.5s for any recently inserted transactions
+  // Polls Supabase every 2.0s for the newest 5 journal vouchers
   const pollRecent = async () => {
     try {
-      const isConfigured =
-        process.env.REACT_APP_SUPABASE_URL &&
-        !process.env.REACT_APP_SUPABASE_URL.includes('placeholder');
-      if (!isConfigured) return;
+      if (!supabase) return;
+      const { data: recentJvs, error } = await supabase
+        .from('journal_vouchers')
+        .select('id, ref, date, narration, category, created_at, transactions (id, account_name, amount, type)')
+        .order('created_at', { ascending: false })
+        .limit(5);
 
-      const loaded = await SupabaseRepository.loadTransactions();
-      if (loaded && loaded.length > 0) {
-        let hasNew = false;
-        loaded.forEach((tx) => {
-          const wasAdded = LedgerEngine.ingestIncomingTransaction(tx);
-          if (wasAdded) {
-            hasNew = true;
-            window.dispatchEvent(new CustomEvent('transaction-received', { detail: { ...tx, __new: true } }));
-          }
-        });
-        if (hasNew) {
-          console.log('[RealtimeSync] Poller discovered and ingested new transactions');
-          window.dispatchEvent(new Event('ledger-updated'));
+      if (error || !recentJvs || recentJvs.length === 0) return;
+
+      let hasNew = false;
+      recentJvs.forEach((jv) => {
+        if (jv.transactions && Array.isArray(jv.transactions)) {
+          jv.transactions.forEach((leg) => {
+            const tx = {
+              id: leg.id,
+              date: jv.date,
+              account: leg.account_name,
+              amount: Number(leg.amount),
+              type: leg.type,
+              narration: jv.narration,
+              ref: jv.ref,
+              category: jv.category,
+              createdAt: jv.created_at,
+              __new: true
+            };
+            const wasAdded = LedgerEngine.ingestIncomingTransaction(tx);
+            if (wasAdded) {
+              hasNew = true;
+              console.log('[RealtimeSync] Ingested live transaction:', tx.ref, tx.account, tx.amount);
+              window.dispatchEvent(new CustomEvent('transaction-received', { detail: tx }));
+            }
+          });
         }
+      });
+      if (hasNew) {
+        window.dispatchEvent(new Event('ledger-updated'));
       }
     } catch (pollErr) {
       // silent
     }
   };
 
-  pollingTimer = setInterval(pollRecent, 3500);
+  pollingTimer = setInterval(pollRecent, 2000);
 }
 
 /**
