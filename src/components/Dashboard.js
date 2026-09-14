@@ -41,41 +41,64 @@ const CustomBarTooltip = ({ active, payload, label }) => {
 const Dashboard = () => {
   const [period, setPeriod] = useState(LedgerEngine.getCurrentFiscalYear());
   const [selectedDeadline, setSelectedDeadline] = useState(null);
-  const [, setTick] = useState(0);
+
+  // ─── Stock-ticker reactive state ───────────────────────────────────
+  // All KPI values live in state. When ledger-updated fires (SSE/Supabase/Poller),
+  // we re-compute from LedgerEngine and setState, which lets AnimatedNumber detect
+  // old→new transitions and animate smoothly — no page refresh needed.
+  const computeKPIs = (p) => {
+    const kpis = LedgerEngine.calcKPIs(p);
+    const is = LedgerEngine.calcIncomeStatement(p);
+    const dateRange = LedgerEngine.getPeriodDateRange(p);
+    return {
+      kpis,
+      is,
+      dateRange,
+      cashBalance: Math.round(LedgerEngine.getAccountBalance('Cash and Bank', dateRange.end)),
+      accountsReceivable: Math.round(LedgerEngine.getAccountBalance('Accounts Receivable')),
+      accountsPayable: Math.round(LedgerEngine.getAccountBalance('Accounts Payable')),
+      inventory: Math.round(LedgerEngine.getAccountBalance('Inventory')),
+      bankLoan: Math.round(LedgerEngine.getAccountBalance('Bank Loan')),
+      taxPayable: Math.round(LedgerEngine.getAccountBalance('Tax Payable')),
+    };
+  };
+
+  const [kpiState, setKpiState] = useState(() => computeKPIs(period));
 
   useEffect(() => {
-    const handleUpdate = () => setTick(t => t + 1);
-    window.addEventListener('ledger-updated', handleUpdate);
-    window.addEventListener('currency-changed', handleUpdate);
+    // Re-compute KPIs reactively — like a stock ticker price feed
+    const refresh = () => setKpiState(computeKPIs(period));
+    window.addEventListener('ledger-updated', refresh);
+    window.addEventListener('currency-changed', refresh);
     return () => {
-      window.removeEventListener('ledger-updated', handleUpdate);
-      window.removeEventListener('currency-changed', handleUpdate);
+      window.removeEventListener('ledger-updated', refresh);
+      window.removeEventListener('currency-changed', refresh);
     };
-  }, []);
-  const kpis = LedgerEngine.calcKPIs(period);
-  const is = LedgerEngine.calcIncomeStatement(period);
+  }, [period]);
 
-  const dateRange = LedgerEngine.getPeriodDateRange(period);
+  // When period changes, recompute immediately
+  useEffect(() => {
+    setKpiState(computeKPIs(period));
+  }, [period]);
+
+  // Destructure from state
+  const { kpis, dateRange, cashBalance, accountsReceivable, accountsPayable, inventory, bankLoan, taxPayable } = kpiState;
+
   const startD = new Date(dateRange.start);
   const endD = new Date(dateRange.end);
   const monthCount = (endD.getFullYear() - startD.getFullYear()) * 12 + endD.getMonth() - startD.getMonth() + 1;
   const totalOperatingDays = Math.max(365, monthCount * 30.4167);
 
-  // Extract real financial data scoped to period
-  const cashBalance = LedgerEngine.getAccountBalance('Cash and Bank', dateRange.end);
   const totalRevenue = kpis.totalRevenue;
   const totalExpenses = kpis.totalExpenses;
   const netProfit = kpis.netProfit;
-  const cogs = LedgerEngine.getAccountBalance('Cost of Goods Sold', dateRange.end, dateRange.start);
+  const cogs = Math.round(LedgerEngine.getAccountBalance('Cost of Goods Sold', dateRange.end, dateRange.start));
   const grossProfit = totalRevenue - cogs;
   const grossMargin = totalRevenue > 0 ? ((grossProfit / totalRevenue) * 100).toFixed(1) : 0;
   const netMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0;
 
-  const accountsReceivable = LedgerEngine.getAccountBalance('Accounts Receivable');
-  const accountsPayable = LedgerEngine.getAccountBalance('Accounts Payable');
-  const inventory = LedgerEngine.getAccountBalance('Inventory');
-  const bankLoan = LedgerEngine.getAccountBalance('Bank Loan');
-  const taxPayable = LedgerEngine.getAccountBalance('Tax Payable');
+
+
 
   // Current Ratio
   const currentAssets = cashBalance + accountsReceivable + inventory;
@@ -219,12 +242,12 @@ const Dashboard = () => {
   ];
 
   // Comprehensive period-scoped expense breakdown
-  const salaryExp = LedgerEngine.getAccountBalance('Salary Expense', dateRange.end, dateRange.start);
-  const rentExp = LedgerEngine.getAccountBalance('Rent Expense', dateRange.end, dateRange.start);
-  const depExp = LedgerEngine.getAccountBalance('Depreciation Expense', dateRange.end, dateRange.start);
-  const finExp = LedgerEngine.getAccountBalance('Finance Cost', dateRange.end, dateRange.start);
-  const otherExp = LedgerEngine.getAccountBalance('Other Expenses', dateRange.end, dateRange.start) + LedgerEngine.getAccountBalance('Bank Charges', dateRange.end, dateRange.start);
-  const taxExp = LedgerEngine.getAccountBalance('Tax Expense', dateRange.end, dateRange.start);
+  const salaryExp = Math.round(LedgerEngine.getAccountBalance('Salary Expense', dateRange.end, dateRange.start));
+  const rentExp = Math.round(LedgerEngine.getAccountBalance('Rent Expense', dateRange.end, dateRange.start));
+  const depExp = Math.round(LedgerEngine.getAccountBalance('Depreciation Expense', dateRange.end, dateRange.start));
+  const finExp = Math.round(LedgerEngine.getAccountBalance('Finance Cost', dateRange.end, dateRange.start));
+  const otherExp = Math.round(LedgerEngine.getAccountBalance('Other Expenses', dateRange.end, dateRange.start) + LedgerEngine.getAccountBalance('Bank Charges', dateRange.end, dateRange.start));
+  const taxExp = Math.round(LedgerEngine.getAccountBalance('Tax Expense', dateRange.end, dateRange.start));
 
   const rawExpenseItems = [
     { name: 'COGS', value: cogs, color: '#f97316' },

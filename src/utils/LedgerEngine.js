@@ -398,7 +398,7 @@ export const LedgerEngine = {
         }
       }
     });
-    return balance;
+    return Math.round(balance);
   },
 
   /**
@@ -520,24 +520,24 @@ export const LedgerEngine = {
 
   calcKPIs(period = 'Full Year') {
     const { start, end } = this.getPeriodDateRange(period);
-    const rev = this.getAccountBalance('Sales Revenue', end, start);
-    const otherInc = this.getAccountBalance('Other Income', end, start);
+    const rev = Math.round(this.getAccountBalance('Sales Revenue', end, start));
+    const otherInc = Math.round(this.getAccountBalance('Other Income', end, start));
     const totalRevenue = rev + otherInc;
 
-    const cogs = this.getAccountBalance('Cost of Goods Sold', end, start);
-    const salaries = this.getAccountBalance('Salary Expense', end, start);
-    const rent = this.getAccountBalance('Rent Expense', end, start);
-    const otherExp = this.getAccountBalance('Other Expenses', end, start);
-    const bankChg = this.getAccountBalance('Bank Charges', end, start);
-    const dep = this.getAccountBalance('Depreciation Expense', end, start);
-    const finCost = this.getAccountBalance('Finance Cost', end, start);
-    const taxExp = this.getAccountBalance('Tax Expense', end, start);
+    const cogs = Math.round(this.getAccountBalance('Cost of Goods Sold', end, start));
+    const salaries = Math.round(this.getAccountBalance('Salary Expense', end, start));
+    const rent = Math.round(this.getAccountBalance('Rent Expense', end, start));
+    const otherExp = Math.round(this.getAccountBalance('Other Expenses', end, start));
+    const bankChg = Math.round(this.getAccountBalance('Bank Charges', end, start));
+    const dep = Math.round(this.getAccountBalance('Depreciation Expense', end, start));
+    const finCost = Math.round(this.getAccountBalance('Finance Cost', end, start));
+    const taxExp = Math.round(this.getAccountBalance('Tax Expense', end, start));
 
     const operatingExpenses = cogs + salaries + rent + otherExp + bankChg + dep + finCost;
     const totalExpenses = operatingExpenses + taxExp;
     const pbt = totalRevenue - operatingExpenses;
     const netProfit = totalRevenue - totalExpenses;
-    const cashBalance = this.getAccountBalance('Cash and Bank', end);
+    const cashBalance = Math.round(this.getAccountBalance('Cash and Bank', end));
 
     return {
       totalRevenue,

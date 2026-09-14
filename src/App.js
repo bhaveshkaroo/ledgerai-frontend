@@ -167,7 +167,7 @@ function App() {
 
   const renderContent = () => {
     switch(activeTab) {
-      case 'dashboard': return <Dashboard key={ledgerVersion} />;
+      case 'dashboard': return <Dashboard />;
       case 'transactions': return <TransactionList key={ledgerVersion} period={currentFY} />;
       case 'invoicing': return <Invoicing key={ledgerVersion} period={currentFY} />;
       case 'inventory': return <Inventory key={ledgerVersion} period={currentFY} />;
