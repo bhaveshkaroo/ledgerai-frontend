@@ -25,22 +25,24 @@ const IncomeStatement = ({ period }) => {
             {data.map((row, idx) => (
               <tr key={idx} style={{ 
                 borderBottom: row.isTotal ? '2px solid var(--border)' : '1px solid var(--border-light)',
-                backgroundColor: row.isSummary && !row.isTotal ? 'var(--bg-surface)' : 'transparent'
+                backgroundColor: row.isSummary && !row.isTotal ? 'var(--bg-surface)' : 'transparent',
+                lineHeight: 'var(--lh-relaxed)'
               }} className={!row.isSummary ? "table-row-hover" : ""}>
                 <td style={{ 
-                  padding: `14px 24px 14px ${24 + (row.level * 24)}px`,
-                  fontWeight: row.isSummary || row.isTotal ? 600 : 500,
+                  padding: `16px 24px 16px ${24 + (row.level * 24)}px`,
+                  fontWeight: row.isSummary || row.isTotal ? 600 : 400,
                   color: row.isSummary ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  fontSize: '13px'
+                  fontSize: row.isTotal ? '15px' : '14px'
                 }}>
                   {row.name}
                 </td>
                 <td style={{ 
-                  padding: '14px 24px',
+                  padding: '16px 24px',
                   textAlign: 'right',
                   fontFamily: 'var(--font-mono)',
                   fontWeight: row.isSummary || row.isTotal ? 700 : 500,
-                  fontSize: row.isTotal ? '14px' : '13px'
+                  fontSize: row.isTotal ? '15px' : '14px',
+                  color: row.isTotal ? 'var(--text-primary)' : 'var(--text-secondary)'
                 }}>
                   {row.value !== null && row.value !== undefined ? formatINR(row.value) : ''}
                 </td>

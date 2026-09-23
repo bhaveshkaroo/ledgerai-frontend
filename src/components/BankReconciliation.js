@@ -84,49 +84,41 @@ function BankReconciliation() {
   };
 
   return (
-    <div className="tab-content" style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="tab-content" style={{ maxWidth: '1200px', margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+      <div className="section-header" style={{ marginBottom: 'var(--sp-6)' }}>
         <div>
-          <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Bank Reconciliation Statement (BRS)</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+          <h1 className="section-title">Bank Reconciliation Statement (BRS)</h1>
+          <p className="section-subtitle">
             Reconciliation as at {availableMonths.find(m => m.value === asOfDate)?.label || asOfDate} &middot; AS 3 / Cash &amp; Bank
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center' }}>
           <select
             value={asOfDate}
             onChange={(e) => handleMonthChange(e.target.value)}
-            style={{
-              padding: '7px 12px',
-              borderRadius: '6px',
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border)',
-              color: 'var(--text-primary)',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
+            className="settings-select"
+            style={{ minWidth: 'auto' }}
           >
             {availableMonths.map(m => (
               <option key={m.value} value={m.value}>{m.label}</option>
             ))}
           </select>
           <button 
-            className="sidebar-btn" 
-            style={{ width: 'auto', padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            className="settings-btn"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             onClick={() => {
               setBankEntries(BRSEngine.getSampleBankStatement(asOfDate));
               setFeedbackMsg({ type: 'success', text: `Loaded fresh sample bank statement for ${availableMonths.find(m => m.value === asOfDate)?.label || asOfDate}.` });
               setTimeout(() => setFeedbackMsg(null), 3000);
             }}
           >
-            <RefreshCw size={14} /> Reset
+            <RefreshCw size={13} /> Reset
           </button>
           <button 
-            className="action-btn" 
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', background: 'var(--text-primary)', color: 'var(--bg-card)', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+            className="btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             onClick={() => setShowPasteModal(true)}
           >
             <Upload size={14} /> Upload / Paste CSV
@@ -136,16 +128,16 @@ function BankReconciliation() {
 
       {feedbackMsg && (
         <div style={{
-          padding: '12px 16px',
-          borderRadius: '8px',
-          marginBottom: '16px',
-          fontSize: '13px',
+          padding: 'var(--sp-3) var(--sp-4)',
+          borderRadius: 'var(--radius-md)',
+          marginBottom: 'var(--sp-5)',
+          fontSize: 'var(--fs-sm)',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          background: feedbackMsg.type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-          color: feedbackMsg.type === 'success' ? '#10b981' : '#ef4444',
-          border: `1px solid ${feedbackMsg.type === 'success' ? '#10b981' : '#ef4444'}`
+          gap: 'var(--sp-2)',
+          background: feedbackMsg.type === 'success' ? 'var(--color-positive-bg)' : 'var(--color-negative-bg)',
+          color: feedbackMsg.type === 'success' ? 'var(--color-positive)' : 'var(--color-negative)',
+          border: `1px solid ${feedbackMsg.type === 'success' ? 'var(--color-positive-border)' : 'var(--color-negative-border)'}`
         }}>
           {feedbackMsg.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
           {feedbackMsg.text}
@@ -153,28 +145,29 @@ function BankReconciliation() {
       )}
 
       {/* Summary KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <div className="card" style={{ padding: '20px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Bank Statement Balance</div>
-          <div style={{ fontSize: '24px', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{formatINR(balances.bankBalance)}</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>As per Bank Feed / Statement</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--sp-4)', marginBottom: 'var(--sp-6)' }}>
+        <div className="kpi-standard">
+          <span className="kpi-standard-label">Bank Statement Balance</span>
+          <div className="kpi-standard-value">{formatINR(balances.bankBalance)}</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>As per Bank Feed / Statement</div>
         </div>
 
-        <div className="card" style={{ padding: '20px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Cash &amp; Bank Book Balance</div>
-          <div style={{ fontSize: '24px', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{formatINR(balances.bookBalance)}</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>As per General Ledger</div>
+        <div className="kpi-standard">
+          <span className="kpi-standard-label">Cash &amp; Bank Book Balance</span>
+          <div className="kpi-standard-value">{formatINR(balances.bookBalance)}</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>As per General Ledger</div>
         </div>
 
-        <div className="card" style={{ padding: '20px', background: balances.isReconciled ? 'rgba(16,185,129,0.05)' : 'rgba(239,68,68,0.05)' }}>
-          <div style={{ fontSize: '11px', color: balances.isReconciled ? '#10b981' : '#ef4444', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {balances.isReconciled ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+        <div className={`kpi-standard ${balances.isReconciled ? '' : 'negative'}`} style={{
+          borderLeft: `3px solid ${balances.isReconciled ? 'var(--color-positive)' : 'var(--color-negative)'}`
+        }}>
+          <span className="kpi-standard-label" style={{ color: balances.isReconciled ? 'var(--color-positive)' : 'var(--color-negative)' }}>
             {balances.isReconciled ? 'Reconciled Adjusted Balance' : 'Unreconciled Variance'}
-          </div>
-          <div style={{ fontSize: '24px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: balances.isReconciled ? '#10b981' : '#ef4444' }}>
+          </span>
+          <div className="kpi-standard-value" style={{ color: balances.isReconciled ? 'var(--color-positive)' : 'var(--color-negative)' }}>
             {formatINR(balances.adjustedBankBalance)}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>
             {balances.isReconciled ? 'Difference: ₹0 (Perfect Equilibrium)' : `Discrepancy: ${formatINR(balances.difference)}`}
           </div>
         </div>

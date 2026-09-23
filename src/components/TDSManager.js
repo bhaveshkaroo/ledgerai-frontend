@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { TDSEngine, TDS_SECTIONS } from '../utils/TDSEngine';
 import { formatINR } from '../utils/LedgerEngine';
+import { isSampleCompanyActive } from '../utils/BusinessEngine';
 import { Receipt, FileText, Calculator, Download, Plus, CheckCircle, AlertTriangle, Calendar, IndianRupee, ShieldAlert, RefreshCw } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL?.replace(/\/+$/, '') || 'https://ledgerai-backend-7jei.onrender.com';
@@ -63,6 +64,21 @@ const TDSManager = () => {
         throw new Error('Audit API offline');
       }
     } catch (_) {
+      if (!isSampleCompanyActive()) {
+        setAuditData({
+          summary: {
+            financial_year: '2026-27',
+            total_audited_expense: 0.0,
+            disallowed_expense_amount: 0.0,
+            projected_tax_penalty: 0.0,
+            pending_challan_deposit: 0.0,
+            compliance_health_pct: 100.0,
+            defaults_count: 0
+          },
+          records: []
+        });
+        return;
+      }
       setAuditData({
         summary: {
           financial_year: '2026-27',
@@ -187,7 +203,7 @@ const TDSManager = () => {
 
   const subTabs = [
     { id: 'register', label: 'TDS Register', icon: Receipt },
-    { id: 'audit-40a', label: '⚠️ Sec 40(a)(ia) Audit', icon: ShieldAlert },
+    { id: 'audit-40a', label: 'Sec 40(a)(ia) Audit', icon: ShieldAlert },
     { id: 'new-deduction', label: 'New Deduction', icon: Plus },
     { id: 'challan', label: 'Challan 281', icon: FileText },
     { id: 'form26q', label: 'Form 26Q', icon: Calculator }
@@ -202,27 +218,26 @@ const TDSManager = () => {
   const totalTDSDeducted = register.filter(t => t.type === 'Credit' && (t.account || '').toLowerCase().includes('tax payable')).reduce((s, t) => s + t.amount, 0);
 
   return (
-    <div style={{ padding: '28px', maxWidth: '1200px' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="section-header" style={{ marginBottom: 'var(--sp-6)', flexWrap: 'wrap', gap: 'var(--sp-3)' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary, #111827)', margin: 0 }}>
-            <IndianRupee size={20} style={{ verticalAlign: 'middle', marginRight: '8px', color: '#10b981' }} />
+          <h1 className="section-title">
             TDS &amp; Withholding Tax (Chapter XVII-B)
           </h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted, #6b7280)', marginTop: '4px' }}>
+          <p className="section-subtitle">
             Statutory TDS Deduction Engine, Challan 281 Monthly Dues &amp; Section 40(a)(ia) 30% Disallowance Audit
           </p>
         </div>
 
         <div style={{
-          padding: '8px 16px', borderRadius: '10px', background: 'rgba(239,68,68,0.08)',
-          border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', gap: '10px'
+          padding: 'var(--sp-2) var(--sp-4)', borderRadius: 'var(--radius-md)', background: 'var(--color-warning-bg)',
+          border: '1px solid var(--color-warning-border)', display: 'flex', alignItems: 'center', gap: 'var(--sp-2)'
         }}>
-          <Calendar size={16} color="#ef4444" />
+          <Calendar size={15} color="var(--color-warning)" />
           <div>
-            <div style={{ fontSize: '10px', color: '#ef4444', fontWeight: 700, textTransform: 'uppercase' }}>Next Challan 281 Deadline</div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>7th October 2026 (Monthly Dues)</div>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', fontWeight: 700, textTransform: 'uppercase' }}>Next Challan 281 Deadline</div>
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>7th October 2026 (Monthly Dues)</div>
           </div>
         </div>
       </div>
@@ -230,29 +245,27 @@ const TDSManager = () => {
       {/* Toast */}
       {toast && (
         <div style={{
-          padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px',
-          background: toast.type === 'success' ? '#ecfdf5' : '#fef2f2',
-          color: toast.type === 'success' ? '#065f46' : '#991b1b',
-          border: `1px solid ${toast.type === 'success' ? '#a7f3d0' : '#fecaca'}`
+          padding: 'var(--sp-3) var(--sp-4)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--sp-4)', display: 'flex', alignItems: 'center', gap: 'var(--sp-2)',
+          background: toast.type === 'success' ? 'var(--color-positive-bg)' : 'var(--color-negative-bg)',
+          color: toast.type === 'success' ? 'var(--color-positive)' : 'var(--color-negative)',
+          border: `1px solid ${toast.type === 'success' ? 'var(--color-positive-border)' : 'var(--color-negative-border)'}`
         }}>
           {toast.type === 'success' ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
-          <span style={{ fontSize: '13px', fontWeight: 500 }}>{toast.message}</span>
+          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 500 }}>{toast.message}</span>
         </div>
       )}
 
       {/* Sub-tabs */}
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'var(--bg-secondary, #f3f4f6)', padding: '4px', borderRadius: '10px', overflowX: 'auto' }}>
+      <div className="tab-switcher" style={{ marginBottom: 'var(--sp-6)', overflowX: 'auto', width: 'fit-content' }}>
         {subTabs.map(tab => {
           const Icon = tab.icon;
           return (
-            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} style={{
-              flex: 1, padding: '10px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-              fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-              background: activeSubTab === tab.id ? 'white' : 'transparent',
-              color: activeSubTab === tab.id ? '#06402b' : 'var(--text-muted, #6b7280)',
-              boxShadow: activeSubTab === tab.id ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-              transition: 'all 0.2s ease', whiteSpace: 'nowrap'
-            }}>
+            <button 
+              key={tab.id} 
+              onClick={() => setActiveSubTab(tab.id)} 
+              className={`tab-switcher-item ${activeSubTab === tab.id ? 'active' : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
               <Icon size={14} /> {tab.label}
             </button>
           );

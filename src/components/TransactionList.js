@@ -144,19 +144,23 @@ function DayBookTab({ period }) {
   return (
     <>
       {saveError && (
-        <div style={{ padding: '12px 16px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>⚠️ {saveError}</span>
-          <button onClick={() => setSaveError(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 600 }}>✕</button>
+        <div style={{ padding: 'var(--sp-3) var(--sp-4)', background: 'var(--color-negative-bg)', color: 'var(--color-negative)', border: '1px solid var(--color-negative-border)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--sp-4)', fontSize: 'var(--fs-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+            <X size={15} />
+            <span>{saveError}</span>
+          </div>
+          <button onClick={() => setSaveError(null)} style={{ background: 'none', border: 'none', color: 'var(--color-negative)', cursor: 'pointer', fontWeight: 600 }}>✕</button>
         </div>
       )}
 
       {/* Toolbar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-5)', flexWrap: 'wrap', gap: 'var(--sp-3)' }}>
+        <div style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center', flexWrap: 'wrap' }}>
           <select
             value={selectedPeriod}
             onChange={(e) => { setSelectedPeriod(e.target.value); setSelectedDate(''); setPage(1); }}
-            style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, outline: 'none' }}
+            className="settings-select"
+            style={{ minWidth: 'auto' }}
           >
             <option value="Full Year">All 3 Years</option>
             <option value="FY 2024-25">FY 2024-25</option>
@@ -164,8 +168,8 @@ function DayBookTab({ period }) {
             <option value={LedgerEngine.getCurrentFiscalYear()}>{LedgerEngine.getCurrentFiscalYear()} (Current)</option>
           </select>
 
-          {/* Calendar Date-Jump Navigation (Part B2) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '3px 8px' }}>
+          {/* Calendar Date-Jump Navigation */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '5px 10px' }}>
             <Calendar size={14} style={{ color: selectedDate ? 'var(--text-primary)' : 'var(--text-muted)' }} />
             <input
               type="date"
@@ -176,7 +180,7 @@ function DayBookTab({ period }) {
                 background: 'transparent',
                 border: 'none',
                 color: 'var(--text-primary)',
-                fontSize: '12px',
+                fontSize: 'var(--fs-xs)',
                 fontWeight: 500,
                 outline: 'none',
                 fontFamily: 'var(--font-sans)',
@@ -196,7 +200,7 @@ function DayBookTab({ period }) {
                   padding: '2px',
                   display: 'flex',
                   alignItems: 'center',
-                  borderRadius: '4px'
+                  borderRadius: 'var(--radius-xs)'
                 }}
               >
                 <X size={13} />
@@ -205,43 +209,48 @@ function DayBookTab({ period }) {
           </div>
 
           <div style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 4px' }}></div>
-          {['All', 'Revenue', 'Expenses'].map(f => (
-            <button
-              key={f}
-              onClick={() => { setActiveFilter(f); setPage(1); }}
-              className={`sidebar-btn ${activeFilter === f ? 'active' : ''}`}
-              style={{ width: 'auto', background: activeFilter === f ? 'var(--bg-surface)' : 'transparent', padding: '4px 12px' }}
-            >
-              {f}
-            </button>
-          ))}
+          <div className="tab-switcher" style={{ padding: '2px' }}>
+            {['All', 'Revenue', 'Expenses'].map(f => (
+              <button
+                key={f}
+                onClick={() => { setActiveFilter(f); setPage(1); }}
+                className={`tab-switcher-item ${activeFilter === f ? 'active' : ''}`}
+                style={{ padding: '4px 10px', fontSize: 'var(--fs-xs)' }}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div className="command-bar-trigger" style={{ width: '220px' }}>
-            <Search size={14} />
+        <div style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center' }}>
+          <div style={{ 
+            display: 'flex', alignItems: 'center', gap: '8px', 
+            background: 'var(--bg-surface)', border: '1px solid var(--border)', 
+            borderRadius: 'var(--radius-md)', padding: '6px 12px', width: '220px' 
+          }}>
+            <Search size={14} color="var(--text-muted)" />
             <input
               type="text"
               placeholder="Filter transactions..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', width: '100%' }}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: 'var(--fs-sm)', outline: 'none', width: '100%' }}
             />
           </div>
           <button
-            className="action-btn"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'var(--text-primary)', color: 'var(--bg-card)', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+            className="btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--fs-xs)' }}
             onClick={() => setIsEntryModalOpen(true)}
           >
             <Plus size={14} /> New Entry
           </button>
           <button
-            className="sidebar-btn"
-            style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px' }}
+            className="topbar-icon-btn"
             onClick={handleExportDayBookPDF}
             title="Export Day Book as statutory PDF"
           >
-            <Download size={16} />
+            <Download size={15} />
           </button>
         </div>
       </div>
@@ -311,14 +320,14 @@ function DayBookTab({ period }) {
                   </td>
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div className={`status-dot ${t.type === 'Credit' ? 'emerald' : ''}`} style={{ background: t.type === 'Credit' ? '#34c759' : '#e5e5e7', width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0 }}></div>
+                      <div className={`status-dot ${t.type === 'Credit' ? 'emerald' : ''}`} style={{ background: t.type === 'Credit' ? 'var(--color-positive)' : '#e5e5e7', width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0 }}></div>
                       <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{t.category}</span>
                     </div>
                   </td>
                   <td style={{ padding: '14px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600 }}>
                     {t.type === 'Debit' ? formatINR(t.amount) : ''}
                   </td>
-                  <td style={{ padding: '14px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: '#34c759' }}>
+                  <td style={{ padding: '14px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: 'var(--color-positive)' }}>
                     {t.type === 'Credit' ? formatINR(t.amount) : ''}
                   </td>
                 </tr>
@@ -334,7 +343,7 @@ function DayBookTab({ period }) {
               <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
                 <AnimatedNumber value={totals.dr} format={formatINR} />
               </td>
-              <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: '#34c759' }}>
+              <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--color-positive)' }}>
                 <AnimatedNumber value={totals.cr} format={formatINR} />
               </td>
             </tr>
@@ -563,33 +572,34 @@ function GeneralLedgerBookTab({ period }) {
         </div>
 
         <button
-          className="sidebar-btn"
-          style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', fontWeight: 600, fontSize: '12px' }}
+          className="topbar-icon-btn"
+          style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '6px', padding: '0 12px', fontSize: 'var(--fs-xs)', fontWeight: 600 }}
           onClick={handleExportLedgerPDF}
           title="Export Ledger Book as statutory PDF"
         >
-          <Download size={14} /> Export Ledger PDF
+          <Download size={14} /> <span>Export Ledger PDF</span>
         </button>
       </div>
 
       {/* KPI Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <div className="card" style={{ padding: '18px 20px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Total Debits ({kpis.label})</div>
-          <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}><AnimatedNumber value={kpis.totalDebits} format={formatINR} /></div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--sp-4)', marginBottom: 'var(--sp-6)' }}>
+        <div className="kpi-standard">
+          <span className="kpi-standard-label">Total Debits ({kpis.label})</span>
+          <div className="kpi-standard-value"><AnimatedNumber value={kpis.totalDebits} format={formatINR} /></div>
         </div>
-        <div className="card" style={{ padding: '18px 20px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Total Credits ({kpis.label})</div>
-          <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#34c759' }}><AnimatedNumber value={kpis.totalCredits} format={formatINR} /></div>
+        <div className="kpi-standard">
+          <span className="kpi-standard-label">Total Credits ({kpis.label})</span>
+          <div className="kpi-standard-value" style={{ color: 'var(--color-positive)' }}><AnimatedNumber value={kpis.totalCredits} format={formatINR} /></div>
         </div>
-        <div className="card" style={{ padding: '18px 20px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Net Current Balance</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}><AnimatedNumber value={Math.abs(kpis.netBalance)} format={formatINR} /></span>
+        <div className="kpi-standard">
+          <span className="kpi-standard-label">Net Current Balance</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+            <span className="kpi-standard-value"><AnimatedNumber value={Math.abs(kpis.netBalance)} format={formatINR} /></span>
             <span style={{
-              fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '6px',
-              background: kpis.balanceType === 'Dr.' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-              color: kpis.balanceType === 'Dr.' ? '#3b82f6' : '#10b981'
+              fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-xs)',
+              background: kpis.balanceType === 'Dr.' ? 'var(--color-info-bg)' : 'var(--color-positive-bg)',
+              color: kpis.balanceType === 'Dr.' ? 'var(--color-info)' : 'var(--color-positive)',
+              border: `1px solid ${kpis.balanceType === 'Dr.' ? 'var(--color-info-border)' : 'var(--color-positive-border)'}`
             }}>
               {kpis.balanceType}
             </span>
@@ -660,7 +670,7 @@ function FYLedgerTable({ fy, fyIdx }) {
             <td style={{ padding: '10px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600 }}>
               {fy.openingBalance > 0 && fy.isDebitNormal ? formatINR(fy.openingBalance) : ''}
             </td>
-            <td style={{ padding: '10px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: '#34c759' }}>
+            <td style={{ padding: '10px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: 'var(--color-positive)' }}>
               {fy.openingBalance > 0 && !fy.isDebitNormal ? formatINR(fy.openingBalance) : ''}
             </td>
             <td style={{ padding: '10px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700 }}>
@@ -686,7 +696,7 @@ function FYLedgerTable({ fy, fyIdx }) {
               <td style={{ padding: '10px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600 }}>
                 {e.debit > 0 ? formatINR(e.debit) : ''}
               </td>
-              <td style={{ padding: '10px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: '#34c759' }}>
+              <td style={{ padding: '10px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: 'var(--color-positive)' }}>
                 {e.credit > 0 ? formatINR(e.credit) : ''}
               </td>
               <td style={{ padding: '10px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600 }}>
@@ -705,17 +715,17 @@ function FYLedgerTable({ fy, fyIdx }) {
             <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
               {formatINR(fy.totalDebits)}
             </td>
-            <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: '#34c759' }}>
+            <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--color-positive)' }}>
               {formatINR(fy.totalCredits)}
             </td>
             <td style={{ padding: '12px 16px', textAlign: 'right' }}></td>
           </tr>
-          <tr style={{ background: 'rgba(6, 64, 43, 0.04)', borderTop: '1px solid rgba(6, 64, 43, 0.12)' }}>
-            <td colSpan={3} style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: '#06402b' }}>
+          <tr style={{ background: 'var(--color-positive-bg)', borderTop: '1px solid var(--color-positive-border)' }}>
+            <td colSpan={3} style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: 'var(--color-positive)' }}>
               Closing Balance c/f
             </td>
             <td colSpan={2} style={{ padding: '12px 16px' }}></td>
-            <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: '#06402b' }}>
+            <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--color-positive)' }}>
               {formatINR(Math.abs(fy.closingBalance))} {fy.closingBalanceType}
             </td>
           </tr>
@@ -732,45 +742,22 @@ function TransactionList({ period }) {
   return (
     <div className="tab-content" style={{ maxWidth: '1200px', margin: '0 auto' }}>
       {/* Sub-Tab Navigation */}
-      <div style={{
-        display: 'flex',
-        gap: '4px',
-        marginBottom: '24px',
-        background: 'var(--bg-surface)',
-        padding: '4px',
-        borderRadius: '12px',
-        border: '1px solid var(--border)',
-        width: 'fit-content'
-      }}>
+      <div className="tab-switcher" style={{ marginBottom: 'var(--sp-6)', width: 'fit-content' }}>
         <button
+          className={`tab-switcher-item ${activeSubTab === 'daybook' ? 'active' : ''}`}
           onClick={() => setActiveSubTab('daybook')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '8px 20px', borderRadius: '9px', border: 'none', cursor: 'pointer',
-            fontSize: '13px', fontWeight: 600,
-            background: activeSubTab === 'daybook' ? 'var(--bg-card)' : 'transparent',
-            color: activeSubTab === 'daybook' ? 'var(--text-primary)' : 'var(--text-muted)',
-            boxShadow: activeSubTab === 'daybook' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-            transition: 'all 0.2s'
-          }}
+          style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}
         >
-          <Receipt size={15} />
-          Day Book (Daily Journal)
+          <Receipt size={14} />
+          <span>Day Book (Daily Journal)</span>
         </button>
         <button
+          className={`tab-switcher-item ${activeSubTab === 'ledger' ? 'active' : ''}`}
           onClick={() => setActiveSubTab('ledger')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '8px 20px', borderRadius: '9px', border: 'none', cursor: 'pointer',
-            fontSize: '13px', fontWeight: 600,
-            background: activeSubTab === 'ledger' ? 'var(--bg-card)' : 'transparent',
-            color: activeSubTab === 'ledger' ? 'var(--text-primary)' : 'var(--text-muted)',
-            boxShadow: activeSubTab === 'ledger' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-            transition: 'all 0.2s'
-          }}
+          style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}
         >
-          <BookOpen size={15} />
-          General Ledger Book
+          <BookOpen size={14} />
+          <span>General Ledger Book</span>
         </button>
       </div>
 

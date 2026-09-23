@@ -263,7 +263,7 @@ When answering:
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border)', marginBottom: '20px', paddingBottom: '2px' }}>
+      <div className="tab-switcher" style={{ marginBottom: 'var(--sp-6)', overflowX: 'auto', width: 'fit-content' }}>
         {[
           { id: 'ratios', label: 'CFA Financial Ratios', icon: Activity },
           { id: 'dupont', label: 'DuPont ROE Analysis', icon: PieChart },
@@ -277,22 +277,10 @@ When answering:
             <button
               key={tab.id}
               onClick={() => setActiveSubTab(tab.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 16px',
-                borderRadius: '8px 8px 0 0',
-                border: 'none',
-                borderBottom: isActive ? '2px solid var(--text-primary)' : '2px solid transparent',
-                background: isActive ? 'rgba(0,0,0,0.03)' : 'transparent',
-                color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
-                fontWeight: isActive ? 600 : 500,
-                fontSize: '13px',
-                cursor: 'pointer'
-              }}
+              className={`tab-switcher-item ${isActive ? 'active' : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
-              <Icon size={16} color={isActive ? 'var(--text-primary)' : 'var(--text-muted)'} />
+              <Icon size={14} />
               <span>{tab.label}</span>
             </button>
           );

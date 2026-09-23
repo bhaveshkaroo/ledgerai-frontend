@@ -9,22 +9,47 @@ export const GEMINI_MODELS = [
   'gemini-flash-latest'
 ];
 
-export function getGeminiApiKey() {
-  const raw = localStorage.getItem(STORAGE_KEY) || process.env.REACT_APP_GEMINI_API_KEY || '';
-  return raw.replace(/['"]/g, '').trim();
-}
-
-export function setGeminiApiKey(key) {
-  if (key && key.trim()) {
-    const cleaned = key.replace(/['"]/g, '').trim();
-    localStorage.setItem(STORAGE_KEY, cleaned);
-    window.dispatchEvent(new Event('meso-api-key-updated'));
+function getCompanyApiKeyStorageKey() {
+  try {
+    const activeId = localStorage.getItem('MESO_ACTIVE_COMPANY_ID') || 'apex-sample';
+    return `MESO_CO_${activeId}_GEMINI_KEY`;
+  } catch (_) {
+    return STORAGE_KEY;
   }
 }
 
+export function getGeminiApiKey() {
+  try {
+    const coKey = localStorage.getItem(getCompanyApiKeyStorageKey());
+    if (coKey !== null) return coKey.replace(/['"]/g, '').trim();
+    // Fallback only for sample company
+    const activeId = localStorage.getItem('MESO_ACTIVE_COMPANY_ID') || 'apex-sample';
+    if (activeId === 'apex-sample') {
+      const raw = localStorage.getItem(STORAGE_KEY) || process.env.REACT_APP_GEMINI_API_KEY || '';
+      return raw.replace(/['"]/g, '').trim();
+    }
+  } catch (_) {}
+  return '';
+}
+
+export function setGeminiApiKey(key) {
+  try {
+    const keyName = getCompanyApiKeyStorageKey();
+    if (key && key.trim()) {
+      const cleaned = key.replace(/['"]/g, '').trim();
+      localStorage.setItem(keyName, cleaned);
+    } else {
+      localStorage.removeItem(keyName);
+    }
+    window.dispatchEvent(new Event('meso-api-key-updated'));
+  } catch (_) {}
+}
+
 export function clearGeminiApiKey() {
-  localStorage.removeItem(STORAGE_KEY);
-  window.dispatchEvent(new Event('meso-api-key-updated'));
+  try {
+    localStorage.removeItem(getCompanyApiKeyStorageKey());
+    window.dispatchEvent(new Event('meso-api-key-updated'));
+  } catch (_) {}
 }
 
 export function hasGeminiApiKey() {

@@ -59,35 +59,35 @@ function Invoicing() {
   };
 
   return (
-    <div className="tab-content" style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="tab-content" style={{ maxWidth: '1200px', margin: '0 auto' }}>
       {/* Header & KPI cards */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+      <div className="section-header" style={{ marginBottom: 'var(--sp-6)' }}>
         <div>
-          <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Sales Invoicing</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Automated GST calculation &amp; double-entry posting</p>
+          <h1 className="section-title">Sales Invoicing</h1>
+          <p className="section-subtitle">Automated GST calculation &amp; double-entry posting</p>
         </div>
         
         <button 
-          className="action-btn" 
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'var(--text-primary)', color: 'var(--bg-card)', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
+          className="btn-primary" 
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           onClick={() => setIsModalOpen(true)}
         >
-          <Plus size={16} /> New Invoice
+          <Plus size={15} /> New Invoice
         </button>
       </div>
 
       {feedbackMsg && (
         <div style={{
-          padding: '12px 16px',
-          borderRadius: '8px',
-          marginBottom: '16px',
-          fontSize: '13px',
+          padding: 'var(--sp-3) var(--sp-4)',
+          borderRadius: 'var(--radius-md)',
+          marginBottom: 'var(--sp-5)',
+          fontSize: 'var(--fs-sm)',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          background: feedbackMsg.type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-          color: feedbackMsg.type === 'success' ? '#10b981' : '#ef4444',
-          border: `1px solid ${feedbackMsg.type === 'success' ? '#10b981' : '#ef4444'}`
+          gap: 'var(--sp-2)',
+          background: feedbackMsg.type === 'success' ? 'var(--color-positive-bg)' : 'var(--color-negative-bg)',
+          color: feedbackMsg.type === 'success' ? 'var(--color-positive)' : 'var(--color-negative)',
+          border: `1px solid ${feedbackMsg.type === 'success' ? 'var(--color-positive-border)' : 'var(--color-negative-border)'}`
         }}>
           {feedbackMsg.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
           {feedbackMsg.text}
@@ -95,60 +95,67 @@ function Invoicing() {
       )}
 
       {/* Summary KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <div className="card" style={{ padding: '20px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Total Invoiced (Gross)</div>
-          <div style={{ fontSize: '22px', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{formatINR(totalInvoiced)}</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>Includes Base + GST</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--sp-4)', marginBottom: 'var(--sp-6)' }}>
+        <div className="kpi-standard">
+          <span className="kpi-standard-label">Total Invoiced (Gross)</span>
+          <div className="kpi-standard-value">{formatINR(totalInvoiced)}</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>Includes Base + GST</div>
         </div>
-        <div className="card" style={{ padding: '20px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Output GST Collected</div>
-          <div style={{ fontSize: '22px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#3b82f6' }}>{formatINR(totalTax)}</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>CGST / SGST / IGST Output</div>
+        <div className="kpi-standard">
+          <span className="kpi-standard-label">Output GST Collected</span>
+          <div className="kpi-standard-value" style={{ color: 'var(--color-info)' }}>{formatINR(totalTax)}</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>CGST / SGST / IGST Output</div>
         </div>
-        <div className="card" style={{ padding: '20px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Finalized Invoices</div>
-          <div style={{ fontSize: '22px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#10b981' }}>
-            {filteredInvoices.filter(i => i.status === 'Finalized').length} <span style={{ fontSize: '13px', fontWeight: 400, color: 'var(--text-muted)' }}>/ {filteredInvoices.length} Filtered ({invoices.length} Total)</span>
+        <div className="kpi-standard">
+          <span className="kpi-standard-label">Finalized Invoices</span>
+          <div className="kpi-standard-value" style={{ color: 'var(--color-positive)' }}>
+            {filteredInvoices.filter(i => i.status === 'Finalized').length} <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 400, color: 'var(--text-muted)' }}>/ {filteredInvoices.length} Filtered</span>
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>Posted to Ledger &amp; AR</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>Posted to Ledger &amp; AR</div>
         </div>
       </div>
 
       {/* Toolbar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-5)', flexWrap: 'wrap', gap: 'var(--sp-3)' }}>
+        <div style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center' }}>
           <select 
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, outline: 'none' }}
+            className="settings-select"
+            style={{ minWidth: 'auto' }}
           >
             <option value="Full Year">All 3 Years</option>
             <option value="FY 2024-25">FY 2024-25</option>
             <option value="FY 2025-26">FY 2025-26</option>
             <option value={LedgerEngine.getCurrentFiscalYear()}>{LedgerEngine.getCurrentFiscalYear()} (Current)</option>
           </select>
-          <div style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 8px' }}></div>
-          {['All', 'Finalized', 'Draft', 'Void'].map(status => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`sidebar-btn ${statusFilter === status ? 'active' : ''}`}
-              style={{ width: 'auto', background: statusFilter === status ? 'var(--bg-surface)' : 'transparent', padding: '4px 12px', fontSize: '12px' }}
-            >
-              {status}
-            </button>
-          ))}
+          <div style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 4px' }}></div>
+          <div className="tab-switcher" style={{ padding: '2px' }}>
+            {['All', 'Finalized', 'Draft', 'Void'].map(status => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`tab-switcher-item ${statusFilter === status ? 'active' : ''}`}
+                style={{ padding: '4px 10px', fontSize: 'var(--fs-xs)' }}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="command-bar-trigger" style={{ width: '260px' }}>
-          <Search size={14} />
+        <div style={{ 
+          display: 'flex', alignItems: 'center', gap: '8px', 
+          background: 'var(--bg-surface)', border: '1px solid var(--border)', 
+          borderRadius: 'var(--radius-md)', padding: '6px 12px', width: '260px' 
+        }}>
+          <Search size={14} color="var(--text-muted)" />
           <input 
             type="text" 
             placeholder="Search invoice or customer..." 
             value={searchTerm} 
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', width: '100%' }}
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: 'var(--fs-sm)', outline: 'none', width: '100%' }}
           />
         </div>
       </div>
@@ -202,12 +209,13 @@ function Invoicing() {
                   <td style={{ padding: '14px 20px', textAlign: 'center' }}>
                     <span style={{
                       display: 'inline-block',
-                      padding: '3px 10px',
-                      borderRadius: '12px',
-                      fontSize: '11px',
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-xs)',
+                      fontSize: 'var(--fs-xs)',
                       fontWeight: 600,
-                      background: inv.status === 'Finalized' ? 'rgba(16,185,129,0.1)' : inv.status === 'Void' ? 'rgba(239,68,68,0.1)' : 'rgba(156,163,175,0.1)',
-                      color: inv.status === 'Finalized' ? '#10b981' : inv.status === 'Void' ? '#ef4444' : 'var(--text-secondary)'
+                      background: inv.status === 'Finalized' ? 'var(--color-positive-bg)' : inv.status === 'Void' ? 'var(--color-negative-bg)' : 'var(--bg-surface)',
+                      color: inv.status === 'Finalized' ? 'var(--color-positive)' : inv.status === 'Void' ? 'var(--color-negative)' : 'var(--text-muted)',
+                      border: `1px solid ${inv.status === 'Finalized' ? 'var(--color-positive-border)' : inv.status === 'Void' ? 'var(--color-negative-border)' : 'var(--border)'}`
                     }}>
                       {inv.status}
                     </span>
@@ -216,15 +224,12 @@ function Invoicing() {
                     {inv.status === 'Finalized' && (
                       <button
                         onClick={() => handleVoid(inv.invoiceNumber)}
-                        className="action-btn"
+                        className="settings-btn"
                         style={{
-                          padding: '4px 10px',
-                          fontSize: '11px',
-                          background: 'transparent',
-                          color: '#ef4444',
-                          border: '1px solid rgba(239,68,68,0.3)',
-                          borderRadius: '4px',
-                          cursor: 'pointer'
+                          padding: '3px 8px',
+                          fontSize: 'var(--fs-xs)',
+                          color: 'var(--color-negative)',
+                          borderColor: 'var(--color-negative-border)'
                         }}
                       >
                         Void

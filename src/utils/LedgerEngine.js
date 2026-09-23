@@ -218,11 +218,18 @@ export const LedgerEngine = {
       return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     });
 
-    // Persist to Supabase — await and propagate errors if backend is configured
+    // Persist company snapshot to local storage
+    try {
+      const { saveCompanySnapshot, isSampleCompanyActive } = await import('./BusinessEngine.js');
+      saveCompanySnapshot();
+      if (!isSampleCompanyActive()) {
+        return true;
+      }
+    } catch (_) {}
+
+    // Persist to Supabase — only for sample company
     try {
       const { SupabaseRepository } = await import('./SupabaseRepository.js');
-      const { supabase } = await import('../supabaseClient.js');
-      // In tests or offline environments where Supabase URL is not configured or placeholder, skip network call
       const isConfigured = process.env.REACT_APP_SUPABASE_URL && !process.env.REACT_APP_SUPABASE_URL.includes('placeholder');
       if (isConfigured) {
         return await SupabaseRepository.saveTransaction(date, narration, debitAccount, creditAccount, amount, category, txRef);

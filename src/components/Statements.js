@@ -91,31 +91,23 @@ function Statements({ period, currency }) {
   };
 
   return (
-    <div className="tab-content" style={{ animation: 'fade-in 0.3s ease-out' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+    <div className="tab-content" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div className="section-header" style={{ marginBottom: 'var(--sp-6)' }}>
         <div>
-          <h2 style={{ fontSize: '20px', fontWeight: 600 }}>
+          <h1 className="section-title">
             Financial Statements — {selectedPeriod === 'Full Year' ? 'All 3 Years' : selectedPeriod}
-          </h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+          </h1>
+          <p className="section-subtitle">
             Schedule III (Companies Act 2013) &amp; AS Compliant — {LedgerEngine.getPeriodDateRange(selectedPeriod).name}
           </p>
         </div>
         
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center' }}>
           <select 
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            style={{
-              padding: '8px 12px',
-              borderRadius: '6px',
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border)',
-              color: 'var(--text-primary)',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
+            className="settings-select"
+            style={{ minWidth: 'auto' }}
           >
             <option value="Full Year">All 3 Years</option>
             <option value="FY 2024-25">FY 2024-25</option>
@@ -125,37 +117,26 @@ function Statements({ period, currency }) {
 
           <button 
             onClick={handleExport}
-            className="action-btn"
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '8px', 
-              padding: '8px 16px', background: 'var(--text-primary)', color: 'var(--bg-card)',
-              borderRadius: '6px', fontSize: '13px', fontWeight: 500, border: 'none', cursor: 'pointer'
-            }}
+            className="btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <Download size={16} />
-            Export PDF
+            <Download size={15} />
+            <span>Export PDF</span>
           </button>
         </div>
       </div>
 
-
-      <div className="statements-nav" style={{ 
-        display: 'flex', gap: '24px', borderBottom: '1px solid var(--border)', marginBottom: 'var(--space-8)',
-        overflowX: 'auto', paddingBottom: '2px'
+      <div className="tab-switcher" style={{ 
+        marginBottom: 'var(--sp-6)', overflowX: 'auto', width: 'fit-content'
       }}>
         {tabs.map(tab => (
-          <div 
+          <button 
             key={tab} 
             onClick={() => setActiveTab(tab)}
-            style={{ 
-              paddingBottom: '12px', fontSize: '14px', fontWeight: 500, cursor: 'pointer',
-              color: activeTab === tab ? 'var(--text-primary)' : 'var(--text-secondary)',
-              borderBottom: activeTab === tab ? '2px solid var(--text-primary)' : '2px solid transparent',
-              transition: 'all 0.2s', whiteSpace: 'nowrap'
-            }}
+            className={`tab-switcher-item ${activeTab === tab ? 'active' : ''}`}
           >
             {tab}
-          </div>
+          </button>
         ))}
       </div>
 

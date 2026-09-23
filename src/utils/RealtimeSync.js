@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { LedgerEngine } from './LedgerEngine';
 import { SupabaseRepository } from './SupabaseRepository';
+import { isSampleCompanyActive } from './BusinessEngine';
 
 let isInitialized = false;
 let activeEventSource = null;
@@ -9,6 +10,23 @@ let activeChannel = null;
 let pollingTimer = null;
 
 export function initRealtimeSync() {
+  // If not sample company, DO NOT connect to shared Razorpay webhooks or shared Supabase ledger
+  if (!isSampleCompanyActive()) {
+    if (activeEventSource) {
+      activeEventSource.close();
+      activeEventSource = null;
+    }
+    if (activeChannel && supabase && typeof supabase.removeChannel === 'function') {
+      try { supabase.removeChannel(activeChannel); } catch (_) {}
+      activeChannel = null;
+    }
+    if (pollingTimer) {
+      clearInterval(pollingTimer);
+      pollingTimer = null;
+    }
+    return;
+  }
+
   if (isInitialized || typeof window === 'undefined') return;
   isInitialized = true;
 

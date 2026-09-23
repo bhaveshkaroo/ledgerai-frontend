@@ -37,29 +37,21 @@ function Inventory({ period }) {
   }, [movements, searchTerm]);
 
   return (
-    <div className="tab-content" style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="tab-content" style={{ maxWidth: '1200px', margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+      <div className="section-header" style={{ marginBottom: 'var(--sp-6)' }}>
         <div>
-          <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Inventory Management</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+          <h1 className="section-title">Inventory Management</h1>
+          <p className="section-subtitle">
             FIFO stock valuation, real-time balances &amp; movement history — {LedgerEngine.getPeriodDateRange(selectedPeriod).name}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center' }}>
           <select 
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border)',
-              color: 'var(--text-primary)',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
+            className="settings-select"
+            style={{ minWidth: 'auto' }}
           >
             <option value="Full Year">All 3 Years (FY 2024-27)</option>
             <option value="FY 2024-25">FY 2024-25</option>
@@ -69,56 +61,43 @@ function Inventory({ period }) {
         </div>
       </div>
 
-
       {/* Summary KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <div className="card" style={{ padding: '20px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Total Inventory Valuation</div>
-          <div style={{ fontSize: '22px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#10b981' }}>{formatINR(totalValuation)}</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>AS 2 FIFO Cost Basis</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--sp-4)', marginBottom: 'var(--sp-6)' }}>
+        <div className="kpi-standard">
+          <span className="kpi-standard-label">Total Inventory Valuation</span>
+          <div className="kpi-standard-value" style={{ color: 'var(--color-positive)' }}>{formatINR(totalValuation)}</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>AS 2 FIFO Cost Basis</div>
         </div>
-        <div className="card" style={{ padding: '20px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Total Stock on Hand</div>
-          <div style={{ fontSize: '22px', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
-            {totalUnits.toLocaleString()} <span style={{ fontSize: '13px', fontWeight: 400, color: 'var(--text-muted)' }}>Units</span>
+        <div className="kpi-standard">
+          <span className="kpi-standard-label">Total Stock on Hand</span>
+          <div className="kpi-standard-value">
+            {totalUnits.toLocaleString()} <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 400, color: 'var(--text-muted)' }}>Units</span>
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>Physical Goods in Warehouse</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>Physical Goods in Warehouse</div>
         </div>
-        <div className="card" style={{ padding: '20px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Product Lines</div>
-          <div style={{ fontSize: '22px', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
-            {items.length} <span style={{ fontSize: '13px', fontWeight: 400, color: 'var(--text-muted)' }}>Active Items</span>
+        <div className="kpi-standard">
+          <span className="kpi-standard-label">Product Lines</span>
+          <div className="kpi-standard-value">
+            {items.length} <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 400, color: 'var(--text-muted)' }}>Active Items</span>
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>Integrated with Sales Invoicing</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>Integrated with Sales Invoicing</div>
         </div>
       </div>
 
       {/* Sub-navigation Tabs */}
-      <div className="statements-nav" style={{ 
-        display: 'flex', gap: '24px', borderBottom: '1px solid var(--border)', marginBottom: 'var(--space-6)'
-      }}>
-        <div 
+      <div className="tab-switcher" style={{ marginBottom: 'var(--sp-5)', width: 'fit-content' }}>
+        <button 
           onClick={() => setActiveTab('overview')}
-          style={{ 
-            paddingBottom: '12px', fontSize: '14px', fontWeight: 500, cursor: 'pointer',
-            color: activeTab === 'overview' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            borderBottom: activeTab === 'overview' ? '2px solid var(--text-primary)' : '2px solid transparent',
-            transition: 'all 0.2s'
-          }}
+          className={`tab-switcher-item ${activeTab === 'overview' ? 'active' : ''}`}
         >
           Stock Overview
-        </div>
-        <div 
+        </button>
+        <button 
           onClick={() => setActiveTab('movements')}
-          style={{ 
-            paddingBottom: '12px', fontSize: '14px', fontWeight: 500, cursor: 'pointer',
-            color: activeTab === 'movements' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            borderBottom: activeTab === 'movements' ? '2px solid var(--text-primary)' : '2px solid transparent',
-            transition: 'all 0.2s'
-          }}
+          className={`tab-switcher-item ${activeTab === 'movements' ? 'active' : ''}`}
         >
           Stock Movement Log ({movements.length})
-        </div>
+        </button>
       </div>
 
       {activeTab === 'overview' && (

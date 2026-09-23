@@ -1,4 +1,5 @@
 import { LedgerEngine, formatINR } from './LedgerEngine';
+import { isSampleCompanyActive } from './BusinessEngine';
 
 // ── Indian TDS Sections Database (Chapter XVII-B, Income Tax Act 1961) ──
 export const TDS_SECTIONS = [
@@ -175,6 +176,7 @@ export const TDSEngine = {
     }));
 
     if (matched.length > 0) return matched;
+    if (!isSampleCompanyActive()) return [];
 
     // Standard baseline sample TDS register for Indian MSMEs
     return [

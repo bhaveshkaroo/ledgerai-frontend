@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine.js';
+import { isSampleCompanyActive } from '../utils/BusinessEngine.js';
 import { 
   AlertCircle, FileText, CheckCircle2, Calculator, Users, 
   Clock, ShieldAlert, ArrowRight, Download, Send, RefreshCw, 
@@ -53,6 +54,28 @@ const GSTCompliance = ({ period }) => {
         throw new Error(`Server returned ${res.status}`);
       }
     } catch (err) {
+      if (!isSampleCompanyActive()) {
+        setReconcileData({
+          summary: {
+            total_portal_invoices: 0,
+            total_books_invoices: 0,
+            matched_count: 0,
+            mismatched_count: 0,
+            missing_in_2b_count: 0,
+            missing_in_books_count: 0,
+            ineligible_count: 0,
+            total_matched_tax: 0,
+            total_blocked_tax: 0,
+            reconciliation_pct: 100.0
+          },
+          matched: [],
+          tax_mismatches: [],
+          missing_in_2b: [],
+          missing_in_books: [],
+          ineligible: []
+        });
+        return;
+      }
       console.warn('[GSTCompliance] Using built-in high-fidelity reconciliation engine:', err.message);
       // High-fidelity fallback mirroring official GST Portal algorithm
       setReconcileData({
@@ -142,6 +165,23 @@ const GSTCompliance = ({ period }) => {
         throw new Error(`Server returned ${res.status}`);
       }
     } catch (err) {
+      if (!isSampleCompanyActive()) {
+        setMsmeData({
+          summary: {
+            total_evaluated_payables: 0.0,
+            disallowed_payables: 0.0,
+            at_risk_payables: 0.0,
+            safe_payables: 0.0,
+            exempt_payables: 0.0,
+            projected_tax_penalty: 0.0,
+            effective_tax_rate: "26.0%",
+            compliance_score: 100.0,
+            as_of_date: new Date().toISOString().split('T')[0]
+          },
+          bills: []
+        });
+        return;
+      }
       // Local fallback for MSME 43B(h)
       setMsmeData({
         summary: {
@@ -383,22 +423,23 @@ const GSTCompliance = ({ period }) => {
     <div className="animate-fade" style={{ maxWidth: '1200px', margin: '0 auto' }}>
       
       {/* ─── Top Header & Dual-Persona Switcher ────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="section-header" style={{ marginBottom: 'var(--sp-6)', flexWrap: 'wrap', gap: 'var(--sp-3)' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-              Indian Statutory &amp; GST Intelligence Hub
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)' }}>
+            <h1 className="section-title">
+              Statutory &amp; GST Intelligence Hub
             </h1>
             <span style={{
-              fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '4px',
-              background: persona === 'business' ? 'rgba(16,185,129,0.1)' : 'rgba(139,92,246,0.1)',
-              color: persona === 'business' ? '#10b981' : '#8b5cf6',
-              letterSpacing: '0.5px', textTransform: 'uppercase'
+              fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-xs)',
+              background: persona === 'business' ? 'var(--color-positive-bg)' : 'var(--color-info-bg)',
+              color: persona === 'business' ? 'var(--color-positive)' : 'var(--color-info)',
+              letterSpacing: '0.5px', textTransform: 'uppercase',
+              border: `1px solid ${persona === 'business' ? 'var(--color-positive-border)' : 'var(--color-info-border)'}`
             }}>
-              {persona === 'business' ? '🏢 Business View' : '⚖️ CA Firm Audit Mode'}
+              {persona === 'business' ? 'Business View' : 'CA Firm Audit Mode'}
             </span>
           </div>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+          <p className="section-subtitle">
             {persona === 'business' 
               ? 'Self-Serve GST & Tax Protection for Indian Founders & MSME Operations' 
               : 'Audit Working Papers, ITC Verification & Section 43B(h) Disallowance Certification for CAs'}
@@ -406,42 +447,22 @@ const GSTCompliance = ({ period }) => {
         </div>
 
         {/* Persona Switcher Pill */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{
-            display: 'flex',
-            background: 'var(--bg-surface)',
-            padding: '3px',
-            borderRadius: '10px',
-            border: '1px solid var(--border)'
-          }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+          <div className="tab-switcher" style={{ padding: '2px' }}>
             <button
               onClick={() => togglePersona('business')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '6px 14px', borderRadius: '8px', border: 'none',
-                background: persona === 'business' ? 'var(--bg-card)' : 'transparent',
-                color: persona === 'business' ? 'var(--text-primary)' : 'var(--text-muted)',
-                fontWeight: persona === 'business' ? 700 : 500, fontSize: '12px',
-                cursor: 'pointer', boxShadow: persona === 'business' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                transition: 'all 0.2s'
-              }}
+              className={`tab-switcher-item ${persona === 'business' ? 'active' : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--fs-xs)' }}
             >
-              <Building2 size={14} color={persona === 'business' ? '#10b981' : 'currentColor'} />
+              <Building2 size={13} color={persona === 'business' ? 'var(--color-positive)' : 'currentColor'} />
               <span>Business View</span>
             </button>
             <button
               onClick={() => togglePersona('ca')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '6px 14px', borderRadius: '8px', border: 'none',
-                background: persona === 'ca' ? 'var(--bg-card)' : 'transparent',
-                color: persona === 'ca' ? 'var(--text-primary)' : 'var(--text-muted)',
-                fontWeight: persona === 'ca' ? 700 : 500, fontSize: '12px',
-                cursor: 'pointer', boxShadow: persona === 'ca' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                transition: 'all 0.2s'
-              }}
+              className={`tab-switcher-item ${persona === 'ca' ? 'active' : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--fs-xs)' }}
             >
-              <Users size={14} color={persona === 'ca' ? '#8b5cf6' : 'currentColor'} />
+              <Users size={13} color={persona === 'ca' ? 'var(--color-info)' : 'currentColor'} />
               <span>CA Firm View</span>
             </button>
           </div>
@@ -449,11 +470,8 @@ const GSTCompliance = ({ period }) => {
           <select 
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            style={{
-              padding: '7px 12px', borderRadius: '8px',
-              background: 'var(--bg-surface)', border: '1px solid var(--border)',
-              color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer'
-            }}
+            className="settings-select"
+            style={{ minWidth: 'auto' }}
           >
             <option value="Full Year">All 3 Years (FY 2024-27)</option>
             <option value="FY 2024-25">FY 2024-25</option>
@@ -464,71 +482,66 @@ const GSTCompliance = ({ period }) => {
       </div>
 
       {/* ─── High-Level Summary Hero ───────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <div className="card" style={{ padding: '18px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Eligible ITC (3B Auto-Offset)</div>
-          <div style={{ fontSize: '22px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#10b981', marginTop: '6px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--sp-4)', marginBottom: 'var(--sp-6)' }}>
+        <div className="kpi-standard">
+          <span className="kpi-standard-label">Eligible ITC (3B Auto-Offset)</span>
+          <div className="kpi-standard-value" style={{ color: 'var(--color-positive)' }}>
             {formatINR(reconcileData?.summary?.total_eligible_itc || gstData.itc.total)}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>
             Matched with GSTR-2B
           </div>
         </div>
 
-        <div className="card" style={{ padding: '18px' }}>
-          <div style={{ fontSize: '11px', color: '#ef4444', fontWeight: 600, textTransform: 'uppercase' }}>Blocked ITC (Vendor Defaults)</div>
-          <div style={{ fontSize: '22px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#ef4444', marginTop: '6px' }}>
+        <div className="kpi-standard">
+          <span className="kpi-standard-label" style={{ color: 'var(--color-negative)' }}>Blocked ITC (Vendor Defaults)</span>
+          <div className="kpi-standard-value" style={{ color: 'var(--color-negative)' }}>
             {formatINR(reconcileData?.summary?.total_blocked_itc || 11112)}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>
             Sec 16(2)(aa) non-compliant
           </div>
         </div>
 
-        <div className="card" style={{ padding: '18px' }}>
-          <div style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 600, textTransform: 'uppercase' }}>Sec 43B(h) Tax Disallowance Risk</div>
-          <div style={{ fontSize: '22px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#f59e0b', marginTop: '6px' }}>
+        <div className="kpi-standard">
+          <span className="kpi-standard-label" style={{ color: 'var(--color-warning)' }}>Sec 43B(h) Risk</span>
+          <div className="kpi-standard-value" style={{ color: 'var(--color-warning)' }}>
             {formatINR(msmeData?.summary?.projected_tax_penalty || 95056)}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>
             Income tax penalty if unpaid
           </div>
         </div>
 
-        <div className="card" style={{ padding: '18px', background: 'var(--bg-surface)' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-primary)', fontWeight: 600, textTransform: 'uppercase' }}>Net Cash GST Payable</div>
-          <div style={{ fontSize: '22px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#f97316', marginTop: '6px' }}>
+        <div className="kpi-standard">
+          <span className="kpi-standard-label">Net Cash GST Payable</span>
+          <div className="kpi-standard-value">
             {formatINR(totalPayable)}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>
             PMT-06 Challan after ITC offset
           </div>
         </div>
       </div>
 
       {/* ─── Navigation Tabs ───────────────────────────────────────────── */}
-      <div className="statements-nav" style={{ 
-        display: 'flex', gap: '20px', borderBottom: '1px solid var(--border)', marginBottom: '24px', overflowX: 'auto'
+      <div className="tab-switcher" style={{ 
+        marginBottom: 'var(--sp-6)', overflowX: 'auto', width: 'fit-content'
       }}>
         {[
-          { id: 'reconcile-2b', label: '🔍 GSTR-2B vs Books Auto-Reconcile' },
-          { id: 'msme-43bh', label: '⏱️ Section 43B(h) MSME 45-Day Tracker' },
-          { id: 'einvoice-eway', label: '⚡ E-Invoice (IRN) & E-Way Bill' },
-          { id: 'gstr-3b', label: '📊 GSTR-3B & GSTR-1 Summaries' },
-          ...(persona === 'ca' ? [{ id: 'ca-audit', label: '📋 CA Audit Workpapers & Sign-off' }] : [])
+          { id: 'reconcile-2b', label: 'GSTR-2B Auto-Reconcile' },
+          { id: 'msme-43bh', label: 'Section 43B(h) MSME Tracker' },
+          { id: 'einvoice-eway', label: 'E-Invoice & E-Way Bill' },
+          { id: 'gstr-3b', label: 'GSTR-3B & GSTR-1 Summaries' },
+          ...(persona === 'ca' ? [{ id: 'ca-audit', label: 'CA Audit Workpapers' }] : [])
         ].map(t => (
-          <div 
+          <button 
             key={t.id} 
             onClick={() => setActiveTab(t.id)}
-            style={{ 
-              paddingBottom: '12px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-              color: activeTab === t.id ? 'var(--text-primary)' : 'var(--text-secondary)',
-              borderBottom: activeTab === t.id ? '2px solid var(--primary-color, #10b981)' : '2px solid transparent',
-              whiteSpace: 'nowrap', transition: 'all 0.2s'
-            }}
+            className={`tab-switcher-item ${activeTab === t.id ? 'active' : ''}`}
           >
             {t.label}
-          </div>
+          </button>
         ))}
       </div>
 
@@ -536,33 +549,25 @@ const GSTCompliance = ({ period }) => {
       {activeTab === 'reconcile-2b' && (
         <div>
           {/* Action Callout based on Persona */}
-          <div style={{
-            padding: '16px', borderRadius: '12px', marginBottom: '20px',
-            background: persona === 'business' ? 'rgba(239,68,68,0.06)' : 'var(--bg-surface)',
-            border: persona === 'business' ? '1px solid rgba(239,68,68,0.2)' : '1px solid var(--border)',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'
-          }}>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: persona === 'business' ? '#ef4444' : 'var(--text-primary)' }}>
+          <div className={persona === 'business' ? 'kpi-alert critical' : 'kpi-standard'} style={{ marginBottom: 'var(--sp-5)' }}>
+            <div className="kpi-alert-content">
+              <div className="kpi-alert-title">
                 {persona === 'business' 
-                  ? '⚠️ Action Required: ₹11,112 Input Tax Credit is currently BLOCKED' 
+                  ? 'Action Required: ₹11,112 Input Tax Credit is currently BLOCKED' 
                   : 'GSTR-2B Multi-Tier ITC Matching Matrix (Rule 36(4) & Section 16(2)(aa))'}
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              <div className="kpi-alert-desc">
                 {persona === 'business'
                   ? 'Arvind Weaves & Dyes has not filed their GSTR-1. Indian GST law prohibits claiming this tax until they file.'
                   : 'Eligible ITC auto-aligned with Table 4(A)(5). Ineligible credits mapped to Table 4(B)(1) reversal.'}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: 'var(--sp-2)', flexShrink: 0 }}>
               <button
                 onClick={fetchReconciliation}
                 disabled={isReconciling}
-                style={{
-                  padding: '7px 14px', borderRadius: '8px', background: 'var(--bg-card)',
-                  border: '1px solid var(--border)', fontSize: '12px', fontWeight: 600,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)'
-                }}
+                className="settings-btn"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 <RefreshCw size={13} className={isReconciling ? 'animate-spin' : ''} />
                 <span>Re-Sync GSTR-2B</span>
@@ -572,11 +577,8 @@ const GSTCompliance = ({ period }) => {
                   href={`https://wa.me/?text=${encodeURIComponent('Dear Arvind Weaves & Dyes, your invoice AWD-2026-903 of Rs 2,22,267 is missing in our GSTR-2B return. Our Input Tax Credit of Rs 11,112 is blocked under Section 16(2)(aa). Please upload and file your GSTR-1 immediately to ensure smooth payment settlement. Regards, Meso AI Accounting Dept.')}`}
                   target="_blank"
                   rel="noreferrer"
-                  style={{
-                    padding: '7px 14px', borderRadius: '8px', background: '#10b981',
-                    border: 'none', color: '#fff', fontSize: '12px', fontWeight: 600,
-                    textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px'
-                  }}
+                  className="btn-lime"
+                  style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px' }}
                 >
                   <Send size={13} />
                   <span>Send WhatsApp Notice to Vendor</span>
@@ -584,11 +586,8 @@ const GSTCompliance = ({ period }) => {
               ) : (
                 <button
                   onClick={() => alert('GSTR-2B Audit Schedule exported as JSON & Excel worksheet.')}
-                  style={{
-                    padding: '7px 14px', borderRadius: '8px', background: '#8b5cf6',
-                    border: 'none', color: '#fff', fontSize: '12px', fontWeight: 600,
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
-                  }}
+                  className="btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--fs-xs)' }}
                 >
                   <Download size={13} />
                   <span>Export 2B Audit Report</span>
@@ -598,24 +597,20 @@ const GSTCompliance = ({ period }) => {
           </div>
 
           {/* Filter Pills */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+          <div className="tab-switcher" style={{ marginBottom: 'var(--sp-4)', flexWrap: 'wrap' }}>
             {[
               { id: 'ALL', label: 'All Invoices' },
-              { id: 'MATCHED', label: `✓ Matched (${reconcileData?.summary?.matched_count || 2})` },
-              { id: 'MISMATCH', label: `⚠️ Tax Discrepancy (${reconcileData?.summary?.mismatched_count || 1})` },
-              { id: 'MISSING_2B', label: `❌ Missing in 2B (${reconcileData?.summary?.missing_in_2b_count || 1})` },
-              { id: 'UNCLAIMED', label: `📥 In 2B Only (${reconcileData?.summary?.missing_in_books_count || 1})` },
-              { id: 'INELIGIBLE', label: `🚫 Sec 17(5) Blocked (${reconcileData?.summary?.ineligible_count || 1})` },
+              { id: 'MATCHED', label: `Matched (${reconcileData?.summary?.matched_count || 2})` },
+              { id: 'MISMATCH', label: `Tax Discrepancy (${reconcileData?.summary?.mismatched_count || 1})` },
+              { id: 'MISSING_2B', label: `Missing in 2B (${reconcileData?.summary?.missing_in_2b_count || 1})` },
+              { id: 'UNCLAIMED', label: `In 2B Only (${reconcileData?.summary?.missing_in_books_count || 1})` },
+              { id: 'INELIGIBLE', label: `Sec 17(5) Blocked (${reconcileData?.summary?.ineligible_count || 1})` },
             ].map(f => (
               <button
                 key={f.id}
                 onClick={() => setReconcileFilter(f.id)}
-                style={{
-                  padding: '5px 12px', borderRadius: '6px', fontSize: '12px',
-                  background: reconcileFilter === f.id ? 'var(--text-primary)' : 'var(--bg-surface)',
-                  color: reconcileFilter === f.id ? 'var(--bg-card)' : 'var(--text-secondary)',
-                  border: '1px solid var(--border)', cursor: 'pointer', fontWeight: 600
-                }}
+                className={`tab-switcher-item ${reconcileFilter === f.id ? 'active' : ''}`}
+                style={{ fontSize: 'var(--fs-xs)' }}
               >
                 {f.label}
               </button>
