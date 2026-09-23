@@ -31,7 +31,7 @@
   /* ─── Surfaces (Rafion Warm Architectural Palette) ───────── */
   --bg-page:          #eae6df;
   --bg-sidebar:       transparent;
-  --bg-card:          #ffffff;
+  --bg-card:          #f8f6f2;
   --bg-surface:       #f5f2eb;
   --bg-surface-hover: #e5e1d7;
   --bg-topbar:        rgba(234, 230, 223, 0.85);
@@ -491,7 +491,7 @@ body {
 }
 
 .sidebar-rail.expanded .rail-toggle-btn {
-  align-self: flex-end;
+  align-self: flex-start;
 }
 
 .rail-toggle-btn:hover {
@@ -655,13 +655,56 @@ body {
   animation: kpiCardPop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
+/* Section switch slide-up-fade animation */
+@keyframes sectionSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.main-content > * {
+  animation: sectionSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Table row stagger entrance animation */
+@keyframes tableRowFade {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.data-table tbody tr {
+  animation: tableRowFade 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.data-table tbody tr:nth-child(1)  { animation-delay: 0.02s; }
+.data-table tbody tr:nth-child(2)  { animation-delay: 0.04s; }
+.data-table tbody tr:nth-child(3)  { animation-delay: 0.06s; }
+.data-table tbody tr:nth-child(4)  { animation-delay: 0.08s; }
+.data-table tbody tr:nth-child(5)  { animation-delay: 0.10s; }
+.data-table tbody tr:nth-child(6)  { animation-delay: 0.12s; }
+.data-table tbody tr:nth-child(7)  { animation-delay: 0.14s; }
+.data-table tbody tr:nth-child(8)  { animation-delay: 0.16s; }
+.data-table tbody tr:nth-child(9)  { animation-delay: 0.18s; }
+.data-table tbody tr:nth-child(10) { animation-delay: 0.20s; }
+
 /* ─── Contextual Sub-Sidebar (for deep sections, borderless) ── */
 .sidebar {
   width: var(--sidebar-width);
   background: var(--bg-sidebar);
-  border-right: none; /* No line as requested */
+  border-right: none;
   padding: var(--sp-4) var(--sp-3);
-  display: flex;
+  display: none !important;
   flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
@@ -812,7 +855,7 @@ body {
 .main-content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--sp-7) var(--sp-8);
+  padding: var(--sp-8) var(--sp-9);
   position: relative;
 }
 
@@ -832,10 +875,10 @@ body {
 
 .card {
   background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  padding: var(--sp-6);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  padding: var(--sp-7);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.03);
   position: relative;
   overflow: hidden;
 }
@@ -941,8 +984,8 @@ body {
 .dashboard-hero-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--sp-6);
-  margin-bottom: var(--sp-7);
+  gap: var(--sp-7);
+  margin-bottom: var(--sp-8);
 }
 
 .dashboard-kpi-grid {
@@ -957,9 +1000,10 @@ body {
 
 .table-responsive {
   background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  padding: var(--sp-2);
-  box-shadow: var(--shadow-sm);
+  border-radius: 18px;
+  padding: var(--sp-3);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.03);
 }
 
 .data-table th {
