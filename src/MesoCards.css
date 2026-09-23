@@ -1,0 +1,346 @@
+/* ═══════════════════════════════════════════════════════════
+   MESO AI — KPI CARD PATTERNS
+   Reusable card styles for all screens.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── 1. Hero KPI Card ───────────────────────────────────── */
+/* Max 1-2 per screen. Large number, accent left border.     */
+.kpi-hero {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-6);
+  border: 1px solid var(--border-light);
+  border-left: 3px solid var(--color-positive);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-hero.negative {
+  border-left-color: var(--color-negative);
+}
+
+.kpi-hero.warning {
+  border-left-color: var(--color-warning);
+}
+
+.kpi-hero.info {
+  border-left-color: var(--color-info);
+}
+
+.kpi-hero-label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semi);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: var(--sp-2);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.kpi-hero-value {
+  font-size: var(--fs-3xl);
+  font-weight: var(--fw-bold);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  line-height: var(--lh-tight);
+}
+
+.kpi-hero-subtitle {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  margin-top: var(--sp-2);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* ─── 2. Standard Metric Card ────────────────────────────── */
+/* Neutral background, icon + label + value + trend.          */
+.kpi-standard {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-5);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.kpi-standard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kpi-standard-label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.kpi-standard-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kpi-standard-icon.positive {
+  background: var(--color-positive-bg);
+  color: var(--color-positive);
+}
+
+.kpi-standard-icon.negative {
+  background: var(--color-negative-bg);
+  color: var(--color-negative);
+}
+
+.kpi-standard-icon.warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.kpi-standard-icon.info {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.kpi-standard-value {
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+
+.kpi-standard-trend {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+}
+
+.kpi-standard-trend.up {
+  color: var(--color-positive);
+}
+
+.kpi-standard-trend.down {
+  color: var(--color-negative);
+}
+
+/* ─── 3. Alert / Deadline Card ───────────────────────────── */
+/* Amber or red left border, icon + title + description.      */
+.kpi-alert {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-4) var(--sp-5);
+  border: 1px solid var(--border-light);
+  border-left: 3px solid var(--color-warning);
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+
+.kpi-alert.critical {
+  border-left-color: var(--color-negative);
+}
+
+.kpi-alert.info {
+  border-left-color: var(--color-info);
+}
+
+.kpi-alert-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.kpi-alert.critical .kpi-alert-icon {
+  background: var(--color-negative-bg);
+  color: var(--color-negative);
+}
+
+.kpi-alert-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.kpi-alert-title {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semi);
+  color: var(--text-primary);
+  margin-bottom: var(--sp-1);
+}
+
+.kpi-alert-desc {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  line-height: var(--lh-normal);
+}
+
+.kpi-alert-countdown {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  font-family: var(--font-mono);
+  color: var(--color-warning);
+  margin-top: var(--sp-2);
+}
+
+.kpi-alert.critical .kpi-alert-countdown {
+  color: var(--color-negative);
+}
+
+/* ─── 4. Trend Chart Card ────────────────────────────────── */
+/* Wrapper for Recharts graphs. Max 2 colors per chart.       */
+.kpi-chart {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-5);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-xs);
+}
+
+.kpi-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-4);
+}
+
+.kpi-chart-title {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semi);
+  color: var(--text-primary);
+}
+
+.kpi-chart-subtitle {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+/* ─── Ratio / Progress Bar Card ──────────────────────────── */
+.kpi-ratio {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-5);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-xs);
+}
+
+.kpi-ratio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-3);
+}
+
+.kpi-ratio-label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+}
+
+.kpi-ratio-value {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.kpi-ratio-bar {
+  height: 6px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.kpi-ratio-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--color-positive);
+  transition: width var(--duration-slow) var(--ease-out);
+}
+
+.kpi-ratio-fill.warning {
+  background: var(--color-warning);
+}
+
+.kpi-ratio-fill.negative {
+  background: var(--color-negative);
+}
+
+/* ─── Section Header (reusable for screen titles) ────────── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-6);
+}
+
+.section-title {
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-semi);
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+
+.section-subtitle {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  margin-top: var(--sp-1);
+}
+
+/* ─── Tab Switcher (reusable pill-style tabs) ────────────── */
+.tab-switcher {
+  display: flex;
+  gap: var(--sp-1);
+  background: var(--bg-surface);
+  padding: var(--sp-1);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+}
+
+.tab-switcher-item {
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+  white-space: nowrap;
+}
+
+.tab-switcher-item:hover {
+  color: var(--text-primary);
+}
+
+.tab-switcher-item.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: var(--fw-semi);
+  box-shadow: var(--shadow-xs);
+}

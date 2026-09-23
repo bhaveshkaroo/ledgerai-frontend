@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
+import './MesoCards.css';
 import Dashboard from './components/Dashboard';
 import TransactionList from './components/TransactionList';
 import Invoicing from './components/Invoicing';
@@ -15,8 +16,6 @@ import JournalDetail from './components/JournalDetail';
 import TDSManager from './components/TDSManager';
 import SettingsPage from './components/Settings';
 import BusinessHub from './components/BusinessHub';
-import InvestorShowcase from './components/InvestorShowcase';
-import CAAuditPortal from './components/CAAuditPortal';
 import FounderOnboardingWizard from './components/FounderOnboardingWizard';
 import { InvoiceEngine } from './utils/InvoiceEngine';
 import { InventoryEngine } from './utils/InventoryEngine';
@@ -25,16 +24,83 @@ import { SupabaseRepository } from './utils/SupabaseRepository';
 import { supabase } from './supabaseClient';
 import { 
   LayoutDashboard, Receipt, FileText, Package, FileBarChart, Bot, Settings, 
-  LogOut, ChevronRight, BookOpen, Scale, Landmark, TrendingUp, BarChart2, 
-  Activity, IndianRupee, Sun, Moon, DollarSign, Building2, Sparkles, ShieldCheck,
-  PlusCircle, RefreshCw
+  LogOut, Scale, Landmark, TrendingUp, BarChart2, 
+  Activity, IndianRupee, Sun, Moon, Building2,
+  PlusCircle, Check, ChevronDown, Sparkles,
+  Menu, X, ChevronRight
 } from 'lucide-react';
 import { ThemeEngine, getTheme, toggleTheme } from './utils/ThemeEngine';
-import { CurrencyEngine, getCurrency, toggleCurrency } from './utils/CurrencyEngine';
-import { getBusinessProfile, getWorkspaceMode, setWorkspaceMode } from './utils/BusinessEngine';
+import { getCurrency, toggleCurrency } from './utils/CurrencyEngine';
+import { 
+  getBusinessProfile, 
+  getWorkspaceMode, 
+  getCompanyList, 
+  getActiveCompanyId, 
+  switchCompany, 
+  isSampleCompanyActive 
+} from './utils/BusinessEngine';
 import { initRealtimeSync } from './utils/RealtimeSync';
 import Auth from './components/Auth';
 import logoImg from './assets/logo.png';
+
+/* ═══════════════════════════════════════════════════════════
+   NAV CONFIGURATION
+   Top bar has 4 groups. Each group maps to sidebar sub-items.
+   ═══════════════════════════════════════════════════════════ */
+const NAV_GROUPS = {
+  dashboard: {
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    tab: 'dashboard',
+    // No sidebar — Dashboard is a single page
+    sidebarItems: null,
+  },
+  operations: {
+    label: 'Operations',
+    icon: Receipt,
+    tab: null, // opens sidebar
+    sidebarItems: [
+      { id: 'transactions', label: 'Day Book / Journal', icon: Receipt },
+      { id: 'invoicing', label: 'Invoicing', icon: FileText },
+      { id: 'inventory', label: 'Inventory', icon: Package },
+      { id: 'brs', label: 'Bank Reconciliation', icon: Landmark },
+    ],
+  },
+  books: {
+    label: 'Books of Accounts',
+    icon: FileBarChart,
+    tab: null,
+    sidebarItems: [
+      { id: 'reports', label: 'Final Accounts', icon: FileBarChart },
+      { id: 'gst-compliance', label: 'GST & Statutory Hub', icon: Scale },
+      { id: 'tds', label: 'TDS & Withholding', icon: IndianRupee },
+      { id: 'business-hub', label: 'Business Hub & Setup', icon: Building2 },
+    ],
+  },
+  insights: {
+    label: 'Insights',
+    icon: TrendingUp,
+    tab: null,
+    sidebarItems: [
+      { id: 'insights', label: 'Level 1: Health', icon: TrendingUp },
+      { id: 'insights-level2', label: 'Level 2: Forecast', icon: BarChart2 },
+      { id: 'insights-level3', label: 'Level 3: Strategic', icon: Activity },
+    ],
+  },
+};
+
+// Helper: find which nav group a tab belongs to
+function getNavGroupForTab(tab) {
+  for (const [groupKey, group] of Object.entries(NAV_GROUPS)) {
+    if (group.tab === tab) return groupKey;
+    if (group.sidebarItems) {
+      for (const item of group.sidebarItems) {
+        if (item.id === tab) return groupKey;
+      }
+    }
+  }
+  return 'dashboard';
+}
 
 function App() {
   const [session, setSession] = useState(null);
@@ -47,17 +113,32 @@ function App() {
   });
   const [businessProfile, setBusinessProfileState] = useState(() => getBusinessProfile());
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [portalMode, setPortalMode] = useState('founder'); // 'founder' | 'audit' | 'investor'
-  const [workspaceMode, setWorkspaceModeState] = useState(() => getWorkspaceMode()); // 'production' | 'demo'
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isBotOpen, setIsBotOpen] = useState(false);
   const [demoMode, setDemoMode] = useState(() => localStorage.getItem('MESO_DEMO_MODE') === 'true');
   const [selectedJournalRef, setSelectedJournalRef] = useState(null);
 
+  // Multi-Company state & User dropdown
+  const [companies, setCompanies] = useState(() => getCompanyList());
+  const [activeCompanyId, setActiveCompanyIdState] = useState(() => getActiveCompanyId());
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
+
   const [ledgerVersion, setLedgerVersion] = useState(0);
   const [dataReady, setDataReady] = useState(false);
   const [currentTheme, setCurrentTheme] = useState(() => ThemeEngine.initTheme());
   const [currentCurrency, setCurrentCurrency] = useState(() => getCurrency());
+
+  // Navigation state
+  const [activeNavGroup, setActiveNavGroup] = useState('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('MESO_SIDEBAR_COLLAPSED') === 'true';
+  });
+
+  // Sync activeNavGroup when activeTab changes
+  useEffect(() => {
+    setActiveNavGroup(getNavGroupForTab(activeTab));
+  }, [activeTab]);
 
   useEffect(() => {
     ThemeEngine.initTheme();
@@ -79,65 +160,74 @@ function App() {
     };
 
     const handleProfileUpdate = (e) => setBusinessProfileState(e.detail?.profile || getBusinessProfile());
-    const handleWorkspaceChange = (e) => setWorkspaceModeState(e.detail?.mode || getWorkspaceMode());
+    const handleCompanySwitch = (e) => {
+      setCompanies(getCompanyList());
+      setActiveCompanyIdState(e.detail?.companyId || getActiveCompanyId());
+      setBusinessProfileState(e.detail?.profile || getBusinessProfile());
+      setLedgerVersion(v => v + 1);
+    };
+
+    const handleOpenWizard = () => setIsOnboardingOpen(true);
 
     window.addEventListener('ledger-updated', handleLedgerUpdate);
     window.addEventListener('theme-changed', handleThemeChange);
     window.addEventListener('currency-changed', handleCurrencyChange);
     window.addEventListener('business-profile-updated', handleProfileUpdate);
-    window.addEventListener('workspace-changed', handleWorkspaceChange);
+    window.addEventListener('company-switched', handleCompanySwitch);
+    window.addEventListener('open-onboarding-wizard', handleOpenWizard);
 
-    // Hash routing for deep links: #/investor, #/audit, #/founder, #/journal/:ref
+    // Close user dropdown on outside click
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+
+    // Hash routing for deep links
     const handleHashChange = () => {
       const hash = window.location.hash;
-      if (hash.includes('#/investor')) {
-        setPortalMode('investor');
-      } else if (hash.includes('#/audit')) {
-        setPortalMode('audit');
-      } else if (hash.includes('#/founder')) {
-        setPortalMode('founder');
-      } else {
-        const journalMatch = hash.match(/#\/journal\/(.+)/);
-        if (journalMatch) {
-          setSelectedJournalRef(decodeURIComponent(journalMatch[1]));
-          setActiveTab('journal-detail');
-        }
+      const journalMatch = hash.match(/#\/journal\/(.+)/);
+      if (journalMatch) {
+        setSelectedJournalRef(decodeURIComponent(journalMatch[1]));
+        setActiveTab('journal-detail');
       }
     };
     window.addEventListener('hashchange', handleHashChange);
     handleHashChange();
 
-    // Check if user is fresh and should trigger onboarding
-    const hasCompletedOnboarding = localStorage.getItem('MESO_ONBOARDING_COMPLETED');
-    if (!hasCompletedOnboarding && LedgerEngine.transactions.length === 0) {
-      setIsOnboardingOpen(true);
-    }
+    // Auto-collapse sidebar on small screens
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setSidebarCollapsed(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize(); // initial check
 
-    // Hydration & Idempotent Seed & Currency Rate Sync
+    // Hydration & Database check
     async function initializePersistence() {
-      CurrencyEngine.syncExchangeRate().catch(() => {});
-
       try {
-        const isSeeded = await SupabaseRepository.isSeeded();
-        if (!isSeeded) {
-          console.log('[Meso AI] Database is not seeded or offline. Seeding demo dataset...');
-          if (InvoiceEngine.invoices.length === 0) {
-            InventoryEngine.seedPurchases();
-            InvoiceEngine.seedInvoices();
+        const isSample = isSampleCompanyActive();
+        if (isSample) {
+          const isSeeded = await SupabaseRepository.isSeeded();
+          if (!isSeeded) {
+            if (InvoiceEngine.invoices.length === 0) {
+              InventoryEngine.seedPurchases();
+              InvoiceEngine.seedInvoices();
+            }
+            SupabaseRepository.seedAccounts().catch(() => {});
+            SupabaseRepository.seedTransactionsBatch(LedgerEngine.transactions).catch(() => {});
+          } else {
+            await Promise.all([
+              LedgerEngine.hydrate(),
+              InvoiceEngine.hydrate(),
+              InventoryEngine.hydrate()
+            ]);
           }
-          SupabaseRepository.seedAccounts().catch(() => {});
-          SupabaseRepository.seedTransactionsBatch(LedgerEngine.transactions).catch(() => {});
-          InvoiceEngine.invoices.forEach(inv => SupabaseRepository.saveInvoice(inv));
-        } else {
-          console.log('[Meso AI] Hydrating from Supabase database...');
-          await Promise.all([
-            LedgerEngine.hydrate(),
-            InvoiceEngine.hydrate(),
-            InventoryEngine.hydrate()
-          ]);
         }
       } catch (err) {
-        console.warn('[Meso AI] Initialization warning:', err.message);
+        console.warn('[Meso AI] Persistence init:', err.message);
       } finally {
         setDataReady(true);
       }
@@ -148,59 +238,60 @@ function App() {
     return () => {
       subscription.unsubscribe();
       window.removeEventListener('ledger-updated', handleLedgerUpdate);
-      window.removeEventListener('hashchange', handleHashChange);
       window.removeEventListener('theme-changed', handleThemeChange);
       window.removeEventListener('currency-changed', handleCurrencyChange);
       window.removeEventListener('business-profile-updated', handleProfileUpdate);
-      window.removeEventListener('workspace-changed', handleWorkspaceChange);
+      window.removeEventListener('company-switched', handleCompanySwitch);
+      window.removeEventListener('open-onboarding-wizard', handleOpenWizard);
+      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
 
-  // Hash-based Investor mode is completely public / auth-free
-  const isInvestorRoute = portalMode === 'investor' || (typeof window !== 'undefined' && window.location.hash.includes('#/investor'));
+  const handleCompanyChange = (coId) => {
+    switchCompany(coId);
+    setIsUserMenuOpen(false);
+  };
 
-  if (isInvestorRoute) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
-        <div style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src={logoImg} alt="Meso AI" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
-            <span style={{ fontWeight: 800, fontSize: '15px', letterSpacing: '0.5px' }}>MESO AI • INVESTOR COCKPIT</span>
-          </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              onClick={() => {
-                window.location.hash = '#/founder';
-                setPortalMode('founder');
-              }}
-              style={{ padding: '8px 14px', background: '#06402b', color: '#fff', borderRadius: '8px', border: 'none', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}
-            >
-              Open Founder Portal
-            </button>
-            <button
-              onClick={() => {
-                window.location.hash = '#/audit';
-                setPortalMode('audit');
-              }}
-              style={{ padding: '8px 14px', background: 'var(--bg-card)', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border)', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}
-            >
-              Open CA Audit Portal
-            </button>
-          </div>
-        </div>
-        <InvestorShowcase onNavigateToApp={(tab) => {
-          if (tab === 'founder' || tab === 'dashboard') {
-            window.location.hash = '#/founder';
-            setPortalMode('founder');
-            setActiveTab('dashboard');
-          } else if (tab === 'audit') {
-            window.location.hash = '#/audit';
-            setPortalMode('audit');
-          }
-        }} />
-      </div>
-    );
-  }
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem('MESO_AUTH_USER');
+    localStorage.removeItem('MESO_DEMO_MODE');
+    setAuthUser(null);
+    setDemoMode(false);
+    setSession(null);
+    setIsUserMenuOpen(false);
+  };
+
+  const handleToggleSidebar = useCallback(() => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('MESO_SIDEBAR_COLLAPSED', String(next));
+      return next;
+    });
+  }, []);
+
+  const handleNavGroupClick = useCallback((groupKey) => {
+    const group = NAV_GROUPS[groupKey];
+    if (group.tab) {
+      // Direct tab (like Dashboard)
+      setActiveTab(group.tab);
+      setActiveNavGroup(groupKey);
+    } else if (group.sidebarItems) {
+      // Group with sidebar items
+      if (activeNavGroup === groupKey) {
+        // Already on this group — toggle sidebar
+        handleToggleSidebar();
+      } else {
+        setActiveNavGroup(groupKey);
+        setSidebarCollapsed(false);
+        localStorage.setItem('MESO_SIDEBAR_COLLAPSED', 'false');
+        // Navigate to first item in group
+        setActiveTab(group.sidebarItems[0].id);
+      }
+    }
+  }, [activeNavGroup, handleToggleSidebar]);
 
   if (!session && !demoMode && !authUser) {
     return <Auth 
@@ -223,7 +314,7 @@ function App() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'var(--bg-app)',
+        background: 'var(--bg-page)',
         color: 'var(--text-primary)',
         gap: '16px'
       }}>
@@ -238,360 +329,254 @@ function App() {
   const currentFY = LedgerEngine.getCurrentFiscalYear();
 
   const renderContent = () => {
-    // If CA Audit portal mode is selected
-    if (portalMode === 'audit') {
-      return <CAAuditPortal key={ledgerVersion} onSelectClient={() => {}} />;
-    }
-
+    const renderKey = `${activeCompanyId}-${ledgerVersion}`;
     switch(activeTab) {
-      case 'dashboard': return <Dashboard />;
-      case 'transactions': return <TransactionList key={ledgerVersion} period={currentFY} />;
-      case 'invoicing': return <Invoicing key={ledgerVersion} period={currentFY} />;
-      case 'inventory': return <Inventory key={ledgerVersion} period={currentFY} />;
-      case 'reports': return <Statements key={ledgerVersion} period={currentFY} />;
-      case 'gst-compliance': return <GSTCompliance key={ledgerVersion} period={currentFY} />;
-      case 'brs': return <BankReconciliation key={ledgerVersion} />;
-      case 'insights': return <Insights key={ledgerVersion} />;
-      case 'insights-level2': return <InsightsLevel2 key={ledgerVersion} />;
-      case 'insights-level3': return <InsightsLevel3 key={ledgerVersion} />;
+      case 'dashboard': return <Dashboard key={renderKey} />;
+      case 'transactions': return <TransactionList key={renderKey} period={currentFY} />;
+      case 'invoicing': return <Invoicing key={renderKey} period={currentFY} />;
+      case 'inventory': return <Inventory key={renderKey} period={currentFY} />;
+      case 'reports': return <Statements key={renderKey} period={currentFY} />;
+      case 'gst-compliance': return <GSTCompliance key={renderKey} period={currentFY} />;
+      case 'brs': return <BankReconciliation key={renderKey} />;
+      case 'insights': return <Insights key={renderKey} />;
+      case 'insights-level2': return <InsightsLevel2 key={renderKey} />;
+      case 'insights-level3': return <InsightsLevel3 key={renderKey} />;
       case 'journal-detail': return <JournalDetail key={selectedJournalRef} journalRef={selectedJournalRef} onBack={() => { window.location.hash = ''; setActiveTab('transactions'); setSelectedJournalRef(null); }} />;
-      case 'settings': return <SettingsPage key="settings" />;
-      case 'tds': return <TDSManager key={ledgerVersion} />;
-      case 'business-hub': return <BusinessHub key={ledgerVersion} />;
-      default: return <Dashboard key={ledgerVersion} />;
+      case 'settings': return <SettingsPage key={renderKey} onOpenNewCompanyModal={() => setIsOnboardingOpen(true)} />;
+      case 'tds': return <TDSManager key={renderKey} />;
+      case 'business-hub': return <BusinessHub key={renderKey} />;
+      default: return <Dashboard key={renderKey} />;
     }
   };
 
+  const isSample = isSampleCompanyActive();
+  const userDisplayName = authUser?.email || session?.user?.email || (isSample ? 'demo@mesoai.in' : 'founder@mesoai.in');
+  const currentNavGroup = NAV_GROUPS[activeNavGroup];
+  const showSidebar = currentNavGroup?.sidebarItems && !sidebarCollapsed;
+
   return (
     <div className="app-container">
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <div 
-          className="sidebar-logo" 
-          onClick={() => setActiveTab('business-hub')}
-          style={{ display: 'flex', alignItems: 'center', gap: '12px' }}
-          title="Business Hub & Setup"
-        >
-          <img 
-            src={logoImg} 
-            alt="Meso Logo" 
-            style={{
-              width: '34px',
-              height: '34px',
-              borderRadius: '9px',
-              objectFit: 'cover',
-              boxShadow: '0 3px 10px rgba(6, 64, 43, 0.2)',
-              border: '1px solid rgba(6, 64, 43, 0.12)',
-              flexShrink: 0
-            }}
-          />
+      {/* ═══ TOP NAVIGATION BAR ═══ */}
+      <header className="topbar">
+        {/* Logo */}
+        <div className="topbar-logo" onClick={() => { setActiveTab('dashboard'); setActiveNavGroup('dashboard'); }}>
+          <img src={logoImg} alt="Meso" />
           <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            <span style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '0.4px', color: 'var(--text-primary)', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span className="topbar-logo-text">
               {businessProfile?.businessName || 'MESO AI'}
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-              <span style={{ fontSize: '9px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.6px' }}>
-                {portalMode === 'audit' ? 'CA AUDIT DESK' : 'FOUNDER BOOKS'}
-              </span>
-              <span style={{ 
-                fontSize: '8px', fontWeight: 700, 
-                color: workspaceMode === 'production' ? '#10b981' : '#f59e0b', 
-                background: workspaceMode === 'production' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', 
-                padding: '1px 5px', borderRadius: '4px', letterSpacing: '0.3px' 
-              }}>
-                {workspaceMode === 'production' ? 'LIVE' : 'SAMPLE'}
-              </span>
-            </div>
+            <span className="topbar-logo-badge" style={{
+              color: isSample ? 'var(--color-warning)' : 'var(--color-positive)',
+              background: isSample ? 'var(--color-warning-bg)' : 'var(--color-positive-bg)',
+            }}>
+              {isSample ? 'SAMPLE' : 'LIVE'}
+            </span>
           </div>
         </div>
 
-        {/* Portal Switcher Pill: Founder ⇄ CA Firm ⇄ Investor Mode */}
-        <div style={{
-          background: 'var(--bg-surface)',
-          padding: '4px',
-          borderRadius: '10px',
-          marginBottom: '12px',
-          border: '1px solid var(--border)',
-          display: 'flex',
-          gap: '4px'
-        }}>
-          <button
-            type="button"
-            onClick={() => {
-              setPortalMode('founder');
-              window.location.hash = '#/founder';
-            }}
-            title="Founder & Business Operational Portal"
-            style={{
-              flex: 1,
-              padding: '6px 4px',
-              borderRadius: '6px',
-              border: 'none',
-              background: portalMode === 'founder' ? '#06402b' : 'transparent',
-              color: portalMode === 'founder' ? '#ffffff' : 'var(--text-muted)',
-              fontSize: '10px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}
-          >
-            🏢 Founder
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setPortalMode('audit');
-              window.location.hash = '#/audit';
-            }}
-            title="CA Audit Desk & Tax Audit 3CD Workpapers"
-            style={{
-              flex: 1,
-              padding: '6px 4px',
-              borderRadius: '6px',
-              border: 'none',
-              background: portalMode === 'audit' ? '#1e3a8a' : 'transparent',
-              color: portalMode === 'audit' ? '#ffffff' : 'var(--text-muted)',
-              fontSize: '10px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}
-          >
-            ⚖️ CA Desk
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              window.location.hash = '#/investor';
-              setPortalMode('investor');
-            }}
-            title="Public Shareable Investor Showcase"
-            style={{
-              flex: 1,
-              padding: '6px 4px',
-              borderRadius: '6px',
-              border: 'none',
-              background: 'transparent',
-              color: 'var(--text-muted)',
-              fontSize: '10px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}
-          >
-            🚀 Pitch
-          </button>
-        </div>
+        {/* Nav Groups */}
+        <nav className="topbar-nav">
+          {Object.entries(NAV_GROUPS).map(([key, group]) => {
+            const Icon = group.icon;
+            const isActive = activeNavGroup === key;
+            return (
+              <div
+                key={key}
+                className={`topbar-nav-item ${isActive ? 'active' : ''}`}
+                onClick={() => handleNavGroupClick(key)}
+              >
+                <Icon size={16} />
+                <span>{group.label}</span>
+              </div>
+            );
+          })}
+        </nav>
 
-        {/* Guided Setup Trigger Button for Founders */}
-        {portalMode === 'founder' && (
+        {/* Right Controls */}
+        <div className="topbar-right">
+          {/* Theme Toggle */}
           <button
-            type="button"
-            onClick={() => setIsOnboardingOpen(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              width: '100%',
-              padding: '8px',
-              borderRadius: '8px',
-              border: '1px dashed #06402b',
-              background: 'rgba(6,64,43,0.06)',
-              color: '#06402b',
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              marginBottom: '12px'
-            }}
-          >
-            <Sparkles size={13} />
-            <span>Setup Wizard (Start from Zero)</span>
-          </button>
-        )}
-
-        {/* 1-Click Quick Controls: Theme & Currency */}
-        <div style={{
-          display: 'flex',
-          gap: '6px',
-          background: 'var(--bg-surface)',
-          padding: '4px',
-          borderRadius: '10px',
-          marginBottom: '16px',
-          border: '1px solid var(--border)'
-        }}>
-          {/* 1-Click Theme Switch */}
-          <button
-            type="button"
+            className="topbar-icon-btn"
             onClick={() => {
               const next = toggleTheme();
               setCurrentTheme(next);
             }}
             title={`Switch to ${currentTheme === 'dark' ? 'Light' : 'Dark'} Mode`}
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              padding: '6px 8px',
-              borderRadius: '7px',
-              border: 'none',
-              background: 'var(--bg-card)',
-              color: 'var(--text-primary)',
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
-            }}
           >
-            {currentTheme === 'dark' ? <Sun size={13} color="#f59e0b" /> : <Moon size={13} color="#38bdf8" />}
-            <span>{currentTheme === 'dark' ? 'Light' : 'Dark'}</span>
+            {currentTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
-          {/* 1-Click INR ⇄ USD Currency Switch */}
+          {/* Currency Toggle */}
           <button
-            type="button"
+            className="topbar-icon-btn"
             onClick={() => {
               const next = toggleCurrency();
               setCurrentCurrency(next);
             }}
-            title={`Switch reporting currency to ${currentCurrency === 'INR' ? 'USD ($)' : 'INR (₹)'}`}
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px',
-              padding: '6px 8px',
-              borderRadius: '7px',
-              border: 'none',
-              background: 'var(--bg-card)',
-              color: 'var(--text-primary)',
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
-            }}
+            title={`Switch to ${currentCurrency === 'INR' ? 'USD' : 'INR'}`}
+            style={{ width: 'auto', padding: '0 12px', fontSize: '12px', fontWeight: 600, gap: '4px', display: 'flex', alignItems: 'center' }}
           >
-            <span style={{ color: '#10b981', fontWeight: 700 }}>{currentCurrency === 'INR' ? '₹' : '$'}</span>
-            <span>{currentCurrency === 'INR' ? 'INR ⇄ USD' : 'USD ⇄ INR'}</span>
+            <span style={{ color: 'var(--color-positive)', fontWeight: 700 }}>
+              {currentCurrency === 'INR' ? '\u20B9' : '$'}
+            </span>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              {currentCurrency}
+            </span>
           </button>
-        </div>
 
-        <div className="sidebar-section-title" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>
-          Books of Accounts
-        </div>
+          {/* Settings */}
+          <button
+            className="topbar-icon-btn"
+            onClick={() => setActiveTab('settings')}
+            title="Settings"
+          >
+            <Settings size={16} />
+          </button>
 
-        <nav className="sidebar-nav">
-          <div className={`sidebar-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => { setActiveTab('dashboard'); if (portalMode === 'audit') setPortalMode('founder'); }}>
-            <LayoutDashboard className="icon" size={16} /> Dashboard
-          </div>
-          <div className={`sidebar-item ${activeTab === 'transactions' ? 'active' : ''}`} onClick={() => { setActiveTab('transactions'); if (portalMode === 'audit') setPortalMode('founder'); }}>
-            <Receipt className="icon" size={16} /> Day Book / Journal
-          </div>
-          <div className={`sidebar-item ${activeTab === 'invoicing' ? 'active' : ''}`} onClick={() => { setActiveTab('invoicing'); if (portalMode === 'audit') setPortalMode('founder'); }}>
-            <FileText className="icon" size={16} /> Invoicing
-          </div>
-          <div className={`sidebar-item ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => { setActiveTab('inventory'); if (portalMode === 'audit') setPortalMode('founder'); }}>
-            <Package className="icon" size={16} /> Inventory
-          </div>
-          <div className={`sidebar-item ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => { setActiveTab('reports'); if (portalMode === 'audit') setPortalMode('founder'); }}>
-            <FileBarChart className="icon" size={16} /> Final Accounts
-          </div>
-          <div className={`sidebar-item ${activeTab === 'gst-compliance' ? 'active' : ''}`} onClick={() => { setActiveTab('gst-compliance'); if (portalMode === 'audit') setPortalMode('founder'); }}>
-            <Scale className="icon" size={16} /> GST &amp; Statutory Hub
-          </div>
-          <div className={`sidebar-item ${activeTab === 'tds' ? 'active' : ''}`} onClick={() => { setActiveTab('tds'); if (portalMode === 'audit') setPortalMode('founder'); }}>
-            <IndianRupee className="icon" size={16} /> TDS &amp; Withholding
-          </div>
-          <div className={`sidebar-item ${activeTab === 'brs' ? 'active' : ''}`} onClick={() => { setActiveTab('brs'); if (portalMode === 'audit') setPortalMode('founder'); }}>
-            <Landmark className="icon" size={16} /> Bank Reconciliation
-          </div>
+          <div className="topbar-divider" />
 
-          <div className="sidebar-section-title" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', fontWeight: 600, marginTop: '16px', marginBottom: '8px' }}>
-            Business Setup
-          </div>
-          <div className={`sidebar-item ${activeTab === 'business-hub' ? 'active' : ''}`} onClick={() => { setActiveTab('business-hub'); if (portalMode === 'audit') setPortalMode('founder'); }}>
-            <Building2 className="icon" size={16} /> Business Hub &amp; Setup
-          </div>
+          {/* Profile Pill + Dropdown */}
+          <div ref={userMenuRef} style={{ position: 'relative' }}>
+            <button
+              className="profile-pill"
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            >
+              <div className="profile-avatar" style={{
+                background: isSample ? 'var(--color-warning)' : 'var(--color-positive)',
+              }}>
+                {(businessProfile?.businessName || 'M')[0].toUpperCase()}
+              </div>
+              <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {businessProfile?.businessName || userDisplayName}
+              </span>
+              <ChevronDown size={14} color="var(--text-muted)" />
+            </button>
 
-          <div className="sidebar-section-title" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', fontWeight: 600, marginTop: '16px', marginBottom: '8px' }}>
-            Advisory &amp; Insights
-          </div>
+            {/* User Dropdown Menu */}
+            {isUserMenuOpen && (
+              <div className="user-dropdown">
+                {/* User Info Header */}
+                <div className="user-dropdown-header">
+                  <div className="user-dropdown-label">Signed in as</div>
+                  <div className="user-dropdown-email">{userDisplayName}</div>
+                </div>
 
-          <div className={`sidebar-item ${activeTab === 'insights' ? 'active' : ''}`} onClick={() => { setActiveTab('insights'); if (portalMode === 'audit') setPortalMode('founder'); }}>
-            <TrendingUp className="icon" size={16} /> Level 1: Health
-          </div>
-          <div className={`sidebar-item ${activeTab === 'insights-level2' ? 'active' : ''}`} onClick={() => { setActiveTab('insights-level2'); if (portalMode === 'audit') setPortalMode('founder'); }}>
-            <BarChart2 className="icon" size={16} /> Level 2: Forecast
-          </div>
-          <div className={`sidebar-item ${activeTab === 'insights-level3' ? 'active' : ''}`} onClick={() => { setActiveTab('insights-level3'); if (portalMode === 'audit') setPortalMode('founder'); }}>
-            <Activity className="icon" size={16} /> Level 3: Strategic
-          </div>
-          <div className="sidebar-item" onClick={() => setIsBotOpen(true)}>
-            <Bot className="icon" size={16} /> AI Audit Assistant
-            <span className="badge" style={{ marginLeft: 'auto', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>Live</span>
-          </div>
+                {/* Company Switcher Section */}
+                <div>
+                  <div className="user-dropdown-section-title">Switch Business</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: '180px', overflowY: 'auto' }}>
+                    {companies.map(co => {
+                      const isActive = co.id === activeCompanyId;
+                      return (
+                        <div
+                          key={co.id}
+                          className={`user-dropdown-company ${isActive ? 'active' : ''}`}
+                          onClick={() => handleCompanyChange(co.id)}
+                        >
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '190px' }}>
+                            {co.name} {co.isSample && '(Sample)'}
+                          </span>
+                          {isActive && <Check size={14} />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
 
-          <div className="sidebar-section-title" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', fontWeight: 600, marginTop: '16px', marginBottom: '8px' }}>
-            Preferences &amp; System
-          </div>
-          <div className={`sidebar-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => { setActiveTab('settings'); if (portalMode === 'audit') setPortalMode('founder'); }}>
-            <Settings className="icon" size={16} /> Settings &amp; API Key
-          </div>
-        </nav>
+                {/* Create New Company */}
+                <div className="user-dropdown-divider">
+                  <button
+                    className="user-dropdown-action positive"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      setIsOnboardingOpen(true);
+                    }}
+                  >
+                    <PlusCircle size={14} />
+                    <span>+ Add New Business</span>
+                  </button>
+                </div>
 
-        <div style={{ marginTop: 'auto' }}>
-          <div style={{ padding: '16px', background: 'var(--bg-surface)', borderRadius: '16px', marginBottom: '16px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>
-              {businessProfile?.businessName || 'Meso AI'}
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Schedule III &amp; AS Compliant</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }}></div>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Double-Entry Verified</span>
-            </div>
-            {(authUser?.email || session?.user?.email) && (
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                👤 {authUser?.email || session?.user?.email}
+                {/* Settings & Logout */}
+                <div className="user-dropdown-divider" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <button
+                    className="user-dropdown-action"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      setActiveTab('settings');
+                    }}
+                  >
+                    <Settings size={14} />
+                    <span>System Settings</span>
+                  </button>
+
+                  <button className="user-dropdown-action danger" onClick={handleLogout}>
+                    <LogOut size={14} />
+                    <span>Log Out</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
-
-          <div className="sidebar-nav">
-            <div className={`sidebar-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
-              <Settings className="icon" size={16} /> Settings
-            </div>
-            <div className="sidebar-item" onClick={async () => {
-              await supabase.auth.signOut();
-              localStorage.removeItem('MESO_AUTH_USER');
-              localStorage.removeItem('MESO_DEMO_MODE');
-              setAuthUser(null);
-              setDemoMode(false);
-              setSession(null);
-            }}>
-              <LogOut className="icon" size={16} /> Log Out
-            </div>
-          </div>
         </div>
-      </aside>
+      </header>
 
-      {/* Main Content Area */}
-      <main className="main-content">
-        {renderContent()}
-      </main>
+      {/* ═══ BODY: SIDEBAR + CONTENT ═══ */}
+      <div className="app-body">
+        {/* Contextual Left Sidebar */}
+        {currentNavGroup?.sidebarItems && (
+          <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+            <div className="sidebar-header">
+              <span className="sidebar-title">{currentNavGroup.label}</span>
+              <button className="sidebar-collapse-btn" onClick={handleToggleSidebar} title="Collapse sidebar">
+                <X size={16} />
+              </button>
+            </div>
 
-      {/* Founder Guided Onboarding Wizard Modal */}
+            <nav className="sidebar-nav">
+              {currentNavGroup.sidebarItems.map(item => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.id}
+                    className={`sidebar-item ${activeTab === item.id ? 'active' : ''}`}
+                    onClick={() => setActiveTab(item.id)}
+                  >
+                    <Icon size={16} className="icon" />
+                    <span>{item.label}</span>
+                  </div>
+                );
+              })}
+            </nav>
+
+            {/* Sidebar Footer */}
+            <div className="sidebar-footer">
+              <div className="sidebar-footer-title">{businessProfile?.businessName || 'Meso AI'}</div>
+              <div className="sidebar-footer-subtitle">Schedule III & AS Compliant</div>
+              <div className="sidebar-footer-status">
+                <div className="sidebar-footer-dot"></div>
+                <span>Double-Entry Verified</span>
+              </div>
+            </div>
+          </aside>
+        )}
+
+        {/* Main Content Area */}
+        <main className="main-content">
+          {renderContent()}
+        </main>
+      </div>
+
+      {/* ═══ FLOATING AI BUTTON ═══ */}
+      <button
+        className="floating-ai-btn"
+        onClick={() => setIsBotOpen(true)}
+        title="AI Audit Assistant"
+      >
+        <Sparkles size={20} />
+      </button>
+
+      {/* ═══ MODALS & PANELS ═══ */}
       <FounderOnboardingWizard
         isOpen={isOnboardingOpen}
         onClose={() => setIsOnboardingOpen(false)}
@@ -601,7 +586,6 @@ function App() {
         }}
       />
 
-      {/* AI Audit Bot Panel */}
       <CompliancePanel isOpen={isBotOpen} onClose={() => setIsBotOpen(false)} />
     </div>
   );
