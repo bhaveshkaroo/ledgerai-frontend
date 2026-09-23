@@ -228,6 +228,35 @@ export function createNewCompany(profile, openingTransactions = []) {
   return companyId;
 }
 
+/** Remove/delete a company and wipe its isolated snapshots */
+export function removeCompany(companyId) {
+  if (companyId === SAMPLE_COMPANY_ID) {
+    throw new Error('The default sample organization cannot be deleted.');
+  }
+
+  const list = getCompanyList().filter(co => co.id !== companyId);
+  localStorage.setItem(STORAGE_COMPANY_LIST_KEY, JSON.stringify(list));
+
+  // Remove isolated snapshots
+  localStorage.removeItem(`MESO_CO_${companyId}_PROFILE`);
+  localStorage.removeItem(`MESO_CO_${companyId}_TX`);
+  localStorage.removeItem(`MESO_CO_${companyId}_INVOICES`);
+  localStorage.removeItem(`MESO_CO_${companyId}_INVENTORY`);
+  localStorage.removeItem(`MESO_CO_${companyId}_CLIENTS`);
+  localStorage.removeItem(`MESO_CO_${companyId}_VENDORS`);
+
+  // If the active company was removed, switch to sample company
+  if (getActiveCompanyId() === companyId) {
+    switchCompany(SAMPLE_COMPANY_ID);
+  } else {
+    window.dispatchEvent(new CustomEvent('company-switched', { 
+      detail: { companyId: getActiveCompanyId(), profile: getBusinessProfile() } 
+    }));
+  }
+
+  return true;
+}
+
 /** Delete a company (cannot delete active company or sample company) */
 export function deleteCompany(companyId) {
   if (companyId === getActiveCompanyId() || companyId === SAMPLE_COMPANY_ID) return false;

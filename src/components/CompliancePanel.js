@@ -9,7 +9,7 @@ import { getGeminiApiKey as getGeminiKey, GEMINI_MODELS, API_KEY_MISSING_MSG } f
 
 const COA_NAMES = CHART_OF_ACCOUNTS.map(a => a.name).join(', ');
 
-const SYSTEM_INSTRUCTION = `You are Meso AI Audit & Accounting Assistant — an autonomous expert Indian Chartered Accountant embedded in the Indian MSME accounting software "Meso".
+const SYSTEM_INSTRUCTION = `You are Beta — an autonomous expert Indian Chartered Accountant embedded in the Indian MSME accounting software "Meso".
 
 Your core capabilities:
 1. Document & Photo OCR: When the user uploads an invoice, bill, receipt, or document image/PDF, analyze it, extract all details (Vendor/Customer, Date, Invoice No, GSTIN, Line items, Tax amounts, Total), and formulate the balanced double-entry journal entry.
@@ -553,8 +553,8 @@ const CompliancePanel = ({ isOpen, onClose }) => {
           <Bot size={20} color="#10b981" />
           <div>
             <div style={{ fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>Meso AI Assistant</span>
-              <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(16,185,129,0.12)', color: '#10b981', fontWeight: 600 }}>1-Tap Control</span>
+              <span>Beta</span>
+              <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(16,185,129,0.12)', color: '#10b981', fontWeight: 600 }}>Autonomous AI</span>
             </div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Scan • Auto-Journal • Reversal • Fix Findings</div>
           </div>

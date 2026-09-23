@@ -3,11 +3,12 @@ import { getGeminiApiKey, setGeminiApiKey, clearGeminiApiKey } from '../utils/ai
 import { getTheme, setTheme } from '../utils/ThemeEngine';
 import { getCurrency, setCurrency, getExchangeRate, getRateMetadata, syncExchangeRate } from '../utils/CurrencyEngine';
 import { 
-  Sun, Moon, Key, DollarSign, IndianRupee, Save, RotateCcw, ShieldCheck, Globe, Building2, CheckCircle2, PlusCircle
+  Sun, Moon, Key, DollarSign, IndianRupee, Save, RotateCcw, ShieldCheck, Globe, Building2, CheckCircle2, PlusCircle, Trash2
 } from 'lucide-react';
 import { 
-  getCompanyList, getActiveCompanyId, switchCompany, createNewCompany, isSampleCompanyActive 
+  getCompanyList, getActiveCompanyId, switchCompany
 } from '../utils/BusinessEngine';
+import RemoveCompanyModal from './RemoveCompanyModal';
 
 function Settings({ onOpenNewCompanyModal }) {
   const [savedSettings, setSavedSettings] = useState(() => ({
@@ -24,6 +25,8 @@ function Settings({ onOpenNewCompanyModal }) {
   // Multi-Company switch state
   const [companies, setCompanies] = useState(() => getCompanyList());
   const [activeCoId, setActiveCoId] = useState(() => getActiveCompanyId());
+  const [companyToRemove, setCompanyToRemove] = useState(null);
+  const [isRemoveOpen, setIsRemoveOpen] = useState(false);
 
   const hasUnsavedChanges = 
     draft.currency !== savedSettings.currency ||
@@ -225,19 +228,49 @@ function Settings({ onOpenNewCompanyModal }) {
                     </div>
                   </div>
 
-                  {isActive ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-positive)', fontSize: '12px', fontWeight: 700 }}>
-                      <CheckCircle2 size={16} /> Active Books
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handleCompanySelect(co.id); }}
-                      className="settings-btn"
-                    >
-                      Switch to This
-                    </button>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {isActive ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-positive)', fontSize: '12px', fontWeight: 700 }}>
+                        <CheckCircle2 size={16} /> Active Books
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleCompanySelect(co.id); }}
+                        className="settings-btn"
+                      >
+                        Switch to This
+                      </button>
+                    )}
+
+                    {!co.isSample && (
+                      <button
+                        type="button"
+                        title={`Remove ${co.name}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCompanyToRemove(co);
+                          setIsRemoveOpen(true);
+                        }}
+                        style={{
+                          border: '1px solid var(--border)',
+                          background: 'var(--bg-card)',
+                          color: 'var(--color-negative)',
+                          padding: '6px 10px',
+                          borderRadius: 'var(--radius-sm)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '11px',
+                          fontWeight: 600
+                        }}
+                      >
+                        <Trash2 size={13} />
+                        <span>Remove</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -432,6 +465,19 @@ function Settings({ onOpenNewCompanyModal }) {
           </div>
         </div>
       </div>
+
+      <RemoveCompanyModal
+        isOpen={isRemoveOpen}
+        company={companyToRemove}
+        onClose={() => {
+          setIsRemoveOpen(false);
+          setCompanyToRemove(null);
+        }}
+        onRemoved={() => {
+          setCompanies(getCompanyList());
+          setActiveCoId(getActiveCompanyId());
+        }}
+      />
     </div>
   );
 }

@@ -18,6 +18,8 @@ import SettingsPage from './components/Settings';
 import BusinessHub from './components/BusinessHub';
 import FounderOnboardingWizard from './components/FounderOnboardingWizard';
 import SupportModal from './components/SupportModal';
+import BetaWelcomeModal from './components/BetaWelcomeModal';
+import RemoveCompanyModal from './components/RemoveCompanyModal';
 import { InvoiceEngine } from './utils/InvoiceEngine';
 import { InventoryEngine } from './utils/InventoryEngine';
 import { LedgerEngine } from './utils/LedgerEngine';
@@ -28,7 +30,7 @@ import {
   LogOut, Scale, Landmark, TrendingUp, BarChart2, 
   Activity, IndianRupee, Sun, Moon, Building2,
   PlusCircle, Check, ChevronDown, Sparkles,
-  Menu, X, ChevronRight, Headphones, Search, User
+  Menu, X, ChevronRight, Headphones, Search, User, Trash2
 } from 'lucide-react';
 import { ThemeEngine, getTheme, toggleTheme } from './utils/ThemeEngine';
 import { getCurrency, toggleCurrency } from './utils/CurrencyEngine';
@@ -128,6 +130,10 @@ function App() {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isBotOpen, setIsBotOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [isBetaWelcomeOpen, setIsBetaWelcomeOpen] = useState(() => !localStorage.getItem('MESO_BETA_NOTE_DISMISSED'));
+  const [isRemoveCompanyOpen, setIsRemoveCompanyOpen] = useState(false);
+  const [companyToDelete, setCompanyToDelete] = useState(null);
+  const [railExpanded, setRailExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [demoMode, setDemoMode] = useState(() => localStorage.getItem('MESO_DEMO_MODE') === 'true');
   const [selectedJournalRef, setSelectedJournalRef] = useState(null);
@@ -372,20 +378,14 @@ function App() {
     <div className="app-container">
       {/* ═══ TOP NAVIGATION BAR ═══ */}
       <header className="topbar">
-        {/* Logo */}
-        <div className="topbar-logo" onClick={() => { setActiveTab('dashboard'); setActiveNavGroup('dashboard'); }}>
+        {/* Logo (Clean Meso Brand without entity name clutter) */}
+        <div 
+          className="topbar-logo" 
+          onClick={() => { setActiveTab('dashboard'); setActiveNavGroup('dashboard'); }}
+          title="Meso Home"
+        >
           <img src={logoImg} alt="Meso" />
-          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            <span className="topbar-logo-text">
-              {businessProfile?.businessName || 'MESO AI'}
-            </span>
-            <span className="topbar-logo-badge" style={{
-              color: isSample ? 'var(--color-warning)' : 'var(--color-positive)',
-              background: isSample ? 'var(--color-warning-bg)' : 'var(--color-positive-bg)',
-            }}>
-              {isSample ? 'SAMPLE' : 'LIVE'}
-            </span>
-          </div>
+          <span className="topbar-logo-text">Meso</span>
         </div>
 
         {/* Nav Groups */}
@@ -496,11 +496,40 @@ function App() {
                           key={co.id}
                           className={`user-dropdown-company ${isActive ? 'active' : ''}`}
                           onClick={() => handleCompanyChange(co.id)}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                         >
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '190px' }}>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>
                             {co.name} {co.isSample && '(Sample)'}
                           </span>
-                          {isActive && <Check size={14} />}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {isActive && <Check size={14} color="var(--color-positive)" />}
+                            {!co.isSample && (
+                              <button
+                                type="button"
+                                title={`Remove ${co.name}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCompanyToDelete(co);
+                                  setIsRemoveCompanyOpen(true);
+                                  setIsUserMenuOpen(false);
+                                }}
+                                style={{
+                                  border: 'none',
+                                  background: 'transparent',
+                                  color: 'var(--text-muted)',
+                                  cursor: 'pointer',
+                                  padding: '2px 4px',
+                                  borderRadius: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.color = 'var(--color-negative)'}
+                                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -547,8 +576,17 @@ function App() {
 
       {/* ═══ BODY: SIDEBAR RAIL + CONTEXTUAL DRAWER + CONTENT ═══ */}
       <div className="app-body">
-        {/* Persistent Left Dock / Rail (Rafion Style with bouncy hover animation) */}
-        <aside className="sidebar-rail">
+        {/* Persistent Left Dock / Rail (Rafion Style with animated expand) */}
+        <aside className={`sidebar-rail ${railExpanded ? 'expanded' : ''}`}>
+          {/* Rail Expand / Collapse Toggle */}
+          <button
+            className="rail-toggle-btn"
+            onClick={() => setRailExpanded(!railExpanded)}
+            title={railExpanded ? "Collapse sidebar dock" : "Expand sidebar labels"}
+          >
+            <Menu size={16} />
+          </button>
+
           {RAIL_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -562,8 +600,12 @@ function App() {
                 }}
                 title={item.label}
               >
-                <Icon size={18} />
-                <span className="rail-tooltip">{item.label}</span>
+                <Icon size={18} className="rail-icon" />
+                {railExpanded ? (
+                  <span className="rail-label-animated">{item.label}</span>
+                ) : (
+                  <span className="rail-tooltip">{item.label}</span>
+                )}
               </button>
             );
           })}
@@ -623,11 +665,11 @@ function App() {
         </main>
       </div>
 
-      {/* ═══ FLOATING AI BUTTON ═══ */}
+      {/* ═══ FLOATING BETA AI ASSISTANT BUTTON ═══ */}
       <button
         className="floating-ai-btn"
         onClick={() => setIsBotOpen(true)}
-        title="AI Audit Assistant"
+        title="Beta — Autonomous AI Accounting Assistant"
       >
         <Sparkles size={20} />
       </button>
@@ -648,6 +690,37 @@ function App() {
       <SupportModal
         isOpen={isSupportOpen}
         onClose={() => setIsSupportOpen(false)}
+      />
+
+      {/* Important Beta AI Assistant Welcome Notice */}
+      <BetaWelcomeModal
+        isOpen={isBetaWelcomeOpen}
+        onClose={() => {
+          setIsBetaWelcomeOpen(false);
+          localStorage.setItem('MESO_BETA_NOTE_DISMISSED', 'true');
+        }}
+        onGoToSettings={() => {
+          setActiveTab('settings');
+          setActiveNavGroup('dashboard');
+        }}
+      />
+
+      {/* Remove Business Confirmation Modal (Requires typing 'remove') */}
+      <RemoveCompanyModal
+        isOpen={isRemoveCompanyOpen}
+        company={companyToDelete}
+        onClose={() => {
+          setIsRemoveCompanyOpen(false);
+          setCompanyToDelete(null);
+        }}
+        onRemoved={(removedId) => {
+          setCompanies(getCompanyList());
+          if (activeCompanyId === removedId) {
+            setActiveCompanyIdState(getActiveCompanyId());
+            setBusinessProfileState(getBusinessProfile());
+            setLedgerVersion(v => v + 1);
+          }
+        }}
       />
     </div>
   );

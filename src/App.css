@@ -213,22 +213,22 @@ body {
     radial-gradient(circle at 14% 38%, rgba(20, 40, 30, 0.3) 0%, transparent 40%);
 }
 
-/* ─── Top Navigation Bar ─────────────────────────────────── */
+/* ─── Top Navigation Bar (Rafion Borderless Style) ───────── */
 .topbar {
   display: flex;
   align-items: center;
   height: var(--topbar-height);
-  padding: 0 var(--sp-6);
+  padding: 0 var(--sp-8);
   background: var(--bg-topbar);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
   position: sticky;
   top: 0;
   z-index: 50;
   flex-shrink: 0;
-  gap: var(--sp-4);
-  transition: background-color var(--duration-normal) ease, border-color var(--duration-normal) ease;
+  gap: var(--sp-6);
+  transition: background-color var(--duration-normal) ease;
 }
 
 .topbar-logo {
@@ -236,9 +236,9 @@ body {
   align-items: center;
   gap: var(--sp-3);
   cursor: pointer;
-  padding: var(--sp-1) var(--sp-2);
+  padding: 6px 12px;
   border-radius: var(--radius-pill);
-  transition: background var(--duration-fast) ease;
+  transition: all var(--duration-fast) ease;
   flex-shrink: 0;
   text-decoration: none;
   color: inherit;
@@ -249,9 +249,9 @@ body {
 }
 
 .topbar-logo img {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   object-fit: cover;
   flex-shrink: 0;
 }
@@ -259,26 +259,17 @@ body {
 .topbar-logo-text {
   font-size: var(--fs-md);
   font-weight: 700;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.3px;
   color: var(--text-primary);
   white-space: nowrap;
 }
 
-.topbar-logo-badge {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: var(--radius-pill);
-  letter-spacing: 0.4px;
-  line-height: 1.4;
-}
-
-/* ─── Top Nav Links (Rafion Pill Aesthetic) ──────────────── */
+/* ─── Top Nav Links (Rafion Pill Aesthetic + Generous Spacing) ── */
 .topbar-nav {
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
-  margin-left: var(--sp-6);
+  gap: 12px;
+  margin-left: var(--sp-8);
 }
 
 .topbar-nav-item {
@@ -388,10 +379,7 @@ body {
 }
 
 .topbar-divider {
-  width: 1px;
-  height: 24px;
-  background: var(--border);
-  margin: 0 var(--sp-2);
+  display: none;
 }
 
 /* ─── Profile Pill (WhatsApp Minimalist Style: No loud colors, clean hover animation) ── */
@@ -450,7 +438,7 @@ body {
   border-color: #f1f5f9;
 }
 
-/* ─── Body Layout (sidebar rail + content) ───────────────── */
+/* ─── Body Layout (borderless sidebar rail + content) ────── */
 .app-body {
   display: flex;
   flex: 1;
@@ -458,11 +446,11 @@ body {
   position: relative;
 }
 
-/* ─── Persistent Left Sidebar Rail (Rafion Dock Style) ──── */
+/* ─── Persistent Left Sidebar Rail (Rafion Borderless Dock) ── */
 .sidebar-rail {
   width: 68px;
   background: transparent;
-  border-right: 1px solid var(--border);
+  border-right: none; /* No lines as requested */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -470,13 +458,52 @@ body {
   gap: 10px;
   flex-shrink: 0;
   z-index: 45;
-  transition: all 0.25s ease;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Expanded state when tapped */
+.sidebar-rail.expanded {
+  width: 230px;
+  align-items: stretch;
+  padding: 16px 12px;
+  background: rgba(234, 230, 223, 0.6);
+  backdrop-filter: blur(12px);
+}
+
+[data-theme="dark"] .sidebar-rail.expanded {
+  background: rgba(17, 19, 23, 0.7);
+}
+
+.rail-toggle-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-bottom: 6px;
+  transition: all 0.2s ease;
+  align-self: center;
+}
+
+.sidebar-rail.expanded .rail-toggle-btn {
+  align-self: flex-end;
+}
+
+.rail-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--text-primary);
+  transform: scale(1.08);
 }
 
 .rail-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -488,19 +515,24 @@ body {
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+.sidebar-rail.expanded .rail-btn {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 0 14px;
+  gap: 12px;
+}
+
 /* Micro-interaction bounce animation requested by user */
 .rail-btn:hover {
-  transform: translateY(-3px) scale(1.16);
+  transform: translateY(-3px) scale(1.15);
   background: #ffffff;
   color: #111111;
-  border-color: rgba(0, 0, 0, 0.08);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.09);
 }
 
 [data-theme="dark"] .rail-btn:hover {
   background: #1c202a;
   color: #f1f5f9;
-  border-color: rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
@@ -508,10 +540,16 @@ body {
   transform: scale(0.94);
 }
 
+/* Active item: icon gets larger and prominent */
 .rail-btn.active {
   background: #111111;
   color: #ffffff;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.rail-btn.active .rail-icon {
+  transform: scale(1.22);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 [data-theme="dark"] .rail-btn.active {
@@ -519,12 +557,35 @@ body {
   color: #0f172a;
 }
 
+/* Animated text reveal from left to right / right to left */
+.rail-label-animated {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: textRevealAnimation 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes textRevealAnimation {
+  0% {
+    opacity: 0;
+    transform: translateX(-14px);
+    letter-spacing: -0.5px;
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+    letter-spacing: normal;
+  }
+}
+
 .rail-tooltip {
   position: absolute;
-  left: 56px;
+  left: 58px;
   background: #111111;
   color: #ffffff;
-  padding: 5px 11px;
+  padding: 5px 12px;
   border-radius: 8px;
   font-size: 11px;
   font-weight: 500;
@@ -545,11 +606,11 @@ body {
 /* Customer Support Icon at the very bottom of left sidebar */
 .rail-support-btn {
   margin-top: auto;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.8);
+  border: none; /* No line */
+  background: rgba(255, 255, 255, 0.85);
   color: var(--text-secondary);
   display: flex;
   align-items: center;
@@ -560,12 +621,11 @@ body {
 }
 
 [data-theme="dark"] .rail-support-btn {
-  background: rgba(24, 28, 38, 0.8);
+  background: rgba(24, 28, 38, 0.85);
 }
 
 .rail-support-btn:hover {
   transform: translateY(-3px) scale(1.18) rotate(10deg);
-  border-color: #111111;
   color: #111111;
   background: #ffffff;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
@@ -573,15 +633,33 @@ body {
 
 [data-theme="dark"] .rail-support-btn:hover {
   background: #232836;
-  border-color: #f1f5f9;
   color: #f1f5f9;
 }
 
-/* ─── Contextual Sub-Sidebar (for deep sections) ─────────── */
+/* KPI cards popping and expanding on tab change */
+@keyframes kpiCardPop {
+  0% {
+    opacity: 0.65;
+    transform: scale(0.975);
+  }
+  65% {
+    transform: scale(1.015);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade {
+  animation: kpiCardPop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ─── Contextual Sub-Sidebar (for deep sections, borderless) ── */
 .sidebar {
   width: var(--sidebar-width);
   background: var(--bg-sidebar);
-  border-right: 1px solid var(--border);
+  border-right: none; /* No line as requested */
   padding: var(--sp-4) var(--sp-3);
   display: flex;
   flex-direction: column;
