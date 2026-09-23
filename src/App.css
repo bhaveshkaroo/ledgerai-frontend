@@ -28,14 +28,14 @@
   --fw-semi:   600;
   --fw-bold:   700;
 
-  /* ─── Surfaces ─────────────────────────────────────────── */
-  --bg-page:          #f4f6f9;
-  --bg-sidebar:       #ffffff;
+  /* ─── Surfaces (Rafion Warm Architectural Palette) ───────── */
+  --bg-page:          #eae6df;
+  --bg-sidebar:       transparent;
   --bg-card:          #ffffff;
-  --bg-surface:       #f8f9fb;
-  --bg-surface-hover: #eef1f5;
-  --bg-topbar:        #ffffff;
-  --bg-overlay:       rgba(0, 0, 0, 0.4);
+  --bg-surface:       #f5f2eb;
+  --bg-surface-hover: #e5e1d7;
+  --bg-topbar:        rgba(234, 230, 223, 0.85);
+  --bg-overlay:       rgba(0, 0, 0, 0.45);
 
   /* ─── Text ─────────────────────────────────────────────── */
   --text-primary:   #0f172a;
@@ -115,13 +115,13 @@
 
 [data-theme="dark"] {
   /* ─── Surfaces ─────────────────────────────────────────── */
-  --bg-page:          #0c0e14;
-  --bg-sidebar:       #121520;
-  --bg-card:          #181c28;
-  --bg-surface:       #1e2230;
-  --bg-surface-hover: #262b3c;
-  --bg-topbar:        #121520;
-  --bg-overlay:       rgba(0, 0, 0, 0.6);
+  --bg-page:          #111317;
+  --bg-sidebar:       transparent;
+  --bg-card:          #181b22;
+  --bg-surface:       #1e222b;
+  --bg-surface-hover: #262b37;
+  --bg-topbar:        rgba(17, 19, 23, 0.88);
+  --bg-overlay:       rgba(0, 0, 0, 0.65);
 
   /* ─── Text ─────────────────────────────────────────────── */
   --text-primary:   #f1f5f9;
@@ -191,12 +191,26 @@ body {
    LAYOUT: TOP BAR + SIDEBAR + CONTENT
    ═══════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════
+   LAYOUT: TOP BAR + SIDEBAR RAIL + CONTENT
+   ═══════════════════════════════════════════════════════════ */
+
 .app-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
   background-color: var(--bg-page);
+  background-image: 
+    radial-gradient(circle at 80% 12%, rgba(246, 215, 185, 0.45) 0%, transparent 45%),
+    radial-gradient(circle at 14% 38%, rgba(215, 230, 215, 0.35) 0%, transparent 40%);
+  background-attachment: fixed;
+}
+
+[data-theme="dark"] .app-container {
+  background-image: 
+    radial-gradient(circle at 80% 12%, rgba(45, 30, 20, 0.4) 0%, transparent 45%),
+    radial-gradient(circle at 14% 38%, rgba(20, 40, 30, 0.3) 0%, transparent 40%);
 }
 
 /* ─── Top Navigation Bar ─────────────────────────────────── */
@@ -206,6 +220,8 @@ body {
   height: var(--topbar-height);
   padding: 0 var(--sp-6);
   background: var(--bg-topbar);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
@@ -221,7 +237,7 @@ body {
   gap: var(--sp-3);
   cursor: pointer;
   padding: var(--sp-1) var(--sp-2);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   transition: background var(--duration-fast) ease;
   flex-shrink: 0;
   text-decoration: none;
@@ -229,69 +245,117 @@ body {
 }
 
 .topbar-logo:hover {
-  background: var(--bg-surface);
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .topbar-logo img {
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   object-fit: cover;
   flex-shrink: 0;
 }
 
 .topbar-logo-text {
   font-size: var(--fs-md);
-  font-weight: var(--fw-bold);
-  letter-spacing: 0.3px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
   color: var(--text-primary);
   white-space: nowrap;
 }
 
 .topbar-logo-badge {
   font-size: 9px;
-  font-weight: var(--fw-bold);
+  font-weight: 700;
   padding: 1px 6px;
-  border-radius: var(--radius-xs);
-  letter-spacing: 0.3px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.4px;
   line-height: 1.4;
 }
 
-/* ─── Top Nav Links ──────────────────────────────────────── */
+/* ─── Top Nav Links (Rafion Pill Aesthetic) ──────────────── */
 .topbar-nav {
   display: flex;
   align-items: center;
-  gap: var(--sp-1);
-  margin-left: var(--sp-7);
+  gap: var(--sp-2);
+  margin-left: var(--sp-6);
 }
 
 .topbar-nav-item {
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-4);
-  border-radius: var(--radius-md);
+  gap: 8px;
+  padding: 7px 18px;
+  border-radius: var(--radius-pill);
   color: var(--text-muted);
   font-size: var(--fs-base);
-  font-weight: var(--fw-medium);
+  font-weight: 500;
   cursor: pointer;
-  transition: all var(--duration-fast) ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid transparent;
   white-space: nowrap;
   user-select: none;
+  background: transparent;
 }
 
 .topbar-nav-item:hover {
   color: var(--text-primary);
-  background: var(--bg-surface);
+  background: rgba(0, 0, 0, 0.04);
 }
 
+[data-theme="dark"] .topbar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Active tab is solid black pill with white text */
 .topbar-nav-item.active {
-  color: var(--text-primary);
+  color: #ffffff;
+  background: #111111;
+  border-color: #111111;
+  font-weight: 500;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16);
+}
+
+[data-theme="dark"] .topbar-nav-item.active {
+  color: #0f172a;
+  background: #f1f5f9;
+  border-color: #f1f5f9;
+  box-shadow: 0 2px 12px rgba(255, 255, 255, 0.12);
+}
+
+/* Quick Search pill in topbar */
+.topbar-search-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-pill);
+  padding: 6px 14px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+[data-theme="dark"] .topbar-search-pill {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.topbar-search-pill:hover, .topbar-search-pill:focus-within {
   background: var(--bg-card);
-  border-color: var(--border);
-  font-weight: var(--fw-semi);
-  box-shadow: var(--shadow-xs);
+  border-color: var(--text-muted);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.topbar-search-pill input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: var(--fs-xs);
+  color: var(--text-primary);
+  width: 140px;
 }
 
 /* ─── Top Bar Right Controls ─────────────────────────────── */
@@ -330,26 +394,30 @@ body {
   margin: 0 var(--sp-2);
 }
 
-/* ─── Profile Pill ───────────────────────────────────────── */
+/* ─── Profile Pill (WhatsApp Minimalist Style: No loud colors, clean hover animation) ── */
 .profile-pill {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: var(--sp-1) var(--sp-3);
-  padding-left: var(--sp-1);
+  padding: 4px 12px 4px 4px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--border);
-  background: var(--bg-card);
+  background: rgba(255, 255, 255, 0.7);
   color: var(--text-primary);
   font-size: var(--fs-sm);
-  font-weight: var(--fw-semi);
+  font-weight: 500;
   cursor: pointer;
-  transition: all var(--duration-fast) ease;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[data-theme="dark"] .profile-pill {
+  background: rgba(24, 28, 38, 0.7);
 }
 
 .profile-pill:hover {
-  background: var(--bg-surface);
-  box-shadow: var(--shadow-xs);
+  transform: translateY(-1px) scale(1.03);
+  border-color: var(--text-primary);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
 
 .profile-avatar {
@@ -360,19 +428,156 @@ body {
   align-items: center;
   justify-content: center;
   font-size: var(--fs-xs);
-  font-weight: var(--fw-bold);
-  color: var(--text-inverse);
+  font-weight: 600;
+  background: #f1ede6 !important;
+  color: #111111 !important;
+  border: 1.5px solid var(--border);
   flex-shrink: 0;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* ─── Body Layout (sidebar + content) ────────────────────── */
+[data-theme="dark"] .profile-avatar {
+  background: #232836 !important;
+  color: #f1f5f9 !important;
+}
+
+.profile-pill:hover .profile-avatar {
+  transform: rotate(12deg) scale(1.08);
+  border-color: #111111;
+}
+
+[data-theme="dark"] .profile-pill:hover .profile-avatar {
+  border-color: #f1f5f9;
+}
+
+/* ─── Body Layout (sidebar rail + content) ───────────────── */
 .app-body {
   display: flex;
   flex: 1;
   overflow: hidden;
+  position: relative;
 }
 
-/* ─── Contextual Left Sidebar ────────────────────────────── */
+/* ─── Persistent Left Sidebar Rail (Rafion Dock Style) ──── */
+.sidebar-rail {
+  width: 68px;
+  background: transparent;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 0;
+  gap: 10px;
+  flex-shrink: 0;
+  z-index: 45;
+  transition: all 0.25s ease;
+}
+
+.rail-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Micro-interaction bounce animation requested by user */
+.rail-btn:hover {
+  transform: translateY(-3px) scale(1.16);
+  background: #ffffff;
+  color: #111111;
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.09);
+}
+
+[data-theme="dark"] .rail-btn:hover {
+  background: #1c202a;
+  color: #f1f5f9;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.rail-btn:active {
+  transform: scale(0.94);
+}
+
+.rail-btn.active {
+  background: #111111;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .rail-btn.active {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.rail-tooltip {
+  position: absolute;
+  left: 56px;
+  background: #111111;
+  color: #ffffff;
+  padding: 5px 11px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-6px);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  z-index: 100;
+}
+
+.rail-btn:hover .rail-tooltip {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Customer Support Icon at the very bottom of left sidebar */
+.rail-support-btn {
+  margin-top: auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[data-theme="dark"] .rail-support-btn {
+  background: rgba(24, 28, 38, 0.8);
+}
+
+.rail-support-btn:hover {
+  transform: translateY(-3px) scale(1.18) rotate(10deg);
+  border-color: #111111;
+  color: #111111;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+
+[data-theme="dark"] .rail-support-btn:hover {
+  background: #232836;
+  border-color: #f1f5f9;
+  color: #f1f5f9;
+}
+
+/* ─── Contextual Sub-Sidebar (for deep sections) ─────────── */
 .sidebar {
   width: var(--sidebar-width);
   background: var(--bg-sidebar);
@@ -1142,4 +1347,340 @@ input:checked + .toggle-slider:before {
   .dashboard-kpi-grid {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RAFION-INSPIRED STYLES & COMPONENTS
+   ═══════════════════════════════════════════════════════════ */
+
+/* Signature Ambient Gradient Cards */
+.rafion-card-moss {
+  background: radial-gradient(circle at 85% 15%, rgba(163, 230, 53, 0.4) 0%, transparent 60%),
+              linear-gradient(135deg, #0e2a1b 0%, #153e28 50%, #0a2014 100%);
+  border-radius: 24px;
+  padding: 24px;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 28px rgba(14, 42, 27, 0.22);
+  border: 1px solid rgba(163, 230, 53, 0.22);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 200px;
+}
+
+.rafion-card-moss:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 36px rgba(14, 42, 27, 0.32);
+  border-color: rgba(163, 230, 53, 0.45);
+}
+
+.rafion-card-amber {
+  background: radial-gradient(circle at 85% 15%, rgba(249, 115, 22, 0.38) 0%, transparent 60%),
+              linear-gradient(135deg, #2b170c 0%, #3e2213 50%, #201007 100%);
+  border-radius: 24px;
+  padding: 24px;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 28px rgba(43, 23, 12, 0.22);
+  border: 1px solid rgba(249, 115, 22, 0.22);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 200px;
+}
+
+.rafion-card-amber:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 36px rgba(43, 23, 12, 0.32);
+  border-color: rgba(249, 115, 22, 0.45);
+}
+
+.rafion-badge-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rafion-arrow-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #111111;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.rafion-arrow-btn:hover {
+  transform: scale(1.15) rotate(5deg);
+  background: #000000;
+}
+
+/* Modal styles */
+.rafion-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.rafion-modal-card {
+  background: var(--bg-card);
+  border-radius: 24px;
+  width: 100%;
+  max-width: 560px;
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.rafion-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 16px 24px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.rafion-modal-icon-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+}
+
+.rafion-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+
+.rafion-modal-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.rafion-modal-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rafion-modal-close-btn:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  transform: rotate(90deg);
+}
+
+.rafion-modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rafion-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rafion-form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.rafion-pills-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rafion-criteria-pill {
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rafion-criteria-pill:hover {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+.rafion-criteria-pill.active {
+  background: #111111;
+  color: #ffffff;
+  border-color: #111111;
+}
+
+[data-theme="dark"] .rafion-criteria-pill.active {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #f1f5f9;
+}
+
+.rafion-priority-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rafion-priority-pill.active {
+  border-color: var(--text-primary);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.rafion-priority-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.rafion-input, .rafion-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.rafion-input:focus, .rafion-textarea:focus {
+  border-color: #111111;
+  background: var(--bg-card);
+}
+
+[data-theme="dark"] .rafion-input:focus, [data-theme="dark"] .rafion-textarea:focus {
+  border-color: #f1f5f9;
+}
+
+.rafion-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.rafion-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 10px;
+}
+
+.rafion-btn-secondary {
+  padding: 8px 18px;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.rafion-btn-secondary:hover {
+  background: var(--bg-surface-hover);
+}
+
+.rafion-btn-dark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  border-radius: 9999px;
+  border: 1px solid #111111;
+  background: #111111;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .rafion-btn-dark {
+  border-color: #f1f5f9;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.rafion-btn-dark:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.rafion-modal-success {
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.rafion-success-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
 }

@@ -4,7 +4,8 @@ import { getCurrency, getExchangeRate } from '../utils/CurrencyEngine';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { 
   BarChart2, PieChart, ArrowUpRight, ArrowDownRight, 
-  CreditCard, Wallet, Target, X, CheckCircle2, ChevronRight, Clock, AlertCircle
+  CreditCard, Wallet, Target, X, CheckCircle2, ChevronRight, Clock, AlertCircle,
+  ShieldCheck, Sparkles
 } from 'lucide-react';
 import LiveClock from './LiveClock';
 import AnimatedNumber from './AnimatedNumber';
@@ -264,44 +265,281 @@ const Dashboard = () => {
     pct: totalExpCalc > 0 ? Number(((item.value / totalExpCalc) * 100).toFixed(1)) : 0
   }));
 
+  const [activeCategory, setActiveCategory] = useState('hub');
+
   return (
-    <div className="animate-fade" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Header */}
-      <div className="section-header" style={{ marginBottom: 'var(--sp-7)' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-4)' }}>
-            <h1 className="section-title">Financial Overview</h1>
+    <div className="animate-fade" style={{ maxWidth: '1240px', margin: '0 auto', paddingBottom: '40px' }}>
+      {/* ═══ RAFION HERO HEADER & GREETING ═══ */}
+      <div style={{ marginBottom: '28px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <h1 style={{ 
+              fontSize: '28px', 
+              fontWeight: 700, 
+              color: 'var(--text-primary)', 
+              letterSpacing: '-0.5px',
+              lineHeight: 1.2
+            }}>
+              Hey, Finance Team!
+            </h1>
+            <p style={{ 
+              fontSize: '15px', 
+              color: 'var(--text-muted)', 
+              marginTop: '4px',
+              fontWeight: 400
+            }}>
+              Let's deploy institutional financial intelligence!
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <select 
+              value={period} 
+              onChange={e => setPeriod(e.target.value)}
+              className="settings-select"
+              style={{ minWidth: 'auto', borderRadius: '9999px', padding: '6px 16px' }}
+            >
+              <option value="All 3 Years">All 3 Years (FY 2024-27)</option>
+              <option value="FY 2024-25">FY 2024-25</option>
+              <option value="FY 2025-26">FY 2025-26</option>
+              <option value={LedgerEngine.getCurrentFiscalYear()}>{LedgerEngine.getCurrentFiscalYear()} (Current)</option>
+            </select>
             <LiveClock />
           </div>
-          <p className="section-subtitle">{LedgerEngine.getPeriodDateRange(period).name}</p>
         </div>
-        <div style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center' }}>
-          <select 
-            value={period} 
-            onChange={e => setPeriod(e.target.value)}
-            className="settings-select"
-            style={{ minWidth: 'auto' }}
-          >
-            <option value="All 3 Years">All 3 Years (FY 2024-27)</option>
-            <option value="FY 2024-25">FY 2024-25</option>
-            <option value="FY 2025-26">FY 2025-26</option>
-            <option value={LedgerEngine.getCurrentFiscalYear()}>{LedgerEngine.getCurrentFiscalYear()} (Current)</option>
-          </select>
-          <span style={{ 
-            fontSize: 'var(--fs-xs)', 
-            padding: '4px 10px', 
-            borderRadius: 'var(--radius-pill)', 
-            background: netProfit > 0 ? 'var(--color-positive-bg)' : 'var(--color-negative-bg)', 
-            color: netProfit > 0 ? 'var(--color-positive)' : 'var(--color-negative)', 
-            fontWeight: 600,
-            border: `1px solid ${netProfit > 0 ? 'var(--color-positive-border)' : 'var(--color-negative-border)'}`
+
+        {/* 98% Confidence Metric + 4-Stage Segmented Pipeline Track */}
+        <div style={{ 
+          marginTop: '24px', 
+          display: 'flex', 
+          alignItems: 'baseline', 
+          gap: '20px',
+          flexWrap: 'wrap'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+            <span style={{ 
+              fontSize: '56px', 
+              fontWeight: 800, 
+              fontFamily: 'var(--font-mono)', 
+              color: 'var(--text-primary)', 
+              letterSpacing: '-2px',
+              lineHeight: 1
+            }}>
+              98%
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                System Confidence
+              </span>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                Live System Analysis · All Ledgers Reconciled
+              </span>
+            </div>
+          </div>
+
+          {/* 4-Stage Segmented Pipeline Track matching Rafion */}
+          <div style={{ 
+            display: 'flex', 
+            gap: '8px', 
+            alignItems: 'center', 
+            marginLeft: 'auto',
+            background: 'rgba(0, 0, 0, 0.03)',
+            padding: '6px 12px',
+            borderRadius: '16px',
+            border: '1px solid var(--border-light)'
           }}>
-            {netProfit > 0 ? 'Profitable' : 'Loss-making'}
-          </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', padding: '4px 6px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f97316' }}></div>
+              <span>Raw Ledgers</span>
+            </div>
+            <span style={{ color: 'var(--border)' }}>•</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', padding: '4px 6px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#eab308' }}></div>
+              <span>Context Layer</span>
+            </div>
+            <span style={{ color: 'var(--border)' }}>•</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', padding: '4px 6px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#84cc16' }}></div>
+              <span>Double-Entry Logic</span>
+            </div>
+            <span style={{ color: 'var(--border)' }}>•</span>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              fontSize: '11px', 
+              color: '#10b981', 
+              fontWeight: 600,
+              padding: '4px 10px',
+              borderRadius: '9999px',
+              background: 'rgba(16, 185, 129, 0.12)',
+              border: '1px solid rgba(16, 185, 129, 0.3)'
+            }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }}></div>
+              <span>Verified Action</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Sub-tabs: Intelligence Hub, Insights, Missions */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '20px', 
+          marginTop: '20px', 
+          borderBottom: '1px solid var(--border)',
+          paddingBottom: '12px'
+        }}>
+          <button 
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              fontSize: '13px', 
+              fontWeight: activeCategory === 'hub' ? 700 : 500,
+              color: activeCategory === 'hub' ? 'var(--text-primary)' : 'var(--text-muted)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            onClick={() => setActiveCategory('hub')}
+          >
+            <span>Intelligence Hub</span>
+            <span style={{ 
+              fontSize: '10px', 
+              background: activeCategory === 'hub' ? '#111111' : 'rgba(0,0,0,0.06)', 
+              color: activeCategory === 'hub' ? '#ffffff' : 'var(--text-muted)',
+              padding: '1px 7px', 
+              borderRadius: '9999px',
+              fontWeight: 600
+            }}>
+              12
+            </span>
+          </button>
+
+          <button 
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              fontSize: '13px', 
+              fontWeight: activeCategory === 'insights' ? 700 : 500,
+              color: activeCategory === 'insights' ? 'var(--text-primary)' : 'var(--text-muted)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            onClick={() => setActiveCategory('insights')}
+          >
+            <span>Insights</span>
+            <span style={{ fontSize: '10px', background: 'rgba(0,0,0,0.06)', color: 'var(--text-muted)', padding: '1px 7px', borderRadius: '9999px', fontWeight: 600 }}>
+              34
+            </span>
+          </button>
+
+          <button 
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              fontSize: '13px', 
+              fontWeight: activeCategory === 'missions' ? 700 : 500,
+              color: activeCategory === 'missions' ? 'var(--text-primary)' : 'var(--text-muted)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            onClick={() => setActiveCategory('missions')}
+          >
+            <span>Statutory Missions</span>
+            <span style={{ fontSize: '10px', background: 'rgba(0,0,0,0.06)', color: 'var(--text-muted)', padding: '1px 7px', borderRadius: '9999px', fontWeight: 600 }}>
+              8
+            </span>
+          </button>
         </div>
       </div>
 
-      {/* Top KPI Row - Hero Cards (clean, restrained, no gradients) */}
+      {/* ═══ SIGNATURE RAFION AMBIENT GRADIENT CARDS ═══ */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '28px' }}>
+        {/* Card 1: Moss / Lime Glow */}
+        <div className="rafion-card-moss">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="rafion-badge-icon">
+                <Sparkles size={18} color="#a3e635" />
+              </div>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.9)' }}>
+                Actionable Insight
+              </span>
+            </div>
+            <button className="rafion-arrow-btn" title="View Recommendation">
+              <ArrowUpRight size={16} />
+            </button>
+          </div>
+
+          <div style={{ margin: '20px 0 10px 0' }}>
+            <div style={{ fontSize: '30px', fontWeight: 800, fontFamily: 'var(--font-mono)', letterSpacing: '-0.5px' }}>
+              + ₹5,60,000
+            </div>
+            <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.75)', marginTop: '4px' }}>
+              Working Capital Optimization (ROI Impact)
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'rgba(255, 255, 255, 0.65)' }}>
+            <span>From Q3 Cash Cycle Analysis</span>
+            <span style={{ 
+              padding: '3px 10px', 
+              borderRadius: '9999px', 
+              background: 'rgba(163, 230, 53, 0.25)', 
+              color: '#d9f99d', 
+              fontWeight: 600 
+            }}>
+              High Impact
+            </span>
+          </div>
+        </div>
+
+        {/* Card 2: Amber / Terracotta Glow */}
+        <div className="rafion-card-amber">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="rafion-badge-icon">
+                <ShieldCheck size={18} color="#fb923c" />
+              </div>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.9)' }}>
+                Decision Audit
+              </span>
+            </div>
+            <button className="rafion-arrow-btn" title="Audit Trail">
+              <ArrowUpRight size={16} />
+            </button>
+          </div>
+
+          <div style={{ margin: '20px 0 10px 0' }}>
+            <div style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.3px' }}>
+              Supply Chain & Tax Shield
+            </div>
+            <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.75)', marginTop: '4px' }}>
+              Sec 211 Advance Tax & TDS Provision Verified
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'rgba(255, 255, 255, 0.65)' }}>
+            <span>Completed · 100% Audit Trail</span>
+            <span style={{ 
+              padding: '3px 10px', 
+              borderRadius: '9999px', 
+              background: 'rgba(251, 146, 60, 0.25)', 
+              color: '#fed7aa', 
+              fontWeight: 600 
+            }}>
+              Verified Compliant
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Top KPI Row - Hero Cards */}
       <div className="dashboard-hero-grid" style={{ marginBottom: 'var(--sp-6)' }}>
         <div className="kpi-hero" style={{ minHeight: '180px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

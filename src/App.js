@@ -17,6 +17,7 @@ import TDSManager from './components/TDSManager';
 import SettingsPage from './components/Settings';
 import BusinessHub from './components/BusinessHub';
 import FounderOnboardingWizard from './components/FounderOnboardingWizard';
+import SupportModal from './components/SupportModal';
 import { InvoiceEngine } from './utils/InvoiceEngine';
 import { InventoryEngine } from './utils/InventoryEngine';
 import { LedgerEngine } from './utils/LedgerEngine';
@@ -27,7 +28,7 @@ import {
   LogOut, Scale, Landmark, TrendingUp, BarChart2, 
   Activity, IndianRupee, Sun, Moon, Building2,
   PlusCircle, Check, ChevronDown, Sparkles,
-  Menu, X, ChevronRight
+  Menu, X, ChevronRight, Headphones, Search, User
 } from 'lucide-react';
 import { ThemeEngine, getTheme, toggleTheme } from './utils/ThemeEngine';
 import { getCurrency, toggleCurrency } from './utils/CurrencyEngine';
@@ -49,16 +50,15 @@ import logoImg from './assets/logo.png';
    ═══════════════════════════════════════════════════════════ */
 const NAV_GROUPS = {
   dashboard: {
-    label: 'Dashboard',
+    label: 'Overview',
     icon: LayoutDashboard,
     tab: 'dashboard',
-    // No sidebar — Dashboard is a single page
     sidebarItems: null,
   },
   operations: {
     label: 'Operations',
     icon: Receipt,
-    tab: null, // opens sidebar
+    tab: null,
     sidebarItems: [
       { id: 'transactions', label: 'Day Book / Journal', icon: Receipt },
       { id: 'invoicing', label: 'Invoicing', icon: FileText },
@@ -89,6 +89,18 @@ const NAV_GROUPS = {
   },
 };
 
+const RAIL_ITEMS = [
+  { id: 'dashboard', label: 'Overview', icon: LayoutDashboard, group: 'dashboard' },
+  { id: 'transactions', label: 'Day Book & Ledger', icon: Receipt, group: 'operations' },
+  { id: 'invoicing', label: 'Invoicing', icon: FileText, group: 'operations' },
+  { id: 'inventory', label: 'Inventory Stock', icon: Package, group: 'operations' },
+  { id: 'brs', label: 'Bank Reconciliation', icon: Landmark, group: 'operations' },
+  { id: 'reports', label: 'Final Accounts & Statements', icon: FileBarChart, group: 'books' },
+  { id: 'gst-compliance', label: 'GST Compliance Hub', icon: Scale, group: 'books' },
+  { id: 'insights', label: 'AI Financial Insights', icon: TrendingUp, group: 'insights' },
+  { id: 'settings', label: 'System Settings', icon: Settings, group: null },
+];
+
 // Helper: find which nav group a tab belongs to
 function getNavGroupForTab(tab) {
   for (const [groupKey, group] of Object.entries(NAV_GROUPS)) {
@@ -115,6 +127,8 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isBotOpen, setIsBotOpen] = useState(false);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [demoMode, setDemoMode] = useState(() => localStorage.getItem('MESO_DEMO_MODE') === 'true');
   const [selectedJournalRef, setSelectedJournalRef] = useState(null);
 
@@ -392,6 +406,17 @@ function App() {
           })}
         </nav>
 
+        {/* Quick Search Pill (Rafion Style) */}
+        <div className="topbar-search-pill">
+          <Search size={13} />
+          <input
+            type="text"
+            placeholder="Quick search ledgers, invoices..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
         {/* Right Controls */}
         <div className="topbar-right">
           {/* Theme Toggle */}
@@ -435,16 +460,15 @@ function App() {
 
           <div className="topbar-divider" />
 
-          {/* Profile Pill + Dropdown */}
+          {/* Profile Pill + Dropdown (WhatsApp Minimalist Style: No loud colors, clean hover micro-animation) */}
           <div ref={userMenuRef} style={{ position: 'relative' }}>
             <button
               className="profile-pill"
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              title="Profile & Businesses"
             >
-              <div className="profile-avatar" style={{
-                background: isSample ? 'var(--color-warning)' : 'var(--color-positive)',
-              }}>
-                {(businessProfile?.businessName || 'M')[0].toUpperCase()}
+              <div className="profile-avatar">
+                <User size={15} />
               </div>
               <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {businessProfile?.businessName || userDisplayName}
@@ -521,9 +545,41 @@ function App() {
         </div>
       </header>
 
-      {/* ═══ BODY: SIDEBAR + CONTENT ═══ */}
+      {/* ═══ BODY: SIDEBAR RAIL + CONTEXTUAL DRAWER + CONTENT ═══ */}
       <div className="app-body">
-        {/* Contextual Left Sidebar */}
+        {/* Persistent Left Dock / Rail (Rafion Style with bouncy hover animation) */}
+        <aside className="sidebar-rail">
+          {RAIL_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                className={`rail-btn ${isActive ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  if (item.group) setActiveNavGroup(item.group);
+                }}
+                title={item.label}
+              >
+                <Icon size={18} />
+                <span className="rail-tooltip">{item.label}</span>
+              </button>
+            );
+          })}
+
+          {/* Customer Support Icon at the very bottom */}
+          <button
+            className="rail-support-btn"
+            onClick={() => setIsSupportOpen(true)}
+            title="Customer Support & Helpdesk"
+          >
+            <Headphones size={18} />
+            <span className="rail-tooltip">Support & Helpdesk</span>
+          </button>
+        </aside>
+
+        {/* Contextual Sub-Sidebar (for deep sections when expanded) */}
         {currentNavGroup?.sidebarItems && (
           <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
             <div className="sidebar-header">
@@ -587,6 +643,12 @@ function App() {
       />
 
       <CompliancePanel isOpen={isBotOpen} onClose={() => setIsBotOpen(false)} />
+
+      {/* Rafion Customer Support & Helpdesk Modal */}
+      <SupportModal
+        isOpen={isSupportOpen}
+        onClose={() => setIsSupportOpen(false)}
+      />
     </div>
   );
 }
