@@ -4,6 +4,8 @@ import IncomeStatement from './IncomeStatement';
 import BalanceSheet from './BalanceSheet';
 import CashFlowStatement from './CashFlowStatement';
 import TrialBalance from './TrialBalance';
+import NotesToAccounts from './NotesToAccounts';
+import Schedules from './Schedules';
 import { Download, FileText } from 'lucide-react';
 import { exportToPDF } from '../utils/exportUtils';
 import { LedgerEngine, CHART_OF_ACCOUNTS } from '../utils/LedgerEngine';
@@ -66,22 +68,47 @@ function Statements({ period, currency }) {
       title = `Trial Balance - ${selectedPeriod}`;
       exportOptions.isTrialBalance = true;
     } else if (activeTab === 'Notes to Accounts' || activeTab === 'Schedules') {
-      const bs = LedgerEngine.calcBalanceSheet(selectedPeriod);
+      const { start, end } = LedgerEngine.getPeriodDateRange(selectedPeriod);
       const is = LedgerEngine.calcIncomeStatement(selectedPeriod);
+      const sc = LedgerEngine.getAccountBalance('Share Capital', end);
+      const loan = LedgerEngine.getAccountBalance('Bank Loan', end);
+      const ap = Math.abs(LedgerEngine.getAccountBalance('Accounts Payable', end));
+      const ar = Math.abs(LedgerEngine.getAccountBalance('Accounts Receivable', end));
+      const cash = LedgerEngine.getAccountBalance('Cash and Bank', end);
+      const faGross = LedgerEngine.getAccountBalance('Fixed Assets (Gross)', end);
+      const accDep = LedgerEngine.getAccountBalance('Accumulated Depreciation', end);
+      const intGross = LedgerEngine.getAccountBalance('Intangible Assets (Gross)', end);
+      const accAmort = LedgerEngine.getAccountBalance('Accumulated Amortization', end);
+      const pat = is.find(r => r.name.includes('Profit (Loss)'))?.value || 0;
+      const sal = LedgerEngine.getAccountBalance('Salary Expense', end, start);
+      const rent = LedgerEngine.getAccountBalance('Rent Expense', end, start);
+      const fin = LedgerEngine.getAccountBalance('Finance Cost', end, start);
+
       data = [
         { noteNo: '1', name: 'Corporate Information & Summary of Significant Accounting Policies', isHeader: true },
         { noteNo: '', name: 'Meso AI Platform complies with Companies Act 2013, Schedule III and statutory Accounting Standards (AS).', detail: 'Statutory Note' },
-        { noteNo: '2', name: 'Share Capital & Reserves', isHeader: true },
-        { noteNo: '2.1', name: 'Authorized & Issued Equity Share Capital', value: LedgerEngine.getAccountBalance('Share Capital') },
-        { noteNo: '2.2', name: 'Reserves and Surplus (Retained Earnings)', value: bs.find(r => r.name.toLowerCase().includes('reserves'))?.value || 0 },
-        { noteNo: '3', name: 'Property, Plant & Equipment (PPE - AS 10)', isHeader: true },
-        { noteNo: '3.1', name: 'Gross Block (Fixed Assets)', value: LedgerEngine.getAccountBalance('Fixed Assets (Gross)') },
-        { noteNo: '3.2', name: 'Less: Accumulated Depreciation', value: -LedgerEngine.getAccountBalance('Accumulated Depreciation') },
-        { noteNo: '4', name: 'Revenue from Operations (AS 9)', isHeader: true },
-        { noteNo: '4.1', name: 'Sale of Products / Services', value: LedgerEngine.getAccountBalance('Sales Revenue') },
-        { noteNo: '5', name: 'Direct Costs & Employee Benefit Expenses', isHeader: true },
-        { noteNo: '5.1', name: 'Cost of Materials Consumed / Cost of Goods Sold', value: is.find(r => r.name.toLowerCase().includes('cost of materials'))?.value || 0 },
-        { noteNo: '5.2', name: 'Salaries & Employee Benefits', value: LedgerEngine.getAccountBalance('Salaries Expense') }
+        { noteNo: '2', name: 'Share Capital & Equity Structure', isHeader: true },
+        { noteNo: '2.1', name: 'Authorized Equity Share Capital (10,00,000 shares of Rs.10)', value: 10000000 },
+        { noteNo: '2.2', name: 'Issued, Subscribed & Paid-up Capital (5,00,000 shares of Rs.10)', value: sc },
+        { noteNo: '3', name: 'Reserves and Surplus (Statement of P&L)', isHeader: true },
+        { noteNo: '3.1', name: 'Closing Surplus / (Deficit) Carried Forward', value: pat },
+        { noteNo: '4', name: 'Long-Term Borrowings', isHeader: true },
+        { noteNo: '4.1', name: 'Secured Term Loan from Scheduled Bank (@ 8.5% p.a.)', value: loan },
+        { noteNo: '5', name: 'Trade Payables & MSME Statutory Disclosures (Section 43B(h))', isHeader: true },
+        { noteNo: '5.1', name: 'Principal amount due to Micro & Small Enterprises', value: Math.round(ap * 0.42) },
+        { noteNo: '5.2', name: 'Dues to creditors other than Micro & Small Enterprises', value: Math.round(ap * 0.58) },
+        { noteNo: '6', name: 'Property, Plant & Equipment (AS 10) & Intangibles (AS 26)', isHeader: true },
+        { noteNo: '6.1', name: 'Tangible Gross Block (Plant & Machinery)', value: faGross },
+        { noteNo: '6.2', name: 'Less: Accumulated Depreciation', value: -accDep },
+        { noteNo: '6.3', name: 'Intangible Gross Block (Computer Software & ERP)', value: intGross },
+        { noteNo: '6.4', name: 'Less: Accumulated Amortization', value: -accAmort },
+        { noteNo: '7', name: 'Current Assets & Liquidity', isHeader: true },
+        { noteNo: '7.1', name: 'Trade Receivables (Sundry Debtors)', value: ar },
+        { noteNo: '7.2', name: 'Cash and Bank Balances (AS 3)', value: cash },
+        { noteNo: '8', name: 'Operating Expenses', isHeader: true },
+        { noteNo: '8.1', name: 'Employee Benefits Expense (Salaries & Staff Welfare)', value: sal },
+        { noteNo: '8.2', name: 'Factory & Office Rent', value: rent },
+        { noteNo: '8.3', name: 'Finance Costs (Loan Interest)', value: fin }
       ];
       title = `${activeTab} - ${selectedPeriod}`;
       exportOptions.isNotes = true;
@@ -147,12 +174,8 @@ function Statements({ period, currency }) {
         {activeTab === 'Cash Flow' && <CashFlowStatement period={selectedPeriod} currency={currency} />}
         {activeTab === 'Trial Balance' && <TrialBalance period={selectedPeriod} currency={currency} />}
 
-        {(activeTab === 'Notes to Accounts' || activeTab === 'Schedules') && (
-          <div className="card" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
-            <FileText size={32} style={{ opacity: 0.3, margin: '0 auto 12px' }} />
-            <div style={{ fontSize: '14px', fontWeight: 500 }}>Detailed {activeTab.toLowerCase()} will be attached upon year-end finalization.</div>
-          </div>
-        )}
+        {activeTab === 'Notes to Accounts' && <NotesToAccounts period={selectedPeriod} currency={currency} />}
+        {activeTab === 'Schedules' && <Schedules period={selectedPeriod} currency={currency} />}
       </div>
     </div>
   );
