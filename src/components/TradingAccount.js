@@ -3,6 +3,7 @@ import { LedgerEngine, formatCurrency } from '../utils/LedgerEngine';
 
 function TradingAccount({ period, currency = 'INR' }) {
   const statement = LedgerEngine.calcTradingAccount(period);
+  const { name: periodName } = LedgerEngine.getPeriodDateRange(period);
 
   return (
     <div className="card" style={{ padding: '32px' }}>
@@ -10,7 +11,7 @@ function TradingAccount({ period, currency = 'INR' }) {
         <div>
           <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '4px' }}>Trading Account</h3>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            For the period ended {period === 'Full Year' ? '31 Mar 2026' : period}
+            For the period — {periodName}
           </p>
         </div>
         <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)' }}>

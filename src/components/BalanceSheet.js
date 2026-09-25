@@ -3,13 +3,14 @@ import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
 
 const BalanceSheet = ({ period }) => {
   const data = LedgerEngine.calcBalanceSheet(period);
+  const { end, name: periodName } = LedgerEngine.getPeriodDateRange(period);
 
   return (
     <div className="animate-fade" style={{ maxWidth: '900px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Balance Sheet</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>As at {period === 'Full Year' ? 'Mar 31, 2026' : period}</p>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>As at {end} — {periodName}</p>
         </div>
       </div>
 

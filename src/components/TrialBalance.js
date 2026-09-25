@@ -2,9 +2,10 @@ import React from 'react';
 import { LedgerEngine, formatINR, CHART_OF_ACCOUNTS } from '../utils/LedgerEngine';
 
 const TrialBalance = ({ period }) => {
-  // Calculate balance for every account in the Chart of Accounts
+  const { end, name: periodName } = LedgerEngine.getPeriodDateRange(period);
+  // Calculate balance for every account in the Chart of Accounts as of the selected period's end date
   const accounts = CHART_OF_ACCOUNTS.map(acc => {
-    const balance = LedgerEngine.getAccountBalance(acc.name);
+    const balance = LedgerEngine.getAccountBalance(acc.name, end);
     const isDebitNormal = ['Asset', 'Expense'].includes(acc.type);
     return {
       ...acc,
@@ -23,7 +24,7 @@ const TrialBalance = ({ period }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Trial Balance</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>As at Mar 31, 2026</p>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>As at {end} — {periodName}</p>
         </div>
         <div style={{
           padding: '6px 14px', borderRadius: 'var(--radius-pill)', fontSize: '12px', fontWeight: 600,

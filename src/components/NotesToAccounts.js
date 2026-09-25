@@ -60,6 +60,28 @@ const NotesToAccounts = ({ period, currency }) => {
   const outSGST = LedgerEngine.getAccountBalance('Output SGST', end);
   const gstPayable = Math.max(0, outCGST + outSGST);
 
+  // Retained earnings roll-forward
+  const isBeginning = period === 'Full Year' || start === '2024-01-01';
+  const prevDate = new Date(new Date(start).getTime() - 86400000).toISOString().split('T')[0];
+
+  let cbRetained = 0;
+  ['Sales Revenue', 'Other Income', 'Cost of Goods Sold', 'Salary Expense', 'Rent Expense', 'Other Expenses', 'Bank Charges', 'Depreciation Expense', 'Finance Cost', 'Tax Expense'].forEach(acc => {
+    const bal = LedgerEngine.getAccountBalance(acc, end);
+    if (['Sales Revenue', 'Other Income'].includes(acc)) cbRetained += bal;
+    else cbRetained -= bal;
+  });
+
+  let obRetained = 0;
+  if (!isBeginning) {
+    ['Sales Revenue', 'Other Income', 'Cost of Goods Sold', 'Salary Expense', 'Rent Expense', 'Other Expenses', 'Bank Charges', 'Depreciation Expense', 'Finance Cost', 'Tax Expense'].forEach(acc => {
+      const bal = LedgerEngine.getAccountBalance(acc, prevDate);
+      if (['Sales Revenue', 'Other Income'].includes(acc)) obRetained += bal;
+      else obRetained -= bal;
+    });
+  }
+
+  const periodPAT = cbRetained - obRetained;
+
   return (
     <div className="animate-fade" style={{ maxWidth: '1000px', margin: '0 auto' }}>
       {/* ═══ STATUTORY STATUS BANNER ═══ */}
@@ -235,7 +257,7 @@ const NotesToAccounts = ({ period, currency }) => {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>
-              {fmt(pat)}
+              {fmt(cbRetained)}
             </span>
             {expandedNotes['note-3'] ? <ChevronDown size={18} color="var(--text-muted)" /> : <ChevronRight size={18} color="var(--text-muted)" />}
           </div>
@@ -247,15 +269,15 @@ const NotesToAccounts = ({ period, currency }) => {
               <tbody>
                 <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
                   <td style={{ padding: '8px 0', color: 'var(--text-secondary)' }}>Opening Balance of Retained Earnings</td>
-                  <td style={{ padding: '8px 0', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{fmt(0)}</td>
+                  <td style={{ padding: '8px 0', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{fmt(obRetained)}</td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
                   <td style={{ padding: '8px 0', color: 'var(--text-secondary)' }}>Add: Profit / (Loss) for the period {period}</td>
-                  <td style={{ padding: '8px 0', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{fmt(pat)}</td>
+                  <td style={{ padding: '8px 0', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{fmt(periodPAT)}</td>
                 </tr>
                 <tr>
                   <td style={{ padding: '10px 0', fontWeight: 600, color: 'var(--text-primary)' }}>Closing Balance Carried to Balance Sheet</td>
-                  <td style={{ padding: '10px 0', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{fmt(pat)}</td>
+                  <td style={{ padding: '10px 0', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{fmt(cbRetained)}</td>
                 </tr>
               </tbody>
             </table>

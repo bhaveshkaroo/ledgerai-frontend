@@ -3,13 +3,14 @@ import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
 
 const CashFlowStatement = ({ period }) => {
   const data = LedgerEngine.calcCashFlow(period);
+  const { name: periodName } = LedgerEngine.getPeriodDateRange(period);
 
   return (
     <div className="animate-fade" style={{ maxWidth: '900px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Statement of Cash Flows</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>For the period ended {period === 'Full Year' ? 'Mar 31, 2026' : period}</p>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>For the period — {periodName}</p>
         </div>
       </div>
 

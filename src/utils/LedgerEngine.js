@@ -631,35 +631,47 @@ export const LedgerEngine = {
   },
 
 
-  calcBalanceSheet(period) {
-    const sc = this.getAccountBalance('Share Capital');
-    const pat = this.calcIncomeStatement().find(r => r.name.includes("Profit (Loss) for the period")).value;
-    const re = this.getAccountBalance('Retained Earnings') + pat; // Roll up net profit
+  calcBalanceSheet(period = 'Full Year') {
+    const { start, end } = this.getPeriodDateRange(period);
+
+    // Sum all P&L accounts up to end date to get true cumulative retained earnings
+    let cumulativeNetProfit = 0;
+    CHART_OF_ACCOUNTS.filter(a => a.classification === 'P&L').forEach(a => {
+      const bal = this.getAccountBalance(a.name, end);
+      if (a.type === 'Revenue') {
+        cumulativeNetProfit += bal;
+      } else if (a.type === 'Expense') {
+        cumulativeNetProfit -= bal;
+      }
+    });
+
+    const sc = this.getAccountBalance('Share Capital', end);
+    const re = this.getAccountBalance('Retained Earnings', end) + cumulativeNetProfit; // Roll up cumulative net profit
     
-    const loan = this.getAccountBalance('Bank Loan');
-    const defTaxLiab = this.getAccountBalance('Deferred Tax Liability');
-    const provEmployee = this.getAccountBalance('Provision for Employee Benefits');
+    const loan = this.getAccountBalance('Bank Loan', end);
+    const defTaxLiab = this.getAccountBalance('Deferred Tax Liability', end);
+    const provEmployee = this.getAccountBalance('Provision for Employee Benefits', end);
     
-    const ap = this.getAccountBalance('Accounts Payable');
-    const taxPay = this.getAccountBalance('Tax Payable');
-    const stProv = this.getAccountBalance('Short-Term Provisions');
+    const ap = this.getAccountBalance('Accounts Payable', end);
+    const taxPay = this.getAccountBalance('Tax Payable', end);
+    const stProv = this.getAccountBalance('Short-Term Provisions', end);
     
-    const outCGST = this.getAccountBalance('Output CGST');
-    const outSGST = this.getAccountBalance('Output SGST');
-    const outIGST = this.getAccountBalance('Output IGST');
+    const outCGST = this.getAccountBalance('Output CGST', end);
+    const outSGST = this.getAccountBalance('Output SGST', end);
+    const outIGST = this.getAccountBalance('Output IGST', end);
     const totalCurrentLiabProv = taxPay + stProv + outCGST + outSGST + outIGST;
     
     const totalEqLiab = sc + re + loan + defTaxLiab + provEmployee + ap + totalCurrentLiabProv;
     
-    const faGross = this.getAccountBalance('Fixed Assets (Gross)');
-    const accDep = this.getAccountBalance('Accumulated Depreciation');
+    const faGross = this.getAccountBalance('Fixed Assets (Gross)', end);
+    const accDep = this.getAccountBalance('Accumulated Depreciation', end);
     const faNet = faGross - accDep; // Tangible Net
     
-    const intGross = this.getAccountBalance('Intangible Assets (Gross)');
-    const accAmort = this.getAccountBalance('Accumulated Amortization');
+    const intGross = this.getAccountBalance('Intangible Assets (Gross)', end);
+    const accAmort = this.getAccountBalance('Accumulated Amortization', end);
     const intNet = intGross - accAmort; // Intangible Net
     
-    const defTaxAsset = this.getAccountBalance('Deferred Tax Asset');
+    const defTaxAsset = this.getAccountBalance('Deferred Tax Asset', end);
     
     // AS 22 states Deferred Tax Asset/Liability should be presented net if legally enforceable
     let netDTA = 0;
@@ -670,13 +682,13 @@ export const LedgerEngine = {
         netDTL = defTaxLiab - defTaxAsset;
     }
     
-    const inv = this.getAccountBalance('Inventory');
-    const ar = this.getAccountBalance('Accounts Receivable');
-    const cash = this.getAccountBalance('Cash and Bank');
+    const inv = this.getAccountBalance('Inventory', end);
+    const ar = this.getAccountBalance('Accounts Receivable', end);
+    const cash = this.getAccountBalance('Cash and Bank', end);
     
-    const inCGST = this.getAccountBalance('Input CGST');
-    const inSGST = this.getAccountBalance('Input SGST');
-    const inIGST = this.getAccountBalance('Input IGST');
+    const inCGST = this.getAccountBalance('Input CGST', end);
+    const inSGST = this.getAccountBalance('Input SGST', end);
+    const inIGST = this.getAccountBalance('Input IGST', end);
     const otherCurrentAssets = inCGST + inSGST + inIGST;
     
     const totalAssets = faNet + intNet + netDTA + inv + ar + cash + otherCurrentAssets;
@@ -722,48 +734,45 @@ export const LedgerEngine = {
     ];
   },
 
-  calcCashFlow(period) {
-    const is = this.calcIncomeStatement();
-    const pbt = is.find(r => r.name.toLowerCase().includes("profit before tax")).value;
-    const dep = this.getAccountBalance('Depreciation Expense');
-    const finCost = this.getAccountBalance('Finance Cost');
-    const taxPayable = this.getAccountBalance('Tax Payable');
-    const currentTax = this.getAccountBalance('Tax Payable'); // from P&L logic
-    // Add back non-cash provisions
-    const provEmployee = this.getAccountBalance('Provision for Employee Benefits');
-    const stProv = this.getAccountBalance('Short-Term Provisions');
-    
-    // In a real system, actual tax paid = Opening Tax Payable + Current Tax Provision - Closing Tax Payable.
-    // For this mock, assume half is paid, half is payable, or just use difference
-    const actualTaxPaid = currentTax - taxPayable; // Since it's year 1, this will be 0 for now.
+  calcCashFlow(period = 'Full Year') {
+    const { start, end } = this.getPeriodDateRange(period);
+    const is = this.calcIncomeStatement(period);
+    const pbt = is.find(r => r.name.toLowerCase().includes("profit before tax"))?.value || 0;
+    const dep = this.getAccountBalance('Depreciation Expense', end, start);
+    const finCost = this.getAccountBalance('Finance Cost', end, start);
+    const actualTaxPaid = 0;
     
     // AS 3 Indirect Method - Working Capital Changes
-    // For Year 1, change is equal to ending balance.
-    const incAR = this.getAccountBalance('Accounts Receivable');
-    const incInv = this.getAccountBalance('Inventory');
-    const incAP = this.getAccountBalance('Accounts Payable');
+    const prevDate = new Date(new Date(start).getTime() - 86400000).toISOString().split('T')[0];
+    const isBeginning = period === 'Full Year' || start === '2024-01-01';
     
-    // Other Current Assets (Input GST / ITC) & Other Current Liabilities / Provisions (Output GST)
-    const inCGST = this.getAccountBalance('Input CGST');
-    const inSGST = this.getAccountBalance('Input SGST');
-    const inIGST = this.getAccountBalance('Input IGST');
-    const incOtherCA = inCGST + inSGST + inIGST;
+    // Non-cash provisions: these are BS-classified liabilities, so we must compute change explicitly
+    const provEmployee = this.getAccountBalance('Provision for Employee Benefits', end) - (isBeginning ? 0 : this.getAccountBalance('Provision for Employee Benefits', prevDate));
+    const stProv = this.getAccountBalance('Short-Term Provisions', end) - (isBeginning ? 0 : this.getAccountBalance('Short-Term Provisions', prevDate));
+    const incTaxPayable = this.getAccountBalance('Tax Payable', end) - (isBeginning ? 0 : this.getAccountBalance('Tax Payable', prevDate));
+    
+    const incAR = this.getAccountBalance('Accounts Receivable', end) - (isBeginning ? 0 : this.getAccountBalance('Accounts Receivable', prevDate));
+    const incInv = this.getAccountBalance('Inventory', end) - (isBeginning ? 0 : this.getAccountBalance('Inventory', prevDate));
+    const incAP = this.getAccountBalance('Accounts Payable', end) - (isBeginning ? 0 : this.getAccountBalance('Accounts Payable', prevDate));
+    
+    const inGSTNow = this.getAccountBalance('Input CGST', end) + this.getAccountBalance('Input SGST', end) + this.getAccountBalance('Input IGST', end);
+    const inGSTPrev = isBeginning ? 0 : (this.getAccountBalance('Input CGST', prevDate) + this.getAccountBalance('Input SGST', prevDate) + this.getAccountBalance('Input IGST', prevDate));
+    const incOtherCA = inGSTNow - inGSTPrev;
 
-    const outCGST = this.getAccountBalance('Output CGST');
-    const outSGST = this.getAccountBalance('Output SGST');
-    const outIGST = this.getAccountBalance('Output IGST');
-    const incOtherCL = outCGST + outSGST + outIGST;
+    const outGSTNow = this.getAccountBalance('Output CGST', end) + this.getAccountBalance('Output SGST', end) + this.getAccountBalance('Output IGST', end);
+    const outGSTPrev = isBeginning ? 0 : (this.getAccountBalance('Output CGST', prevDate) + this.getAccountBalance('Output SGST', prevDate) + this.getAccountBalance('Output IGST', prevDate));
+    const incOtherCL = outGSTNow - outGSTPrev;
     
     // Add provisions to operating cash flow before WC changes
     const opCFBeforeWC = pbt + dep + finCost + provEmployee + stProv;
     const opCF = opCFBeforeWC - incAR - incInv + incAP - incOtherCA + incOtherCL - actualTaxPaid;
     
-    const faPurchase = -this.getAccountBalance('Fixed Assets (Gross)');
-    const intPurchase = -this.getAccountBalance('Intangible Assets (Gross)');
+    const faPurchase = -(this.getAccountBalance('Fixed Assets (Gross)', end) - (isBeginning ? 0 : this.getAccountBalance('Fixed Assets (Gross)', prevDate)));
+    const intPurchase = -(this.getAccountBalance('Intangible Assets (Gross)', end) - (isBeginning ? 0 : this.getAccountBalance('Intangible Assets (Gross)', prevDate)));
     const invCF = faPurchase + intPurchase;
     
-    const eqIssuance = this.getAccountBalance('Share Capital');
-    const loanIssuance = this.getAccountBalance('Bank Loan');
+    const eqIssuance = this.getAccountBalance('Share Capital', end) - (isBeginning ? 0 : this.getAccountBalance('Share Capital', prevDate));
+    const loanIssuance = this.getAccountBalance('Bank Loan', end) - (isBeginning ? 0 : this.getAccountBalance('Bank Loan', prevDate));
     const finCF = eqIssuance + loanIssuance - finCost; // Interest paid
     
     const netCash = opCF + invCF + finCF;
