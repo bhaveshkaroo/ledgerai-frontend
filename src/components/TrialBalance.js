@@ -5,15 +5,23 @@ const TrialBalance = ({ period }) => {
   const { end, name: periodName } = LedgerEngine.getPeriodDateRange(period);
   // Calculate balance for every account in the Chart of Accounts as of the selected period's end date
   const accounts = CHART_OF_ACCOUNTS.map(acc => {
-    const balance = LedgerEngine.getAccountBalance(acc.name, end);
-    const isDebitNormal = ['Asset', 'Expense'].includes(acc.type);
+    let dr = 0;
+    let cr = 0;
+    LedgerEngine.transactions.forEach(t => {
+      if (t.account === acc.name && t.date <= end) {
+        if (t.type === 'Debit') dr += t.amount;
+        else cr += t.amount;
+      }
+    });
+    const netDr = dr > cr ? dr - cr : 0;
+    const netCr = cr > dr ? cr - dr : 0;
     return {
       ...acc,
-      balance,
-      debit: isDebitNormal ? balance : 0,
-      credit: !isDebitNormal ? balance : 0,
+      balance: netDr > 0 ? netDr : netCr,
+      debit: netDr,
+      credit: netCr,
     };
-  }).filter(a => a.balance !== 0); // Only show accounts with balances
+  }).filter(a => a.debit !== 0 || a.credit !== 0);
 
   const totalDebits = accounts.reduce((sum, a) => sum + a.debit, 0);
   const totalCredits = accounts.reduce((sum, a) => sum + a.credit, 0);

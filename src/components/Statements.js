@@ -41,14 +41,23 @@ function Statements({ period, currency }) {
       title = `Statement of Cash Flows - ${selectedPeriod}`;
       exportOptions.isCashFlow = true;
     } else if (activeTab === 'Trial Balance') {
+      const { end } = LedgerEngine.getPeriodDateRange(selectedPeriod);
       const tbAccounts = CHART_OF_ACCOUNTS.map(acc => {
-        const balance = LedgerEngine.getAccountBalance(acc.name);
-        const isDebitNormal = ['Asset', 'Expense'].includes(acc.type);
+        let dr = 0;
+        let cr = 0;
+        LedgerEngine.transactions.forEach(t => {
+          if (t.account === acc.name && t.date <= end) {
+            if (t.type === 'Debit') dr += t.amount;
+            else cr += t.amount;
+          }
+        });
+        const netDr = dr > cr ? dr - cr : 0;
+        const netCr = cr > dr ? cr - dr : 0;
         return {
           name: acc.name,
           type: acc.type,
-          debit: isDebitNormal ? balance : 0,
-          credit: !isDebitNormal ? balance : 0
+          debit: netDr,
+          credit: netCr
         };
       }).filter(a => a.debit !== 0 || a.credit !== 0);
 
