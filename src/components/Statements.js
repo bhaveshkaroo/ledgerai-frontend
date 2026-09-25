@@ -6,7 +6,7 @@ import CashFlowStatement from './CashFlowStatement';
 import TrialBalance from './TrialBalance';
 import NotesToAccounts from './NotesToAccounts';
 import Schedules from './Schedules';
-import { Download, FileText } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { exportToPDF } from '../utils/exportUtils';
 import { LedgerEngine, CHART_OF_ACCOUNTS } from '../utils/LedgerEngine';
 

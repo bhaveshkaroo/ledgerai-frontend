@@ -2,13 +2,12 @@ import React, { useState } from 'react';
 import { LedgerEngine, formatINR } from '../utils/LedgerEngine';
 import { formatCurrency } from '../utils/CurrencyEngine';
 import { getBusinessProfile } from '../utils/BusinessEngine';
-import { ShieldCheck, Clock, CheckCircle2, ChevronDown, ChevronRight, FileText, Info } from 'lucide-react';
+import { ShieldCheck, Clock, ChevronDown, ChevronRight } from 'lucide-react';
 
 const NotesToAccounts = ({ period, currency }) => {
   const profile = getBusinessProfile() || {};
   const currentFY = LedgerEngine.getCurrentFiscalYear();
   const isCurrentYear = period === currentFY;
-  const isAllYears = period === 'Full Year';
   const { start, end, name: periodDisplayName } = LedgerEngine.getPeriodDateRange(period);
 
   const [expandedNotes, setExpandedNotes] = useState({
@@ -34,31 +33,21 @@ const NotesToAccounts = ({ period, currency }) => {
   // Balances computed dynamically for the selected period
   const sc = LedgerEngine.getAccountBalance('Share Capital', end);
   const loan = LedgerEngine.getAccountBalance('Bank Loan', end);
-  const provEmp = LedgerEngine.getAccountBalance('Provision for Employee Benefits', end);
-  const taxPay = LedgerEngine.getAccountBalance('Tax Payable', end);
   const ap = Math.abs(LedgerEngine.getAccountBalance('Accounts Payable', end));
-  const ar = Math.abs(LedgerEngine.getAccountBalance('Accounts Receivable', end));
   const cash = LedgerEngine.getAccountBalance('Cash and Bank', end);
-  const inv = LedgerEngine.getAccountBalance('Inventory', end);
   const faGross = LedgerEngine.getAccountBalance('Fixed Assets (Gross)', end);
   const accDep = LedgerEngine.getAccountBalance('Accumulated Depreciation', end);
   const faNet = Math.max(0, faGross - accDep);
   const intGross = LedgerEngine.getAccountBalance('Intangible Assets (Gross)', end);
   const accAmort = LedgerEngine.getAccountBalance('Accumulated Amortization', end);
   const intNet = Math.max(0, intGross - accAmort);
-  const defTaxAsset = LedgerEngine.getAccountBalance('Deferred Tax Asset', end);
 
-  const isData = LedgerEngine.calcIncomeStatement(period);
-  const pat = isData.find(r => r.name.includes('Profit (Loss)'))?.value || 0;
-  const rev = isData.find(r => r.name.includes('Revenue from operations'))?.value || 0;
   const sal = LedgerEngine.getAccountBalance('Salary Expense', end, start);
   const rent = LedgerEngine.getAccountBalance('Rent Expense', end, start);
   const fin = LedgerEngine.getAccountBalance('Finance Cost', end, start);
-  const dep = LedgerEngine.getAccountBalance('Depreciation Expense', end, start);
   const otherExp = LedgerEngine.getAccountBalance('Other Expenses', end, start);
   const outCGST = LedgerEngine.getAccountBalance('Output CGST', end);
   const outSGST = LedgerEngine.getAccountBalance('Output SGST', end);
-  const gstPayable = Math.max(0, outCGST + outSGST);
 
   // Retained earnings roll-forward
   const isBeginning = period === 'Full Year' || start === '2024-01-01';

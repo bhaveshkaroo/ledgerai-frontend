@@ -632,7 +632,7 @@ export const LedgerEngine = {
 
 
   calcBalanceSheet(period = 'Full Year') {
-    const { start, end } = this.getPeriodDateRange(period);
+    const { end } = this.getPeriodDateRange(period);
 
     // Sum all P&L accounts up to end date to get true cumulative retained earnings
     let cumulativeNetProfit = 0;
@@ -749,7 +749,6 @@ export const LedgerEngine = {
     // Non-cash provisions: these are BS-classified liabilities, so we must compute change explicitly
     const provEmployee = this.getAccountBalance('Provision for Employee Benefits', end) - (isBeginning ? 0 : this.getAccountBalance('Provision for Employee Benefits', prevDate));
     const stProv = this.getAccountBalance('Short-Term Provisions', end) - (isBeginning ? 0 : this.getAccountBalance('Short-Term Provisions', prevDate));
-    const incTaxPayable = this.getAccountBalance('Tax Payable', end) - (isBeginning ? 0 : this.getAccountBalance('Tax Payable', prevDate));
     
     const incAR = this.getAccountBalance('Accounts Receivable', end) - (isBeginning ? 0 : this.getAccountBalance('Accounts Receivable', prevDate));
     const incInv = this.getAccountBalance('Inventory', end) - (isBeginning ? 0 : this.getAccountBalance('Inventory', prevDate));
